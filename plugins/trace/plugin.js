@@ -92,7 +92,7 @@
             var $trace = $(evt.target);
             var editDate = parseInt($trace.attr('hm-modify-time'), 10);
             var modifiedType = $trace.attr('hm-modify-type');
-            var text = new Date(editDate).Format('yyyy-MM-dd hh:mm:ss') + '&nbsp;&nbsp;' + $trace.attr('hm-modifier') + '&nbsp;&nbsp;' + modifiedType;
+            var text = new Date(editDate).Format('yyyy-MM-dd hh:mm:ss') + '&nbsp;&nbsp;' + $trace.attr('hm-modify-userName') + '&nbsp;&nbsp;' + modifiedType;
             this.$tracePreview.find('.hm-trace-toolbar-preview').html(text);
             var traceClass = '';
             if(modifiedType == '增加'){

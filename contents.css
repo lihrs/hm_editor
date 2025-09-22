@@ -91,7 +91,7 @@ tr {
     page-break-after: auto
 }
 
-table[data-hm-datatable] tr,
+/* table[data-hm-datatable] tr, */
 table[pageBreakInside-tr-avoid] tr{
     page-break-inside: avoid;
 }
@@ -144,6 +144,22 @@ table.font-normal td , table.font-normal th{
 
 table.font-weight td, table.font-weight th{
     font-weight: 800;
+}
+
+/* 表格对齐样式 - 避免浮动坍塌问题 */
+table.hm-table-align-left {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+table.hm-table-align-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+table.hm-table-align-right {
+    margin-left: auto;
+    margin-right: 0;
 }
 
 
@@ -777,10 +793,10 @@ ins.ice-no-decoration, del.ice-no-decoration {
 }
 .hm-logic-page .new-textbox:before {
     color: transparent;
-    background: url("./img/left.png") no-repeat;
-    background-size: 100% 100%;
-    margin-left: -1px;
-    margin-right: calc(-0.5em + 1px);
+    background: url("./img/left.png") no-repeat center;
+    background-size: 100% 70%;
+    margin-left: 2px;
+    margin-right: calc(-0.5em + 5px);
 }
 
 .new-textbox:after {
@@ -789,10 +805,10 @@ ins.ice-no-decoration, del.ice-no-decoration {
 }
 .hm-logic-page .new-textbox:after {
     color: transparent;
-    background: url("./img/right.png") no-repeat;
-    background-size: 100% 100%;
-    margin-left: calc(-0.5em + 1px);
-    margin-right: 0;
+    background: url("./img/right.png") no-repeat center;
+    background-size: 100% 70%;
+    margin-left: calc(-0.5em + 6px);
+    margin-right: 2px;
 }
 
 [data-hm-node="newtextbox"][_texttype="时间文本"].new-textbox{
@@ -1296,7 +1312,376 @@ span[data-hm-node=timebox][_notnull=true].concise-model:after{
 }
 
 /* 只有一个时，禁用 hover 效果 */
-.only-one-widget .cke_widget_wrapper:hover > .cke_widget_element {
+.only-one-widget .cke_widget_wrapper:is(:hover, .hover) > .cke_widget_element {
     /* 取消 hover 样式，比如 */
-    outline:none !important;
+    outline: none !important;
 }
+
+/* 日期导航样式 - 基于Figma设计规范 */
+.date-navigation-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    box-shadow: 0px 4px 24px 0px rgba(151, 151, 151, 0.45);
+    background: rgba(235, 244, 255, 1);
+    border-radius: 6px;
+    padding: 6px 8px;
+    z-index: 10000;
+    min-width: 320px;
+}
+
+.date-navigation-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.date-nav-button {
+    background: #ffffff;
+    color: #3b82f6;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-align: center;
+    white-space: nowrap;
+    min-width: auto;
+    /* box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); */
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.025em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.button-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+.date-text,
+.button-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #0000007a;
+}
+
+.date-nav-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.date-nav-button:hover::before {
+    left: 100%;
+}
+
+.date-nav-button:hover {
+    background: #f8fafc;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+}
+
+.date-nav-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.date-nav-button:disabled {
+    background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.date-nav-button:disabled:hover {
+    background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+    transform: none;
+    box-shadow: none;
+}
+
+.date-display {
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #e1e8ed;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-align: center;
+    /* min-width: 90px; */
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
+    letter-spacing: 0.025em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+
+
+.date-icon {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.date-display:hover {
+    /* background: #f8fafc;
+    border-color: #3b82f6; */
+    /* box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15); */
+    transform: translateY(-1px);
+}
+
+.date-display:active {
+    transform: translateY(0);
+}
+
+.date-nav-separator {
+    height: 20px;
+    border-left: 1px dashed rgba(153, 202, 255, 1);
+}
+
+.date-nav-collapse {
+    background: #ffffff;
+    border: none;
+    cursor: pointer;
+    color: #3b82f6;
+    font-size: 16px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    min-width: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collapse-icon-wrapper {
+    position: relative;
+    cursor: pointer;
+    display: inline-block;
+    display: flex;
+    align-items: center;
+}
+
+.collapse-icon-wrapper:hover::after {
+    content: "收起";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffe1;
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10001;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 5px;
+}
+
+.collapse-icon {
+    width: 20px;
+    height: 20px;
+    cursor: pointer !important;
+    background-image: url('./img/collapse_btn.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.date-nav-button-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.date-nav-previous-day-wrapper:hover::after {
+    content: "前一天";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffe1;
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10001;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.date-nav-next-day-wrapper:hover::after {
+    content: "后一天";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffe1;
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10001;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 快速定位按钮样式 */
+.quick-location-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    box-shadow: 0px 4px 24px 0px rgba(151, 151, 151, 0.45);
+    background: rgba(235, 244, 255, 1);
+    border-radius: 50%;
+    /* padding: 8px; */
+    cursor: pointer;
+    z-index: 10000;
+    transition: all 0.2s ease;
+    pointer-events: auto !important;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quick-location-btn:hover {
+    /* background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); */
+    /* border-color: #3b82f6; */
+    transform: translateY(-1px);
+    /* box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.15),
+        0 2px 4px rgba(0, 0, 0, 0.1); */
+}
+
+.unfold-icon {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    transform: rotate(180deg);
+    background-image: url('./img/collapse_btn.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.quick-location-btn:hover::after {
+    content: "快速定位";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffe1;
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10001;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: -5px;
+}
+
+.date-nav-collapse:hover {
+    /* background: #f8fafc;
+    border-color: #3b82f6; */
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+}
+
+.date-nav-collapse:active {
+    transform: translateY(0);
+}
+
+/* 特定按钮样式 */
+.date-nav-first-day {
+    background: #ffffff;
+    color: #3b82f6;
+}
+
+.date-nav-first-day:hover {
+    background: #f8fafc;
+    border-color: #3b82f6;
+}
+
+.date-nav-last-day {
+    background: #ffffff;
+    color: #3b82f6;
+}
+
+.date-nav-last-day:hover {
+    background: #f8fafc;
+    border-color: #3b82f6;
+}
+
+/* 高亮找到的行 */
+.highlighted-row {
+    background-color: #fff3cd !important;
+    border: 2px solid #ffc107 !important;
+    animation: highlight-pulse 2s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* 图片拖拽改变尺寸功能样式 */
+.cke_image_resizer {
+    display: none;
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    bottom: -5px;
+    right: -5px;
+    background: #000;
+    outline: 1px solid #fff;
+    line-height: 0;
+    cursor: se-resize;
+    user-select: none;
+}
+
+[data-hm-image-resizable="true"] {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+}
+
+[data-hm-image-resizable="true"]:hover .cke_image_resizer,
+.cke_image_resizer.cke_image_resizing {
+    display: block;
+}
+
+.cke_image_resizing * {
+    cursor: se-resize !important;
+}
+
+.cke_image_resizing {
+    user-select: none;
+}
+

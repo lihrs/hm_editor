@@ -134,7 +134,6 @@ CKEDITOR.DIALOG_STATE_BUSY = 2;
 		var input = this.getInputElement();
 		input && input.removeAttribute( 'aria-invalid' );
 	}
-
 	var templateSource = '<div class="cke_reset_all {editorId} {editorDialogClass} {hidpi}' +
 		'" dir="{langDir}"' +
 		' lang="{langCode}"' +
@@ -874,7 +873,7 @@ CKEDITOR.DIALOG_STATE_BUSY = 2;
 			if ( CKEDITOR.dialog._.currentTop === null ) {
 				CKEDITOR.dialog._.currentTop = this;
 				this._.parentDialog = null;
-				if(this.getName()!=='find'){
+				if(this.getName()!=='find' && this.getName()!=='documenttree'){
 					showCover( this._.editor );
 				}
 			} else {
@@ -1072,7 +1071,7 @@ CKEDITOR.DIALOG_STATE_BUSY = 2;
 				CKEDITOR.dialog._.currentTop.hide();
 
 			// Maintain dialog ordering and remove cover if needed.
-			if (!this._.parentDialog || (this._.parentDialog && this._.parentDialog._.name === 'find'))
+			if (!this._.parentDialog || (this._.parentDialog && (this._.parentDialog._.name === 'find' || this._.parentDialog._.name === 'documenttree')))
 				hideCover( this._.editor );
 			 else {
 				var parentElement = this._.parentDialog.getElement().getFirst();
@@ -2365,7 +2364,6 @@ CKEDITOR.DIALOG_STATE_BUSY = 2;
 			uiElement: function( dialog, elementDefinition, htmlList, nodeNameArg, stylesArg, attributesArg, contentsArg ) {
 				if ( arguments.length < 4 )
 					return;
-
 				var nodeName = ( nodeNameArg.call ? nodeNameArg( elementDefinition ) : nodeNameArg ) || 'div',
 					html = [ '<', nodeName, ' ' ],
 					styles = ( stylesArg && stylesArg.call ? stylesArg( elementDefinition ) : stylesArg ) || {},
@@ -3158,9 +3156,9 @@ CKEDITOR.DIALOG_STATE_BUSY = 2;
 		 */
 		openDialog: function( dialogName, callback ) {
 			var dialog = null, dialogDefinitions = CKEDITOR.dialog._.dialogDefinitions[ dialogName ];
-			//1、判断dialog是否为find，find不展示cover
-			//2、在find打开的情况下打开其他dialog展示cover
-			if ((CKEDITOR.dialog._.currentTop === null && dialogName !== 'find') || (CKEDITOR.dialog._.currentTop && CKEDITOR.dialog._.currentTop._.name === 'find' && dialogName !== 'find'))
+			//1、判断dialog是否为find或documenttree，这些dialog不展示cover
+			//2、在find或documenttree打开的情况下打开其他dialog展示cover
+			if ((CKEDITOR.dialog._.currentTop === null && dialogName !== 'find' && dialogName !== 'documenttree') || (CKEDITOR.dialog._.currentTop && (CKEDITOR.dialog._.currentTop._.name === 'find' || CKEDITOR.dialog._.currentTop._.name === 'documenttree') && dialogName !== 'find' && dialogName !== 'documenttree'))
 				showCover( this );
 
 			// If the dialogDefinition is already loaded, open it immediately.

@@ -419,21 +419,7 @@
 					editor.showNotification("当前行或上一行有单元格合并，不能调整顺序！", "warn");
 					break;
 				}
-                //病案首页手术移动时只交换内容，不移动数据元
-                var operation = $(startRow.$).find('span[data-hm-name^=手术及操作编码]')[0];
-                var diagnose = $(startRow.$).find('span[data-hm-name^=出院诊断_其他诊断]')[0]
-                || $(startRow.$).find('span[data-hm-name^=出院西医诊断_]')[0]
-                || $(startRow.$).find('span[data-hm-name^=出院中医诊断_]')[0];
-                if(operation||diagnose){
-                    lastRow=allTrs[startRowIndex - 1];
-                    var index = diagnose ? firstCell.getIndex() : null;
-                    var count = diagnose ? startRow.getChildCount() : null;
-                    var startRowInfo=getValues(startRow.$,index,count);
-                    var lastRowInfo=getValues(lastRow,index,count);
-                    setValues(startRowInfo.values,lastRowInfo.hmNodes);
-                    setValues(lastRowInfo.values,startRowInfo.hmNodes);
-                    break;
-                }
+
 				newRow = startRow.clone(true);
 				newRow.insertBefore(new CKEDITOR.dom.element(allTrs[startRowIndex - 1]));
 				startRow.remove();
@@ -448,21 +434,7 @@
 					editor.showNotification("当前行或下一行有单元格合并，不能调整顺序！", "warn");
 					break;
 				}
-				//病案首页手术移动时只交换内容，不移动数据元
-				var operation = $(startRow.$).find('span[data-hm-name^=手术及操作编码]')[0];
-                var diagnose = $(startRow.$).find('span[data-hm-name^=出院诊断_其他诊断]')[0]
-                || $(startRow.$).find('span[data-hm-name^=出院西医诊断_]')[0]
-                || $(startRow.$).find('span[data-hm-name^=出院中医诊断_]')[0];
-                if(operation||diagnose){
-                    nextRow=allTrs[startRowIndex + 1];
-                    var index = diagnose ? firstCell.getIndex() : null;
-                    var count = diagnose ? startRow.getChildCount() : null;
-                    var startRowInfo=getValues(startRow.$,index,count);
-                    var nextRowInfo=getValues(nextRow,index,count);
-                    setValues(startRowInfo.values,nextRowInfo.hmNodes);
-                    setValues(nextRowInfo.values,startRowInfo.hmNodes);
-                    break;
-                }
+		
 				newRow = startRow.clone(true);
 				newRow.insertAfter(new CKEDITOR.dom.element(allTrs[startRowIndex + 1]));
 				startRow.remove();
@@ -1610,14 +1582,30 @@
 						group: 'tablerow',
 						order: 1,
 						getItems: function() {
-							return {
-								tablerow_insertBefore: CKEDITOR.TRISTATE_OFF,
-								tablerow_insertAfter: CKEDITOR.TRISTATE_OFF,
-								tablerow_customInsert: CKEDITOR.TRISTATE_OFF,
-								tablerow_moveUp:CKEDITOR.TRISTATE_OFF,
-								tablerow_moveDown: CKEDITOR.TRISTATE_OFF,
-								tablerow_delete: CKEDITOR.TRISTATE_OFF
-							};
+							var selection = editor.getSelection();
+							var path = editor.elementPath();
+							var table = path.contains( 'table', 1 );
+							var items = {};
+							
+							if (table) {
+								// 根据table_add_row属性控制新增相关菜单
+								if (table.getAttribute('table_add_row') === 'true') {
+									items.tablerow_insertBefore = CKEDITOR.TRISTATE_OFF;
+									items.tablerow_insertAfter = CKEDITOR.TRISTATE_OFF;
+									items.tablerow_customInsert = CKEDITOR.TRISTATE_OFF;
+								}
+								
+								// 根据table_delete_row属性控制删除菜单
+								if (table.getAttribute('table_delete_row') === 'true') {
+									items.tablerow_delete = CKEDITOR.TRISTATE_OFF;
+								}
+								
+								// 移动菜单始终显示
+								items.tablerow_moveUp = CKEDITOR.TRISTATE_OFF;
+								items.tablerow_moveDown = CKEDITOR.TRISTATE_OFF;
+							}
+							
+							return items;
 						}
 					},
 
@@ -1668,12 +1656,26 @@
 						group: 'tablecolumn',
 						order: 1,
 						getItems: function() {
-							return {
-								tablecolumn_insertBefore: CKEDITOR.TRISTATE_OFF,
-								tablecolumn_insertAfter: CKEDITOR.TRISTATE_OFF,
-								tablecolumn_customInsert: CKEDITOR.TRISTATE_OFF,
-								tablecolumn_delete: CKEDITOR.TRISTATE_OFF
-							};
+							var selection = editor.getSelection();
+							var path = editor.elementPath();
+							var table = path.contains( 'table', 1 );
+							var items = {};
+							
+							if (table) {
+								// 根据table_add_col属性控制新增相关菜单
+								if (table.getAttribute('table_add_col') === 'true') {
+									items.tablecolumn_insertBefore = CKEDITOR.TRISTATE_OFF;
+									items.tablecolumn_insertAfter = CKEDITOR.TRISTATE_OFF;
+									items.tablecolumn_customInsert = CKEDITOR.TRISTATE_OFF;
+								}
+								
+								// 根据table_delete_col属性控制删除菜单
+								if (table.getAttribute('table_delete_col') === 'true') {
+									items.tablecolumn_delete = CKEDITOR.TRISTATE_OFF;
+								}
+							}
+							
+							return items;
 						}
 					},
 
@@ -1793,16 +1795,27 @@
 					var cell = path.contains( { 'td': 1, 'th': 1 }, 1 );
 					if ( cell && (!cell.isReadOnly()  || !editor.readOnly)) {
 						editor.scrollTop =editor.document.$.documentElement.scrollTop;
-						// if(editor.HMConfig.designMode) {
-							return {
-								tablecell: CKEDITOR.TRISTATE_OFF,
-								tablerow: CKEDITOR.TRISTATE_OFF,
-								tablecolumn: CKEDITOR.TRISTATE_OFF
-							};
-						// }
-						// return {
-						// 	tablerow: CKEDITOR.TRISTATE_OFF,
-						// };
+						
+						// 获取当前表格
+						var table = path.contains( 'table', 1 );
+						var menuItems = {
+							tablecell: CKEDITOR.TRISTATE_OFF,
+							tablerow: CKEDITOR.TRISTATE_OFF
+						};
+						
+						// 根据列配置控制父级列菜单的显示
+						if (table) {
+							var showAddCol = table.getAttribute('table_add_col') === 'true';
+							var showDeleteCol = table.getAttribute('table_delete_col') === 'true';
+							
+							// 如果有任一列配置为true，则显示列菜单
+							if (showAddCol || showDeleteCol) {
+								menuItems.tablecolumn = CKEDITOR.TRISTATE_OFF;
+							}
+							// 如果两项都为false或未设置，则不显示列菜单（通过不添加到menuItems来隐藏）
+						}
+						
+						return menuItems;
 					}
 
 					return null;

@@ -1,57 +1,54 @@
 //# sourceURL=plugins/datasource/dialogs/datasourceConfig.js
 CKEDITOR.dialog.add('datasourceConfig', function (editor) {
-    var sdkHost = editor.HMConfig.sdkHost||'';
+    var sdkHost = editor.HMConfig.sdkHost || '';
     return {
         title: '数据元',
         minWidth: 600,
         minHeight: 400,
-        contents: [
-            {
-                id: 'config',
-                label: '',
-                elements: [
-                    {
-                        type: 'html',
-                        html: '<iframe id="dsConfig" style="width:100%;height:390px"></iframe>',
-                        setup: function (ele) {
-                            //$('#dsConfig').attr('src', $('#dsConfig').attr('src'));
+        contents: [{
+            id: 'config',
+            label: '',
+            elements: [{
+                type: 'html',
+                html: '<iframe id="dsConfig" style="width:100%;height:390px"></iframe>',
+                setup: function (ele) {
+                    //$('#dsConfig').attr('src', $('#dsConfig').attr('src'));
 
-                            $('#dsConfig').hide();
-                            document.getElementById('dsConfig').contentWindow.location.reload(true);
+                    $('#dsConfig').hide();
+                    document.getElementById('dsConfig').contentWindow.location.reload(true);
 
-                            var init = function () {
-                                $('#dsConfig').show();
-                                window.editDs && ele && window.editDs(ele.$);
-                            }
-                            var iframe = $('#dsConfig')[0];
-                            // 获取iframe body 加载
-                            $.getTplHtml(sdkHost + '/plugins/datasource/dialogs/config/index.html',{
-                                sdkHost: sdkHost
-                            },function(bodyHtml){
-                                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                                iframeDoc.open();
-                                iframeDoc.write(bodyHtml);
-                                iframeDoc.close();
-
-                                if (iframe.attachEvent) {
-                                iframe.attachEvent("onload", function () {
-                                    init();
-                                });
-                            } else {
-                                iframe.onload = function () {
-                                    init();
-                                };
-                            }
-                            });
-                            //init();
-                        },
-                        commit: function (data) {
-                            Object.assign(data, window.config())
-                            //data = window.config();
-                        }
+                    var init = function () {
+                        $('#dsConfig').show();
+                        window.editDs && ele && window.editDs(ele.$);
                     }
-                ]
-            }],
+                    var iframe = $('#dsConfig')[0];
+                    // 获取iframe body 加载
+                    $.getTplHtml(sdkHost + '/plugins/datasource/dialogs/config/index.html', {
+                        sdkHost: sdkHost
+                    }, function (bodyHtml) {
+                        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        iframeDoc.open();
+                        iframeDoc.write(bodyHtml);
+                        iframeDoc.close();
+
+                        if (iframe.attachEvent) {
+                            iframe.attachEvent("onload", function () {
+                                init();
+                            });
+                        } else {
+                            iframe.onload = function () {
+                                init();
+                            };
+                        }
+                    });
+                    //init();
+                },
+                commit: function (data) {
+                    Object.assign(data, window.config())
+                    //data = window.config();
+                }
+            }]
+        }],
         onOk: function () {
             var editor = editorIns;
             var d = {};
@@ -65,7 +62,7 @@ CKEDITOR.dialog.add('datasourceConfig', function (editor) {
                 editor.showNotification("请先选择数据元");
                 return false;
             }
-            if(d['data-hm-node'] == 'searchbox' && !d['_searchpair']){
+            if (d['data-hm-node'] == 'searchbox' && !d['_searchpair']) {
                 editor.showNotification("搜索类型数据元对应名称/编码不能为空");
                 return false;
             }
@@ -113,6 +110,7 @@ CKEDITOR.dialog.add('datasourceConfig', function (editor) {
         }
     }
 })
+
 function _handleEdit(editor, sourceData) {
     var element = editor.contextTargetElement;
     if (!element.hasAttribute('data-hm-node') && !element.is('button')) {
@@ -121,7 +119,7 @@ function _handleEdit(editor, sourceData) {
     var td = editor.elementPath().contains('td');
     if (td && td.hasAttribute('data-hm-node')) element = td;
 
-    if(!sourceData['data-hm-items']){
+    if (!sourceData['data-hm-items']) {
         element.removeAttribute('data-hm-items');
     }
 
@@ -137,18 +135,18 @@ function _handleEdit(editor, sourceData) {
     }
 
 
-    if(sourceData._timewidth){
+    if (sourceData._timewidth) {
         element.setAttribute('_timeWidth', sourceData._timewidth);
-        element.setStyle('width',sourceData._timewidth+'px');
-        element.setStyle('min-width',sourceData._timewidth+'px');
-    }else {
+        element.setStyle('width', sourceData._timewidth + 'px');
+        element.setStyle('min-width', sourceData._timewidth + 'px');
+    } else {
         element.removeStyle('width');
         element.removeStyle('min-width');
     }
 
-    if(sourceData['data-hm-items']){
-        element.setAttribute('data-hm-items',sourceData['data-hm-items'] || '');
-    }else{
+    if (sourceData['data-hm-items']) {
+        element.setAttribute('data-hm-items', sourceData['data-hm-items'] || '');
+    } else {
         element.removeAttribute('data-hm-items');
     }
 
@@ -194,10 +192,10 @@ function _handleEdit(editor, sourceData) {
             break;
         case 'newtextbox':
             var defaultPlaceholder = '_';
-            if(!sourceData['_placeholder']){
-               sourceData['_placeholder'] = defaultPlaceholder;
+            if (!sourceData['_placeholder']) {
+                sourceData['_placeholder'] = defaultPlaceholder;
             }
-            element.setAttribute('_placeholder',sourceData['_placeholder']);
+            element.setAttribute('_placeholder', sourceData['_placeholder']);
             var childrenSpan = element.$.children;
             if (childrenSpan) {
                 if ($(childrenSpan).attr('_placeholdertext')) {
@@ -238,6 +236,18 @@ function _handleEdit(editor, sourceData) {
                 sourceData._selecttype && newtextPlaceholder.attr('_selecttype', sourceData._selecttype);
                 sourceData._jointsymbol && newtextPlaceholder.attr('_jointsymbol', sourceData._jointsymbol);
 
+            } else if (_texttype == '二维码') {
+                newtextPlaceholder.removeAttr('_precision');
+                newtextPlaceholder.removeAttr('_timetype');
+                newtextPlaceholder.removeAttr('data-hm-items');
+                newtextPlaceholder.removeAttr('_selecttype');
+                newtextPlaceholder.removeAttr('_jointsymbol');
+            } else if (_texttype == '条形码') {
+                newtextPlaceholder.removeAttr('_precision');
+                newtextPlaceholder.removeAttr('_timetype');
+                newtextPlaceholder.removeAttr('data-hm-items');
+                newtextPlaceholder.removeAttr('_selecttype');
+                newtextPlaceholder.removeAttr('_jointsymbol');
             }
 
 
@@ -251,7 +261,77 @@ function _handleEdit(editor, sourceData) {
                 }
             }
 
+            // 如果是二维码类型，更新二维码预览
+            if (sourceData._texttype == '二维码') {
+                // 获取二维码配置参数
+                var qrcodeWidth = sourceData._qrcode_width || '100';
+                var qrcodeHeight = sourceData._qrcode_height || '100';
+                var errorLevel = sourceData._qrcode_error_level || 'M';
+                var textPosition = sourceData._qrcode_text_position || 'bottom';
+                var previewText = '123456';
+                
+                // 尝试获取编辑器的二维码生成方法并更新预览
+                try {
+                    var _t = window.hmEditor.documentModel;
+                    if (_t.generateQrcode) {
+                        newtextPlaceholder.removeAttr('_placeholdertext');
 
+                        // 使用通用二维码生成方法更新预览
+                        _t.generateQrcode({
+                            text: previewText,
+                            width: qrcodeWidth,
+                            height: qrcodeHeight,
+                            errorLevel: errorLevel,
+                            textPosition: textPosition,
+                            container: newtextPlaceholder
+                        }).catch(function(error) {
+                            console.log('二维码预览更新失败，保持原有显示:', error);
+                        });
+                    } else {
+                        console.log('二维码生成方法不可用，保持原有显示');
+                    }
+                } catch (error) {
+                    console.log('二维码预览更新出错:', error);
+                }
+            } else if (sourceData._texttype == '条形码') {
+                // 获取条形码配置参数
+                var barcodeWidth = sourceData._barcode_width || '200';
+                var barcodeHeight = sourceData._barcode_height || '50';
+                var barWidth = sourceData._barcode_bar_width || '2';
+                var textPosition = sourceData._barcode_text_position || 'bottom';
+                var previewText = '123456';
+                
+                // 尝试获取编辑器的条形码生成方法并更新预览
+                try {
+                    var _t = window.hmEditor.documentModel;
+                    if (_t.generateBarcodeSync) {
+                        newtextPlaceholder.removeAttr('_placeholdertext');
+                        // 使用同步条形码生成方法更新预览
+                        var barcodeHTML = _t.generateBarcodeSync({
+                            text: previewText,
+                            width: barcodeWidth,
+                            height: barcodeHeight,
+                            barWidth: barWidth,
+                            textPosition: textPosition
+                        });
+                        newtextPlaceholder.html(barcodeHTML);
+                        console.log('条形码预览更新成功');
+                    } else {
+                        console.log('条形码生成方法不可用，保持原有显示');
+                    }
+                } catch (error) {
+                    console.log('条形码预览更新出错:', error);
+                }
+            } else {
+                if (newtextPlaceholder.find('.hm-qrcode-container').length > 0) {
+                    newtextPlaceholder.find('.hm-qrcode-container').remove();
+                    newtextPlaceholder.text(sourceData['_placeholder']);
+                }
+                if (newtextPlaceholder.find('.hm-barcode-container').length > 0) {
+                    newtextPlaceholder.find('.hm-barcode-container').remove();
+                    newtextPlaceholder.text(sourceData['_placeholder']);
+                }
+            }
 
             break;
         case 'searchbox':
@@ -272,20 +352,23 @@ function _handleEdit(editor, sourceData) {
     element.setAttribute('data-hm-name', sourceData['data-hm-name']);
 
 }
-function removeDefineAttr(element){
-    if(!element){
+
+function removeDefineAttr(element) {
+    if (!element) {
         return;
     }
     var names = element.getAttributeNames();
     var len = names.length;
-    for(var i=0;i<len;i++){
+    for (var i = 0; i < len; i++) {
         var cn = names[i] || '';
-        if(cn.indexOf('_') == 0){
+        if (cn.indexOf('_') == 0) {
             element.removeAttribute(cn);
         }
     }
 }
+
 function _handleCreate(editor, sourceData) {
+    // sourceData.autoLable = true; 
     var ranges = editor.getSelection().getRanges();
     var legalRange = true;
     if (ranges.length == 1 && ranges[0].collapsed) {
@@ -299,7 +382,7 @@ function _handleCreate(editor, sourceData) {
     } else {
         legalRange = false;
     }
-    if (editor.elementPath().contains('span') && editor.elementPath().contains('span').hasClass('new-textbox-content')) {
+    if (editor.elementPath() && editor.elementPath().contains('span') && editor.elementPath().contains('span').hasClass('new-textbox-content')) {
         legalRange = true;
     }
     var td = editor.elementPath().contains('td');
@@ -317,6 +400,7 @@ function _handleCreate(editor, sourceData) {
         if (sourceData.type != 'labelbox') {
             node.setAttribute('data-hm-id', wrapperUtils.getGUID());
         }
+
         var attrs = Object.keys(sourceData);
         for (var i = 0; i < attrs.length; i++) {
             var attrKey = attrs[i];
@@ -326,12 +410,20 @@ function _handleCreate(editor, sourceData) {
             }
         }
 
-
-
-
         editor.fire('lockSnapshot');
         editor.editable().insertText('\u200B');
 
+        // 自动插入labelbox标题
+        if (sourceData['autoLable'] && sourceData['data-hm-node'] != 'labelbox') { 
+            var labelboxNode = new CKEDITOR.dom.element('span');
+            labelboxNode.setText('\u200B');
+            labelboxNode.setAttribute('contentEditable', 'false');
+            labelboxNode.setAttribute('data-hm-id', wrapperUtils.getGUID());
+            labelboxNode.setAttribute('data-hm-node', 'labelbox');
+            labelboxNode.setAttribute('data-hm-name', sourceData['data-hm-name'] + ':');
+            labelboxNode.setText(sourceData['data-hm-name'] + ':');
+            editor.editable().insertElement(labelboxNode);
+        }
 
         switch (sourceData['data-hm-node']) {
             case 'labelbox':
@@ -340,7 +432,7 @@ function _handleCreate(editor, sourceData) {
                 break;
             case 'newtextbox':
                 var defaultPlaceholder = '_';
-                if(!sourceData['_placeholder']){
+                if (!sourceData['_placeholder']) {
                     sourceData['_placeholder'] = defaultPlaceholder;
                 }
                 var newtextbox = node.clone(true);
@@ -350,7 +442,7 @@ function _handleCreate(editor, sourceData) {
                 newtextPlaceholder.addClass('new-textbox-content');
                 newtextPlaceholder.setAttribute('_placeholderText', true);
                 newtextPlaceholder.setAttribute('contentEditable', 'true');
-                newtextPlaceholder.setText( sourceData['_placeholder']);
+                newtextPlaceholder.setText(sourceData['_placeholder']);
 
 
                 for (var i = 0; i < attrs.length; i++) {
@@ -364,8 +456,69 @@ function _handleCreate(editor, sourceData) {
 
                 if (sourceData._texttype == '下拉') {
                     sourceData['data-hm-items'] && newtextPlaceholder.setAttribute('data-hm-items', sourceData['data-hm-items']);
-
-
+                }
+                
+                // 如果是二维码类型，创建预览二维码
+                if (sourceData._texttype == '二维码') {
+                    // 获取二维码配置参数
+                    var qrcodeWidth = sourceData._qrcode_width || '100';
+                    var qrcodeHeight = sourceData._qrcode_height || '100';
+                    var errorLevel = sourceData._qrcode_error_level || 'M';
+                    var textPosition = sourceData._qrcode_text_position || 'bottom';
+                    var previewText = '123456';
+                    
+                    // 尝试获取编辑器的二维码生成方法并生成预览
+                    try {
+                        var _t = window.hmEditor.documentModel;
+                        if (_t.generateQrcode) {
+                            $(newtextPlaceholder.$).removeAttr('_placeholdertext');
+                            // 使用通用二维码生成方法创建预览
+                            _t.generateQrcode({
+                                text: previewText,
+                                width: qrcodeWidth,
+                                height: qrcodeHeight,
+                                errorLevel: errorLevel,
+                                textPosition: textPosition,
+                                container: $(newtextPlaceholder.$)
+                            }).catch(function(error) {
+                                console.log('二维码预览生成失败，使用默认占位符:', error);
+                                // 如果生成失败，保持原有的占位符
+                            });
+                        } else {
+                            console.log('二维码生成方法不可用，使用默认占位符');
+                        }
+                    } catch (error) {
+                        console.log('二维码预览生成出错:', error);
+                    }
+                } else if (sourceData._texttype == '条形码') {
+                    // 获取条形码配置参数
+                    var barcodeWidth = sourceData._barcode_width || '200';
+                    var barcodeHeight = sourceData._barcode_height || '50';
+                    var barWidth = sourceData._barcode_bar_width || '2';
+                    var textPosition = sourceData._barcode_text_position || 'bottom';
+                    var previewText = '123456';
+                    
+                    // 尝试获取编辑器的条形码生成方法并生成预览
+                    try {
+                        var _t = window.hmEditor.documentModel;
+                        if (_t.generateBarcodeSync) {
+                            $(newtextPlaceholder.$).removeAttr('_placeholdertext');
+                            // 使用同步条形码生成方法创建预览
+                            var barcodeHTML = _t.generateBarcodeSync({
+                                text: previewText,
+                                width: barcodeWidth,
+                                height: barcodeHeight,
+                                barWidth: barWidth,
+                                textPosition: textPosition
+                            });
+                            $(newtextPlaceholder.$).html(barcodeHTML);
+                            console.log('条形码预览生成成功');
+                        } else {
+                            console.log('条形码生成方法不可用，使用默认占位符');
+                        }
+                    } catch (error) {
+                        console.log('条形码预览生成出错:', error);
+                    }
                 }
 
                 newtextbox.append(newtextPlaceholder);
@@ -480,9 +633,9 @@ function _handleCreate(editor, sourceData) {
                 var widget = editor.widgets.initOn(wrapNode, 'textboxWidget');
                 //editor.execCommand( 'textboxWidget' );
                 break;
-            // case 'button':
-            //     editor.editable().insertElement(node);
-            //     break;
+                // case 'button':
+                //     editor.editable().insertElement(node);
+                //     break;
             default:
                 editor.showNotification('请选择一种数据元类型');
                 break;
@@ -562,8 +715,8 @@ function _handleCascade(node, target) {
     }
 }
 // 级联数据元处理
-function _handleRelevance(node){
-    if(node.hasClass('new-textbox-content')){
+function _handleRelevance(node) {
+    if (node.hasClass('new-textbox-content')) {
         node = $(node.parent()[0]);
     }
     if (!node.attr('_relevance')) {
@@ -571,7 +724,7 @@ function _handleRelevance(node){
     }
     var relevanceArr = JSON.parse(node.attr('_relevance'));
     var val = getVal(node).replace(zeroWidthChar, '');
-    console.log('值------------'+val)
+    console.log('值------------' + val)
     var valArr = [];
     var nodeType = node.attr('data-hm-node');
     switch (nodeType) {
@@ -580,7 +733,7 @@ function _handleRelevance(node){
             if (_texttype == '下拉') {
                 var jointsymbol = node.attr('_jointSymbol') || ',';
                 valArr = val.split(jointsymbol);
-            }else{
+            } else {
                 valArr = [val];
             }
             break;
@@ -618,21 +771,21 @@ function _handleRelevance(node){
                     case 'radiobox':
                         ele.find('span[data-hm-node="radiobox"]').removeClass('fa-dot-circle-o').addClass('fa-circle-o').removeAttr('_selected');
                         if (关联数据元值 != '置空') {
-                            ele.find('span[data-hm-node="radiobox"][data-hm-itemname="'+关联数据元值+'"]').removeClass('fa-circle-o').addClass('fa-dot-circle-o').attr('_selected','true');
+                            ele.find('span[data-hm-node="radiobox"][data-hm-itemname="' + 关联数据元值 + '"]').removeClass('fa-circle-o').addClass('fa-dot-circle-o').attr('_selected', 'true');
                         }
-                    case 'checkbox':
-                        if (关联数据元值 == '置空') {
-                            ele.find('span[data-hm-node="checkbox"]:not([data-hm-node="labelbox"])').removeClass('fa-check-square-o').addClass('fa-square-o').removeAttr('_selected');
-                        } else {
-                            ele.find('[data-hm-itemname='+关联数据元值+']:not([data-hm-node="labelbox"])').removeClass('fa-square-o').addClass('fa-check-square-o').attr('_selected', 'true');
-                        }
-                        break;
-                    default:
-                        break;
+                        case 'checkbox':
+                            if (关联数据元值 == '置空') {
+                                ele.find('span[data-hm-node="checkbox"]:not([data-hm-node="labelbox"])').removeClass('fa-check-square-o').addClass('fa-square-o').removeAttr('_selected');
+                            } else {
+                                ele.find('[data-hm-itemname=' + 关联数据元值 + ']:not([data-hm-node="labelbox"])').removeClass('fa-square-o').addClass('fa-check-square-o').attr('_selected', 'true');
+                            }
+                            break;
+                        default:
+                            break;
                 }
             }
         }
-        if(关联数据元显示隐藏){
+        if (关联数据元显示隐藏) {
             if (关联数据元显示隐藏 == '显示') {
                 if (valArr.includes(当前数据元值)) {
                     ele.show();
@@ -690,4 +843,3 @@ function getVal(el) {
     }
     return spanObj.keyValue;
 }
-

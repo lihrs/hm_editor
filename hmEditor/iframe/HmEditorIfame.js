@@ -3,9 +3,9 @@
  * 封装基于CKEditor 4.0的编辑器，提供统一的API接口
  */
 (function (window) {
-    // 自动注入 HmEditorMcpBridge.js 脚本，确保 MCPHandler 可用
     (function () {
-        if (!window.MCPHandler) {
+        var bool_skip_mcp = true;
+        if (!window.MCPHandler && !bool_skip_mcp) {
             var script = document.createElement('script');
 
             // 动态计算 HmEditorMcpBridge.js 的路径
@@ -47,6 +47,9 @@
                 console.error('尝试加载的路径:', script.src);
             };
             document.head.appendChild(script);
+        } else {
+            //console.log('不启动MCPHandler，仅仅Mock会话！');
+            window.SKIP_MCP_HANDLER = bool_skip_mcp;
         }
     })();
 
@@ -104,9 +107,10 @@
             this.mcpHandler = null; // MCP 处理器
             this.mcpConfig = null; // MCP 配置
             // 只有在 MCPHandler 可用时才自动初始化 MCP
-            if (window.MCPHandler) {
+            if (window.MCPHandler && !window.SKIP_MCP_HANDLER) {
                 this.autoInitMCP();
             } else {
+                this.mcpHandler = {sessionId:"DUMMY"};
                 console.log('⚠️ MCPHandler 未加载，跳过自动初始化 MCP');
             }
         },
@@ -147,9 +151,11 @@
          * @param {Boolean} options.designMode 设计模式开关，true开启设计模式，默认false
          * @param {Boolean} options.reviseMode 修订模式开关，true开启修订模式，默认false
          * @param {Boolean} options.readOnly 只读模式开关，true开启只读模式，默认false
+         * @param {Boolean} options.editShowPaddingTopBottom 编辑时纸张设置里面的上下边距是否有效，true为有效，默认为false
          * @param {Object} options.style iframe样式
          * @param {String} options.sdkHost 加载sdk地址
          * @param {Object} options.editorConfig 编辑器配置
+         * @param {Array} options.editorConfig.contentsCss 编辑器配置样式
          * @param {Object} options.customParams 自定义参数 动态数据源接口入参 例：{departmentCode:'0001',doctorCode:'0001'}
          * @param {Array} options.customToolbar 自定义工具栏 例：[{name:'customButton',label:'自定义按钮',icon:'/path/to/icon.png',toolbarGroup:'insert',onExec:function(editor){},onRefresh:function(editor,path){}}]
          * @param {Object} options.printConfig 打印配置
@@ -234,9 +240,11 @@
          * @param {String} options.id iframe唯一标识
          * @param {Object} options.style iframe样式
          * @param {Object} options.editorConfig 编辑器配置
+         * @param {Array} options.editorConfig.contentsCss 编辑器配置样式
          * @param {Boolean} options.designMode 设计模式开关，true开启设计模式，默认false
          * @param {Boolean} options.reviseMode 修订模式开关，true开启修订模式，默认false
          * @param {Boolean} options.readOnly 只读模式开关，true开启只读模式，默认false
+         * @param {Boolean} options.editShowPaddingTopBottom 编辑时纸张设置里面的上下边距是否有效，true为有效，默认为false
          * @param {Object} options.customParams 自定义参数 动态数据源接口入参 例：{departmentCode:'0001',doctorCode:'0001'}
          * @param {Array} options.sdkHost 加载sdk地址
          * @param {Array} options.customToolbar 自定义工具栏 例：[{name:'customButton',label:'自定义按钮',icon:'/path/to/icon.png',toolbarGroup:'insert',onExec:function(editor){},onRefresh:function(editor,path){}}]
@@ -303,9 +311,11 @@
                 _this._loadIframeContent(id, function () {
                     // 初始化编辑器
                     var iframeWin = iframe.contentWindow;
+
                     var hmEditor = iframeWin.hmEditor = new iframeWin.HMEditor(options, function (hmEditor) {
                         if (_this.loaders[id]) {
                             hmEditor.sessionId = _this.mcpHandler.sessionId;
+
                             _this.loaders[id].hmEditor = hmEditor;
                             // 使用Promise解析编辑器对象
                             resolve(hmEditor);
@@ -508,6 +518,8 @@
                 '/vendor/konva.min.js',
                 '/vendor/bootstrap.min.js',
                 '/vendor/underscore-min.js',
+                '/vendor/qrcode.min.js',
+                '/vendor/jsbarcode.min.js',
                 '/wrapper/wrapperUtils.js',
                 '/wrapper/hmgrowl/index.js',
                 '/ckeditor.js',
@@ -552,13 +564,17 @@
          * @param {*} autherEntity.hospitalName 医院名称 非必要字段
          * @param {*} autherEntity.customEnv
          * @param {*} autherEntity.flag m 住院 c 门诊
+         * @param {*} cusMayson 客户端mayson true 客户端已接入mayson，false 需要依赖编辑器mayson
          * @returns
          */
-        aiAuth: function (autherEntity, recordMap, isAi) {
+        aiAuth: function (autherEntity, recordMap, cusMayson, isAi) {
             var _t = this;
             _t.setAiToken(autherEntity.authToken);
             _t.autherEntity = autherEntity;
             _t.recordMap = recordMap; // 病历文书映射表
+            if (cusMayson) {
+                return;
+            } else {
             return new Promise(function (resolve, reject) {
                 console.log('资源加载的地址', autherEntity.aiServer + '/hm_static/jssdk/jssdk_cdss_4.0.js');
                 if (!window.HM) {
@@ -568,15 +584,16 @@
                             reject(err);
                             return;
                         }
-                        _t.loadMayson(resolve,reject,autherEntity, isAi);
+                            _t.loadMayson(resolve, reject, autherEntity, isAi);
 
                     });
                 } else {
-                    _t.loadMayson(resolve,reject,autherEntity, isAi);
+                        _t.loadMayson(resolve, reject, autherEntity, isAi);
                 }
             });
+            }
         },
-        loadMayson: function (resolve,reject,autherEntity, isAi) {
+        loadMayson: function (resolve, reject, autherEntity, isAi) {
             if (window.HM) {
                 if (isAi == 1) {
                     window.HM.config.isembed = 1;
@@ -585,7 +602,8 @@
                     HM.maysonLoader(autherEntity, function (mayson) {
                         //加载编辑器助手
                         mayson.setDrMaysonConfig('m', 3);
-                        resolve(mayson);
+                        window.mayson = mayson;
+                        resolve(true);
                         // mayson 内嵌展示，先不发布
                     }, 'assistantSmartPanel');
                 } else {
@@ -594,9 +612,10 @@
                     // window.HM.config.formsSizeType = 2;
                     // window.HM.config.accessType = 3;
                     HM.maysonLoader(autherEntity, function (mayson) {
+                        window.mayson = mayson;
                         //加载编辑器助手
                         // mayson.setDrMaysonConfig('m', 3); // mayson 内嵌展示，先不发布
-                        resolve(mayson);
+                        resolve(true);
                     });
                     // mayson 内嵌展示，先不发布
                     // }, 'assistantSmartPanel');

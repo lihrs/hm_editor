@@ -103,19 +103,19 @@ commonHM.component['hmAi'].fn({
     bindReminderEvents: function() {
         var _t = this;
         // 绑定忽略全部按钮事件
-        _t.$body.on('click', '.btt-ignore-all', function() {
+        _t.$body.find(".doc-reminder").on('click', '.btt-ignore-all', function() {
             _t.$reminderPanel = _t.$body.find('.doc-reminder');
             _t.handleIgnoreAll();
         });
 
         // 绑定查看全部按钮事件
-        _t.$body.on('click', '.btt-view-all', function() {
+        _t.$body.find(".doc-reminder").on('click', '.btt-view-all', function() {
             _t.$reminderPanel = _t.$body.find('.doc-reminder');
             _t.handleViewAll();
         });
 
         // 绑定单个忽略按钮事件
-        _t.$body.on('click', '.btt-ignore', function() {
+        _t.$body.find(".doc-reminder").on('click', '.btt-ignore', function() {
             _t.$reminderPanel = _t.$body.find('.doc-reminder');
             var uucode = $(this).attr('uucode');
             var item = _t.cachWarn[uucode];
@@ -125,7 +125,7 @@ commonHM.component['hmAi'].fn({
         });
 
         // 绑定评估按钮事件
-        _t.$body.on('click', '.btt-evalute', function() {
+        _t.$body.find(".doc-reminder").on('click', '.btt-evalute', function() {
             _t.$reminderPanel = _t.$body.find('.doc-reminder');
             var uucode = $(this).attr('uucode');
             _t.handleEvaluateClick(uucode);
@@ -215,7 +215,7 @@ commonHM.component['hmAi'].fn({
         var list = _t.reminderList.slice(0,10); // 只显示10条
         _t.$reminderAllPanel = $(tpl);
           // 将模板添加到编辑器
-          $('body').append(_t.$reminderAllPanel);
+        $('body').append(_t.$reminderAllPanel);
         _t.$reminderAllPanel.find('.doc-reminder-list').css({
             'height': 'calc(100% - 30px)'
         }).append($.getTpl($docAi_tpl['docAi/tpl/reminder'],{list:list || []}));
@@ -263,10 +263,7 @@ commonHM.component['hmAi'].fn({
      * @param {Object} uucode - 要移除的提醒项
      */
     removeReminderItem: function(uucode) {
-        var _t = this;
-
-
-
+        var _t = this; 
         // 从列表中移除
         var index = -1;
         for (var i = 0; i < _t.reminderList.length; i++) {
@@ -342,9 +339,7 @@ commonHM.component['hmAi'].fn({
             if(_t.$reminderAllPanel){
                 _t.$reminderAllPanel.find('.doc-reminder-item[uucode="' +uucode + '"]').remove();
                 _t.$reminderAllPanel.find('.doc-reminder-number-idx').text('['+_t.reminderCount + ']');
-            }
-
-
+            } 
         }
     }
 });

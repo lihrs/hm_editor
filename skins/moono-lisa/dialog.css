@@ -431,7 +431,7 @@ It is possible to have nested V/H-Boxes.
 .cke_dialog_ui_hbox_child,
 .cke_dialog_ui_hbox_last
 {
-	vertical-align: top;
+	vertical-align: middle;
 }
 
 .cke_ltr .cke_dialog_ui_hbox_first,
@@ -896,6 +896,7 @@ select.cke_dialog_ui_input_select
 .cke_dialog fieldset .cke_dialog_ui_vbox .cke_dialog_ui_checkbox .cke_dialog_ui_checkbox_input,
 .cke_dialog fieldset .cke_dialog_ui_vbox .cke_dialog_ui_checkbox .cke_dialog_ui_checkbox_input + label {
 	vertical-align: middle;
+    margin:0;
 }
 
 /*
@@ -1017,9 +1018,10 @@ a.cke_specialchar
 {
 	cursor: inherit;
 	display: block;
-	height: 1.25em;
+	/* height: 1.25em; */
 	padding: 0.2em 0.3em;
 	text-align: center;
+    line-height: 1.25em;
 }
 
 a.cke_smile,

@@ -29,14 +29,14 @@
                     // 表单模式 除了数据元其他内容禁用编辑
                     if ($body.find('.switchModel').length == 0) {
                         $body.html("<div contenteditable='false' class='switchModel'>" + $body.html() + "</div>");
-                        $body.find('.emrWidget-content').attr('contenteditable', 'false');
+                        $body.find('.emrWidget-content').attr('contenteditable', 'false').attr('_contenteditable', 'false');
                     }
                 } else {
                     if ($body.find('.switchModel').length > 0) {
                         $body.html($body.find('.switchModel').html());
                     }
                     // 编辑模式 其他内容也可以编辑
-                    $body.find('.emrWidget-content').attr('contenteditable', 'true');
+                    $body.find('.emrWidget-content').attr('contenteditable', 'true').removeAttr('_contenteditable');
                 }
             });
             editor.ui.addRichCombo('SwitchModel', {

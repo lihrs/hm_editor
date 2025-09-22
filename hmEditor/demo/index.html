@@ -89,6 +89,10 @@
                                 <button id="btnGetText">获取TEXT</button>
                                 <button id="btnGetMetaData">获取数据元</button>
                                 <button id="btnExportPdf">下载PDF</button>
+                                <button id="btnCustomProperties">自定义属性</button>
+                                <button id="btnRevisionHistory">修订记录</button>
+                                <button id="btnMultiPartHeader">设置分段页眉</button>
+                                <button id="btnInsMetaData" disabled class="next-feature-btn">插入数据元</button>
                                 <button id="btnHmAiToken" disabled class="next-feature-btn">AI令牌</button>
                                 <button id="btnHmAiAuth" disabled class="next-feature-btn">AI认证</button>
                                 <button id="btnHmAiGen" disabled class="next-feature-btn">指尖AI</button>
@@ -208,6 +212,30 @@
                 </div>
             </div>
 
+            <!-- 插入数据元_输入框 -->
+            <div class="dialogBox insertMetaDataInfo">
+                <h3>演示用 - 输入数据元参数</h3>
+                <div class="option-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="autoLablebox" checked="checked"> 自动添加数据元标题
+                    </label>
+                </div>
+                <textarea placeholder="请输入JSON格式的数据元内容"
+                    style="height:220px;min-height:120px;resize:vertical;white-space:pre;overflow:auto;"></textarea>
+                <div class="quick-links">
+                    快速载入:
+                    <a href="javascript:void(0);" class="quick-link quick-link-metadata"
+                        data-file="file/metadata_sample_001.json">例_姓名</a>
+                    <a href="javascript:void(0);" class="quick-link quick-link-metadata"
+                        data-file="file/metadata_sample_002.json">例_出生日期</a> 
+                </div>
+                <div>
+                    <button id="btnConfirmMetaData" class="dialog-btn btn-primary">确定</button>
+                    <button id="btnCancelMetaData" class="dialog-btn">取消</button>
+                    <div class="help-text">输入数据元JSON配置信息</div>
+                </div>
+            </div>
+
             <!-- 设置数据对话框 -->
             <div class="dataInputDialog">
                 <h3>演示用 - 输入数据参数</h3>
@@ -287,6 +315,17 @@
                 </div>
             </div>
 
+            <!-- 获取修订记录对话框 -->
+            <div class="dialogBox getRevisionHistoryDialog">
+                <h3>演示用 - 获取修订记录</h3>
+                <textarea placeholder="请输入文档唯一编号（可选）"></textarea>
+                <div>
+                    <button id="btnConfirmGetRevisionHistory" class="dialog-btn btn-primary">确定</button>
+                    <button id="btnCancelGetRevisionHistory" class="dialog-btn">取消</button>
+                    <div class="help-text">参数为空，获取当前文档的修订记录</div>
+                </div>
+            </div>
+
             <!-- 设置水印对话框 -->
             <div class="dialogBox setWatermarkDialog">
                 <h3>演示用 - 水印设置</h3>
@@ -357,7 +396,19 @@
 
             <!-- 获取病历数据传参对话框 -->
             <div class="dialogBox getDataDialog">
-                <h3 id="contentTitle">演示用 - 输入获取病历参数</h3>
+                <h3 id="getDataDialogTitle">演示用 - 输入获取病历参数</h3>
+                <!-- 数据类型选择 -->
+                <div class="input-group" id="dataTypeSelection" style="display: none;">
+                    <label>数据类型：</label>
+                    <div style="margin-top: 4px;">
+                        <label style="margin-right: 20px;">
+                            <input type="radio" name="dataTypeMode" value="metadata" checked> 获取数据元
+                        </label>
+                        <!-- <label>
+                            <input type="radio" name="dataTypeMode" value="tabledata"> 获取列表类表格数据
+                        </label> -->
+                    </div>
+                </div>
                 <textarea placeholder=""></textarea>
                 <div>
                     <button id="btnAddParamsText" class="dialog-btn" style="display: none;">快速录入</button>
@@ -450,6 +501,17 @@
                 </div>
             </div>
 
+            <!-- 分段页眉设置弹框 -->
+            <div class="multiPartHeaderDialog dialogBox" style="display:none;">
+                <h3>分段页眉设置</h3>
+                <textarea id="multiPartHeaderJson"
+                    style="width:100%;height:240px;white-space:pre;overflow:auto;resize:vertical;font-family:monospace;font-size:14px;"></textarea>
+                <div style="margin-top:18px;text-align:right;">
+                    <button id="multiPartHeaderOkBtn" class="dialog-btn btn-primary">确定</button>
+                    <button id="multiPartHeaderCancelBtn" class="dialog-btn">取消</button>
+                </div>
+            </div>
+
             <!-- 通用alert弹框 -->
             <div id="customAlertDialog"
                 style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.15);align-items:center;justify-content:center;">
@@ -507,6 +569,63 @@
                         <button id="closeAiSettingsBtn" class="dialog-btn">取消</button>
                     </div>
                     <div style="color:#888;font-size:13px;margin-top:8px;">请填写MCP/LLM完整配置，支持多服务和大模型参数，uuid自动生成。</div>
+                </div>
+            </div>
+
+            <!-- 自定义属性对话框 -->
+            <div class="dialogBox customPropertiesDialog" style="display:none;">
+                <h3 id="customPropsTitle">演示用 - 自定义属性</h3>
+                <!-- 操作模式切换 -->
+                <div class="input-group">
+                    <label>操作模式：</label>
+                    <div style="margin-top: 4px;">
+                        <label style="margin-right: 20px;">
+                            <input type="radio" name="customPropsMode" value="add" checked> 增加
+                        </label>
+                        <label style="margin-right: 20px;">
+                            <input type="radio" name="customPropsMode" value="delete"> 删除
+                        </label>
+                        <label>
+                            <input type="radio" name="customPropsMode" value="get"> 获取数据
+                        </label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>病历编码：</label>
+                    <input type="text" id="customPropsDocCode" placeholder="请输入病历唯一编码">
+                </div>
+                <div class="input-group">
+                    <label>节点标识：</label>
+                    <input type="text" id="customPropsNodeId" placeholder="请输入节点唯一标识">
+                </div>
+                <!-- 添加属性模式的输入框 -->
+                <div class="input-group" id="customPropsAddGroup">
+                    <label>自定义属性：</label>
+                    <textarea id="customPropsData" placeholder="请输入JSON格式的自定义属性数组如：[{&quot;name&quot;: &quot;&quot;, &quot;value&quot;: &quot;&quot;}]" rows="6"></textarea>
+                </div>
+                <!-- 删除属性模式的输入框 -->
+                <div class="input-group" id="customPropsDeleteGroup" style="display:none;">
+                    <label>要删除的属性名称：</label>
+                    <textarea id="customPropsDeleteNames" placeholder="请输入要删除的属性名称数组，如：[&quot;patientId&quot;, &quot;department&quot;]" rows="4"></textarea>
+                </div>
+                <!-- 获取数据模式的输入框 -->
+                <div class="input-group" id="customPropsGetGroup" style="display:none;">
+                    <label>获取参数：</label>
+                    <textarea id="customPropsGetParams" placeholder="请输入要获取的属性名称数组，如：[&quot;patientId&quot;, &quot;department&quot;]" rows="4"></textarea>
+                </div>
+                <div class="quick-links">
+                    快速载入:
+                    <a href="javascript:void(0);" class="quick-link quick-link-customProps" data-type="example1">示例1</a>
+                    <a href="javascript:void(0);" class="quick-link quick-link-customProps" data-type="example2">示例2</a>
+                    <a href="javascript:void(0);" class="quick-link quick-link-customProps" data-type="delete1" style="display:none;">删除示例1</a>
+                    <a href="javascript:void(0);" class="quick-link quick-link-customProps" data-type="delete2" style="display:none;">删除示例2</a>
+                    <a href="javascript:void(0);" class="quick-link quick-link-customProps" data-type="get1" style="display:none;">获取示例1</a>
+                    <a href="javascript:void(0);" class="quick-link quick-link-customProps" data-type="get2" style="display:none;">获取示例2</a>
+                </div>
+                <div>
+                    <button id="btnConfirmCustomProps" class="dialog-btn btn-primary">确定</button>
+                    <button id="btnCancelCustomProps" class="dialog-btn">取消</button>
+                    <div class="help-text" id="customPropsHelpText">设置文档的自定义属性信息</div>
                 </div>
             </div>
 

@@ -23,6 +23,9 @@ commonHM.component['hmAi'].fnSub("generator", {
         _t.batchProcessedCount = 0;
         _t.batchTotalCount = 0;
         _t.batchProcessing = false;
+        $(window).resize(function () {
+            _t.setPosition();
+        });
     },
     /**
      * 调用提醒端api 生成内容
@@ -48,7 +51,7 @@ commonHM.component['hmAi'].fnSub("generator", {
         _t.target = traget;
         _t.fillIndex=0;//回填索引
         var content = utils.getContent(JTar);
-        var uuId = utils.getUUId();
+        var uuId = utils.getUUId(); 
         var position = utils.getPosition(JTar.closest('p')[0]);
         var keyTar = JTar.closest('span[data-hm-code]');
         editorTool.callCommand('openGenRecord',{
@@ -95,7 +98,7 @@ commonHM.component['hmAi'].fnSub("generator", {
                     _t.processNextBatchNode();
                 }
             }
-
+           
         })
         //直接生成
         // if(type==2){
@@ -115,7 +118,7 @@ commonHM.component['hmAi'].fnSub("generator", {
         var editorTool = _t.parent.editorTool,
             utils = _t.parent.utils;
         if(editorTool && editorTool.callCommand('isOpen')){
-            var position = utils.getPosition($(_t.target).closest('p')[0]);
+            var position = utils.getPosition($(_t.target).closest('p')[0]); 
             editorTool.callCommand('setPosition',position);
         }
     },

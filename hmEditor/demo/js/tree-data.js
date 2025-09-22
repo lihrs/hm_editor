@@ -3,17 +3,6 @@
  * 用于HM Editor Demo中的文档树管理
  */
 const documentTreeData = [
-    //{
-    //     id: 'medical_record', // 测试case
-    //     docName: '测试病历数据元',
-    //     type: 'folder',
-    //     children: [{
-    //         docCode: 'template1749724711692',
-    //         docPath: 'file/testRecord.html',
-    //         docName: '测试病历数据元',
-    //         type: 'file-edit'
-    //     }]
-    // },
     {
        id: 'medical_record',
        docName: '病案首页',

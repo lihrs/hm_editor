@@ -161,11 +161,17 @@ CKEDITOR.plugins.add( 'table', {
 		if ( editor.contextMenu ) {
 			editor.contextMenu.addListener( function( element, selection, path ) {
 				// menu item state is resolved on commands.
+				var obj = {};
+				
+				// 检查表格是否设置了删除表格属性（不受设计模式控制）
+				var table = path.contains( 'table', 1 );
+				if ( table && table.getAttribute('table_delete_table') ) {
+					obj.tabledelete = CKEDITOR.TRISTATE_OFF;
+				}
+				
 				if (editor.HMConfig.designMode) {
-					var obj = {
-						tabledelete: CKEDITOR.TRISTATE_OFF,
-						table: CKEDITOR.TRISTATE_OFF,
-					}
+					obj.table = CKEDITOR.TRISTATE_OFF;
+					
 					var td = path.contains({ 'td': 1 }, 1);
 					var svg = path.contains({ 'svg': 1 }, 1);
 					if (td && !td.isReadOnly()) {
@@ -174,9 +180,8 @@ CKEDITOR.plugins.add( 'table', {
 					if (svg && !svg.isReadOnly()) {
 						obj.romoveline = CKEDITOR.TRISTATE_OFF;
 					}
-					return obj;
 				}
-				return {};
+				return obj;
 			} );
 		}
 		editor.on("group-table-op", function (d) {

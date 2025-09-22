@@ -83,7 +83,7 @@
 				]
 			],
 			panel: {
-				css: [ CKEDITOR.skin.getPath( 'editor' ) ].concat( config.contentsCss ),
+				css: [ CKEDITOR.skin.getPath( 'editor' )],
 				multiSelect: false,
 				attributes: { 'aria-label': lang.panelTitle }
 			},

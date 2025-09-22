@@ -16,6 +16,10 @@
         console.error.apply(console, arguments);
     }
 
+    function mcpWarn() {
+        console.error.apply(console, arguments);
+    }
+
     // WebSocket连接状态监控器
     var WebSocketMonitor = function() {
         this.mcpHandler = null;
@@ -38,13 +42,13 @@
          */
         startMonitoring: function(mcpHandler) {
             if (this.isMonitoring) {
-                console.log('WebSocket监控已在运行中');
+                mcpLog('WebSocket监控已在运行中');
                 return;
             }
 
             this.mcpHandler = mcpHandler;
             this.isMonitoring = true;
-            console.log('🔍 开始监控WebSocket连接状态');
+            mcpLog('🔍 开始监控WebSocket连接状态');
 
             // 立即检查一次
             this.checkConnection();
@@ -72,7 +76,7 @@
          */
         checkConnection: function() {
             if (!this.mcpHandler) {
-                console.warn('MCP处理器未初始化，无法检查连接状态');
+                mcpWarn('MCP处理器未初始化，无法检查连接状态');
                 return;
             }
 
@@ -85,7 +89,7 @@
 
             // 如果正在连接中，跳过检查
             if (this.mcpHandler.isConnecting) {
-                console.log('🔍 WebSocket正在连接中，跳过状态检查');
+                mcpLog('🔍 WebSocket正在连接中，跳过状态检查');
                 return;
             }
 
@@ -100,16 +104,16 @@
 
             // 检查是否需要重连
             if (!isConnected) {
-                console.warn('⚠️ WebSocket连接已断开，尝试重连');
+                mcpWarn('⚠️ WebSocket连接已断开，尝试重连');
                 this.connectionStatus.lastError = '连接断开';
                 this.triggerReconnect();
             } else if (timeSinceLastHeartbeat > heartbeatTimeout) {
-                console.warn('⚠️ WebSocket心跳超时，尝试重连');
+                mcpWarn('⚠️ WebSocket心跳超时，尝试重连');
                 this.connectionStatus.lastError = '心跳超时';
                 this.triggerReconnect();
             } else {
                 this.connectionStatus.lastError = null;
-                //console.log('✅ WebSocket连接状态正常');
+                mcpLog('✅ WebSocket连接状态正常');
             }
         },
 
@@ -118,7 +122,7 @@
          */
         triggerReconnect: function() {
             if (this.mcpHandler && typeof this.mcpHandler.reconnect === 'function') {
-                console.log('🔄 触发WebSocket重连');
+                mcpLog('🔄 触发WebSocket重连');
                 this.mcpHandler.reconnect();
             }
         },
@@ -140,7 +144,7 @@
          * 手动重连
          */
         manualReconnect: function() {
-            console.log('🔄 手动触发WebSocket重连');
+            mcpLog('🔄 手动触发WebSocket重连');
             this.triggerReconnect();
         },
 
@@ -150,7 +154,7 @@
         resetReconnectAttempts: function() {
             if (this.mcpHandler) {
                 this.mcpHandler.reconnectAttempts = 0;
-                console.log('🔄 重置重连计数');
+                mcpLog('🔄 重置重连计数');
             }
         }
     };
@@ -779,7 +783,7 @@
     // 页面可见性变化时检查连接
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden && window.MCPHandler && window.MCPHandler.monitor && window.MCPHandler.monitor.isMonitoring) {
-            console.log('📱 页面变为可见，检查WebSocket连接状态');
+            mcpLog('📱 页面变为可见，检查WebSocket连接状态');
             setTimeout(() => {
                 window.MCPHandler.monitor.checkConnection();
             }, 1000);
@@ -789,7 +793,7 @@
     // 网络状态变化时检查连接
     window.addEventListener('online', function() {
         if (window.MCPHandler && window.MCPHandler.monitor && window.MCPHandler.monitor.isMonitoring) {
-            console.log('🌐 网络连接恢复，检查WebSocket连接状态');
+            mcpLog('🌐 网络连接恢复，检查WebSocket连接状态');
             setTimeout(() => {
                 window.MCPHandler.monitor.checkConnection();
             }, 2000);

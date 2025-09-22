@@ -129,7 +129,6 @@ HMEditor.fn({
      */
     initEditorConfig: function () {
         var _t = this;
-        _t.editor.showTools = true;
         _t.editor.options = _t.options;
         _t.editor.HMConfig = window.HMConfig = {
             designMode: _t.options.designMode || false,
@@ -143,12 +142,16 @@ HMEditor.fn({
             zeroWidthCharEnded: /[\u200B-\u200D\uFEFF]+$/g,
             watermark: {}, // 文档水印
             printConfig: _t.options.printConfig || {},
-            customParams: _t.options.customParams || {} // 自定义参数 动态数据源接口入参
+            customParams: _t.options.customParams || {}, // 自定义参数 动态数据源接口入参
+            editShowPaddingTopBottom: _t.options.editShowPaddingTopBottom || false, // 编辑时纸张设置里面的上下边距是否有效，默认为false
+            multiPartHeader: _t.options.multiPartHeader || [] // 聚合病程实时分页时，页眉上转科换床信息
         }
+        _t.editor.showTools = _t.options.hasOwnProperty('showTools') ? _t.options.showTools : true;
         delete _t.options.designMode;
         delete _t.options.reviseMode;
         delete _t.options.readOnly;
         delete _t.options.sdkHost;
+        delete _t.options.showTools;
     },
     /**
      * 初始化右键菜单监听
@@ -173,6 +176,9 @@ HMEditor.fn({
     initDefaultConfig: function () {
         var _t = this;
         var editorConfig = _t.options.editorConfig || {};
+        // 获取基础CSS配置
+        var baseCss = [CKEDITOR.getUrl('vendor/font-awesome.min.css'),CKEDITOR.getUrl('vendor/hm-sdk.min.css'),CKEDITOR.getUrl('css/docAi.min.css'),CKEDITOR.getUrl('css/document.min.css'),CKEDITOR.getUrl('contents.css')];
+        editorConfig.contentsCss = baseCss.concat(editorConfig.contentsCss || []);
         var removePlugins = (editorConfig.removePlugins || '').replace(/,\s*$/, '');
         if (!_t.options.designMode) {
             editorConfig.removePlugins = removePlugins + ',switchmodel,clear,removeformat';

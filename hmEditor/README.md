@@ -18,12 +18,46 @@ HMEditorLoader.createEditor({
     designMode: false,  // 是否启用设计模式
     reviseMode: true,   // 是否启用修订模式
     readOnly: false,    // 是否启用只读模式
+    editShowPaddingTopBottom: false, // 编辑时纸张设置里面的上下边距是否有效，默认为false
     customParams: {     // 自定义参数
         header:{},
         data:{
             departmentCode: '0001',
             doctorCode: '0001',
         }
+    },
+    // 转科换床页眉信息配置
+    multiPartHeader: {
+        controlElementName: "记录日期",  // 控制时间的数据元名称（页面中对应元素的data-hm-name属性值）
+        headerList: [
+            {
+                startTime: "2025-08-20",      // 开始时间（格式：yyyy-MM-dd）
+                endTime: "2025-08-25",        // 结束时间（格式：yyyy-MM-dd）
+                headerData: {                 // 在此时间段内显示的页眉数据
+                    "病区名称": "外科病区",     // 键为data-hm-name属性值
+                    "科室名称": "外科",        // 值为要显示的内容
+                    "床位号": "001"               
+                }
+            },
+            {
+                startTime: "2025-08-26",      // 下一个时间段
+                endTime: null,                // 结束时间为空表示从startTime开始的所有时间
+                headerData: {
+                    "病区名称": "内科病区",
+                    "科室名称": "内科", 
+                    "床位号": "002"
+                }
+            },
+            {
+                startTime: null,               // 下一个时间段
+                endTime: "2025-08-27",         // 开始时间为空表示endTime以前的所有时间
+                headerData: {
+                    "病区名称": "儿科病区",
+                    "科室名称": "儿科", 
+                    "床位号": "003"
+                }
+            }
+        ]
     },
     customToolbar: [    // 自定义工具栏按钮
         {
@@ -65,6 +99,7 @@ HMEditorLoader.createEditorAsync({
     designMode: false,  // 是否启用设计模式
     reviseMode: false,  // 是否启用修订模式
     readOnly: true,     // 是否启用只读模式
+    editShowPaddingTopBottom: false, // 编辑时纸张设置里面的上下边距是否有效，默认为false
     customParams: {     // 自定义参数
         departmentCode: '0001',
         doctorCode: '0001'
@@ -172,16 +207,24 @@ HMEditorLoader.destroyEditor(editorId);
 | id | String | 否 | iframe唯一标识，不填会自动生成 |
 | style | Object | 否 | iframe样式对象 |
 | editorConfig | Object | 否 | 编辑器配置参数 |
+| editorConfig.contentCss | Array | 否 | 编辑器配置的样式参数 |
 | onReady | Function | 否 | 编辑器初始化完成回调函数 |
 | designMode | Boolean | 否 | 设计模式开关，true开启设计模式，默认false |
 | reviseMode | Boolean | 否 | 修订模式开关，true开启修订模式，默认false |
 | readOnly | Boolean | 否 | 只读模式开关，true开启只读模式，默认false |
+| editShowPaddingTopBottom | Boolean | 否 | 编辑时纸张设置里面的上下边距是否有效，默认为false |
 | customParams | Object | 否 | 自定义参数，用于动态数据源接口入参，例：{departmentCode:'0001',doctorCode:'0001'} |
 | customToolbar | Array | 否 | 自定义工具栏按钮，例：[{name:'customButton',label:'自定义按钮',icon:'/path/to/icon.png',onExec:function(editor){},onRefresh:function(editor,path){}}] |
 | printConfig | Object | 否 | 打印配置参数 |
 | printConfig.pageBreakPrintPdf | Boolean | 否 | 分页模式打印是否生成pdf |
 | printConfig.pageAnotherTpls | Array | 否 | 另页打印模板名称 |
 | printConfig.pageAloneTpls | Array | 否 | 单独一页打印模板名称 |
+| multiPartHeader | Object | 否 | 转科换床页眉信息配置 |
+| multiPartHeader.controlElementName | String | 是 | 控制时间的数据元名称（页面中对应元素的data-hm-name属性值） |
+| multiPartHeader.headerList | Array | 是 | 页眉信息列表，包含不同时间段的页眉数据配置 |
+| multiPartHeader.headerList[].startTime | String | 否 | 时间段开始时间，格式：yyyy-MM-dd |
+| multiPartHeader.headerList[].endTime | String | 否 | 时间段结束时间，格式：yyyy-MM-dd，为空表示从startTime开始的所有时间 |
+| multiPartHeader.headerList[].headerData | Object | 是 | 页眉数据对象，键为页面元素的data-hm-name属性值，值为显示内容 |
 
 ## 常见问题
 
@@ -206,6 +249,17 @@ HMEditorLoader.destroyEditor(editorId);
 
 1. 确保页面中没有多个版本的jQuery或其他库冲突
 2. 避免在全局作用域中修改jQuery或其他库
+
+### 转科换床页眉配置问题
+
+1. **时间格式错误**：确保 startTime 和 endTime 使用 yyyy-MM-dd 格式（如：2025-08-25）
+2. **data-hm-name属性值错误**：确保 controlElementName 和 headerData 中的键与页面元素的 data-hm-name 属性值完全一致
+3. **时间范围重叠**：避免多个时间段重叠，系统会使用第一个匹配的记录
+4. **页眉数据不生效**：检查页眉模板中是否存在对应 data-hm-name 属性的元素节点
+5. **时间匹配逻辑**：
+   - 如果同时设置 startTime 和 endTime：recordTime > startTime 且 recordTime <= endTime
+   - 如果只设置 endTime：recordTime <= endTime  
+   - 如果只设置 startTime：recordTime > startTime
 
 ## 最佳实践
 
@@ -236,7 +290,12 @@ var autherEntity = {
     flag: 'm', // m:住院 c:门诊
     customEnv: 1
 };
-HMEditorLoader.aiAuth(autherEntity)
+// 映射编辑器支持的病历类型
+var recordMapData = [{
+    "recordName": "出院记录",
+    "recordType": 10,
+}];
+HMEditorLoader.aiAuth(autherEntity, recordMap, cusMayson)
 .then(function(mayson) {
     console.log('认证初始化成功，编辑器助手已加载');
     // mayson 是编辑器助手实例，可用于AI辅助功能
@@ -268,6 +327,8 @@ HMEditorLoader.aiAuth(autherEntity)
 | hospitalName | String | 否 | 医院名称（非必要字段） |
 | flag | String | 是 | 就诊类型标识，'m'表示住院，'c'表示门诊 |
 | customEnv | Object | 否 | 自定义环境参数 |
+| recordMap | Array | 否 | 病历类型映射数据 |
+| cusMayson | Boolean | 否 | 客户端是否已对接mayson，true:已对接；false:未对接 |
 
 ## 常见问题
 
@@ -461,6 +522,40 @@ HMEditorLoader.getEditorInstanceAsync(editorId)
 **参数说明：**
 - `targetNode`: 目标节点对象，指定需要进行AI段落生成的DOM节点
 
+## AI辅助修正功能
+### 基本用法
+```javascript
+// 调用AI辅助修正功能，对指定规则进行AI辅助修正
+HMEditorLoader.getEditorInstanceAsync(editorId)
+    .then(function(editorInstance) {
+        var ruleId = 'RULE001'; // 规则ID
+        editorInstance.aiAssistCorrect(ruleId);
+    })
+    .catch(function(error) {
+        console.error("获取编辑器实例失败:", error);
+    });
+```
+
+### aiAssistCorrect方法说明
+
+| 方法名 | 参数 | 类型 | 必填 | 返回值 | 描述 |
+| --- | --- | --- | --- | --- | --- |
+| aiAssistCorrect | ruleId | String | 是 | void | 对指定规则进行AI辅助修正 |
+
+**功能说明：**
+- 此方法用于触发AI辅助修正功能，针对特定的质控规则进行自动修正
+- 通过传入规则ID，系统会根据该规则对当前文档内容进行智能分析和修正建议
+- 适用于质控规则触发后，需要进行AI辅助修正的场景
+- 可以帮助医生快速修正文档中不符合质控规则的内容
+
+**参数说明：**
+- `ruleId`: 规则ID，指定需要进行AI辅助修正的质控规则标识
+
+**使用场景：**
+- 质控系统发现文档中存在不符合规范的内容时
+- 需要对特定的医疗文书规则进行智能修正时
+- 提高文档质量和规范性的辅助工具
+
 ## 常见问题
 
 ### 质控提醒功能无法调用
@@ -477,11 +572,21 @@ HMEditorLoader.getEditorInstanceAsync(editorId)
 3. 确认AI服务器地址配置正确
 4. 检查网络连接稳定性
 
+### AI辅助修正功能异常
+
+1. 确保已正确初始化认证信息和AI服务
+2. 检查传入的ruleId参数是否有效
+3. 确认质控规则存在且配置正确
+4. 检查AI服务器响应和网络连接状态
+5. 确保编辑器实例已正确加载且处于可编辑状态
+
 ### 最佳实践
 
-1. 在调用qc和ai功能前，确保已完成认证初始化
+1. 在调用qc、ai和aiAssistCorrect功能前，确保已完成认证初始化
 2. 总是处理异常情况，特别是在网络不稳定的环境
 3. 根据实际业务场景正确设置质控参数
 4. 在调用AI功能前，确保编辑器实例已准备就绪
 5. 合理设置质控提醒的触发时机，避免频繁调用
+6. 使用aiAssistCorrect时，确保ruleId对应的质控规则已正确配置
+7. 建议在质控规则触发后立即调用aiAssistCorrect，以提供最佳的用户体验
 

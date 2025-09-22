@@ -24,8 +24,14 @@ commonHM.component['documentModel'].fn({
         //     _html = _html.replace(/<body/g, '<body doc_code="' + contentlist[0].code + '"');
         // }
         _t.renderContent(_html);
-        _t.setDocData(contentlist);
-
+        _t.setDocData(contentlist); 
+        // 加载完文档，关闭editorTool
+        var editorTool = _t.$parent.hmAi.editorTool;
+        if (editorTool && editorTool.callCommand('isOpen')) {
+            editorTool.callCommand('destoryGenPopup');
+        }
+        // 根据初始化参数 设置文档只读
+        _t.editor.HMConfig.readOnly && _t.setDocReadOnly('', _t.editor.HMConfig.readOnly);
     },
     /**
      * 在指定文档后插入新文档
@@ -63,7 +69,7 @@ commonHM.component['documentModel'].fn({
         var _t = this;
         //    var content = _t.editor.document.getBody().$;
         var content = _t.getContent(params);
-        console.log(content); 
+        // console.log(content); 
         return content;
     },
     /**
@@ -136,7 +142,7 @@ commonHM.component['documentModel'].fn({
      */
     insertImageAtCursor: function(imageData) {
         var _t = this;
-        const imageHtml = `<img src="${imageData.src}" ${imageData.width ? `width="${imageData.width}"` : ''} ${imageData.height ? `height="${imageData.height}"` : ''} />`;
+        const imageHtml = `<span><img src="${imageData.src}" ${imageData.width ? `width="${imageData.width}"` : ''} ${imageData.height ? `height="${imageData.height}"` : ''} /></span>`;
         _t.insertContentAtCursor(imageHtml);
     },
     /**

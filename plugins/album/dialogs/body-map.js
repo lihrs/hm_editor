@@ -57,7 +57,7 @@
       onOk: function(e) {
           var path = $('#bodyPicId')[0].src;
           var uuid = "cms"+guid();
-          editor.insertHtml('<img style="max-width:480px;max-height:320px;" id="' + uuid + '" src="' + path + '">');
+          editor.insertHtml('<span><img style="max-width:480px;max-height:320px;" id="' + uuid + '" src="' + path + '"></span>');
           editor.editable().fire('togglePlaceHolder', e);
       },
       onLoad:function(){

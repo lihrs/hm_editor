@@ -9,7 +9,7 @@ commonHM.component['hmAi'].fn({
         _t.hasTask = false; //是否存在任务 
 
         _t.patientRecord = {};
-        _t.awekenAiWidget={}; // 唤醒AI的widget
+        _t.awekenAiWidget = {}; // 唤醒AI的widget
         _t.bindWarnAcion();
     },
     initWarnInfo: function (data) {
@@ -20,7 +20,7 @@ commonHM.component['hmAi'].fn({
         var aiServer = _pWindow.HMEditorLoader && _pWindow.HMEditorLoader.autherEntity && _pWindow.HMEditorLoader.autherEntity.aiServer;
         //获取警告信息
         _t.utils.request({
-            url: aiServer+'/cdss/api/outer/wagon/emr/problems',
+            url: aiServer + '/cdss/api/outer/wagon/emr/problems',
             data: maysonBean,
             success: function (result) {
                 //缓存警告信息
@@ -42,7 +42,7 @@ commonHM.component['hmAi'].fn({
             return;
         }
         _t.editorTool.callCommand('checkDataSource', function (list) {
-            console.log('ai返回的测试助手参数', list);
+            // console.log('ai返回的测试助手参数', list);
             list.forEach(function (item) {
                 var el = _t.$widget.find('span[data-hm-code="' + item.nodeCode + '"]').children('.new-textbox-content').attr('generate', 1);
                 if (el.attr('_placeholdertext')) {
@@ -73,27 +73,35 @@ commonHM.component['hmAi'].fn({
             (progress.problemList || []).forEach(function (problem) {
                 problem.sources.forEach(function (item) {
                     if (problem.type == 1) { //错误
-                        _t.utils.findAndStyle($progreeContent, item.emrAttributeCode, item.surroundingText, {
+                        _t.utils.findAndStyle($progreeContent, item, {
                             'class': 'doc-warn-txt doc-warn-level-' + (problem.severityLevel || 1),
                             'uucode': item.uucode,
                             'rule-code': problem.ruleInfo && (problem.ruleInfo.code || ''),
                             'progress-guid': progressGuid,
-                            'attr-code': item.emrAttributeCode
+                            'attr-code': item.emrAttributeCode,
+                            'contenteditable': 'false'
                         });
                     } else if (problem.type == 2) { //缺失
+                        var type = 1; // 按照节点code查找
                         var el = $progreeContent.find('span[data-hm-code="' + item.emrAttributeCode + '"]').closest('p');
                         var ruleContent = $progreeContent.find('p[attr-code="' + item.emrAttributeCode + '"]');
                         // var currSource = '<span class="doc-warn-lack"><span class="doc-warn-title">'+problem.detailsInfo+'</span></span>';
+                        if (!el.length) {
+                            el = $progreeContent.find('span[data-hm-code="' + item.cdssAttributeId + '"]').closest('p');
+                            ruleContent = $progreeContent.find('p[attr-code="' + item.cdssAttributeId + '"]');
+                            type = 2; // 按照标准id查找
+                        }
                         var index = ruleContent.children().length + 1;
                         var lackHtml = $.getTpl($docAi_tpl['docAi/tpl/lack'], {
                             problem: problem,
                             item: item,
-                            index: index + '.'
+                            index: index + '.',
+                            type: type
                         });
                         if (ruleContent.length) {
                             ruleContent.append(lackHtml);
                         } else {
-                            var warnP = $('<p attr-code="' + item.emrAttributeCode + '"  contenteditable="false"></p>');
+                            var warnP = $('<p attr-code="' + (type == 1 ? item.emrAttributeCode : item.cdssAttributeId) + '"  contenteditable="false"></p>');
                             warnP.addClass('doc-warn-p');
                             warnP.append(lackHtml);
                             warnP.insertAfter(el);
@@ -134,13 +142,15 @@ commonHM.component['hmAi'].fn({
             }
             if ((e.ctrlKey || e.metaKey) && e.key === '/') { //ctrl + /
                 _t.generator.generateMessage(this, 1);
+                _t.$body.attr('contenteditable', 'false');
             }
             if (e.key === 'Control' && e.timeStamp - _t.lastCtrlPress < 500) { //双击ctrl
                 _t.lastCtrlPress = 0;
-                 _t.generator.generateMessage(this, 2);
+                _t.generator.generateMessage(this, 2);
+                _t.$body.attr('contenteditable', 'false');
             } else if (e.key === 'Control') {
                 _t.lastCtrlPress = e.timeStamp;
-                return; 
+                return;
             }
         }).on('click', '.doc-warn-txt', function (event) {
             var ele = $(this);
@@ -180,8 +190,9 @@ commonHM.component['hmAi'].fn({
             _t.utils.focusInputFirst(this);
         }).on('click', '.r-model-gen-text', function () {
             _t.generator.reOpenPopupProgress(this);
-        }).on('click', function (e) {
+        }).on('click', function (e) { 
             _t.editorTool && _t.editorTool.callCommand('destoryGenPopup');
+            _t.$body.attr('contenteditable', 'true');
             if (_t.generator.progressFlag != 1) {
                 var jTar = $(e.target).closest('p');
                 // 获取所有子元素
@@ -214,7 +225,6 @@ commonHM.component['hmAi'].fn({
                 } else {
                     _t.generator.closePopup();
                 }
-
             }
         });
         _t.editor.document.$.body.onscroll = function (e) {
@@ -295,7 +305,7 @@ commonHM.component['hmAi'].fn({
         });
         $progreeContent.find('.mc-auto-text').remove();
 
-        $progreeContent.find('.r-model-gen-text,.r-model-gen-remark').each(function (i, item) {
+        $progreeContent.find('.r-model-gen-text').each(function (i, item) {
             var $item = $(item);
             var inputArea = $item.closest('.new-textbox-content').removeAttr('generate').attr('_placeholdertext', true);
             $(item).remove();
@@ -396,7 +406,7 @@ commonHM.component['hmAi'].fn({
         var _t = this;
         var $body = $(_t.editor.document.getBody().$);
         _t.awekenAiWidget = {}; // 清空唤醒AI的widget
-        $body.find('.new-textbox-content').each(function (i,ele) {
+        $body.find('.new-textbox-content').each(function (i, ele) {
             if ($(ele).attr('generate') == '1' && $(ele).find('.r-model-gen-remark').length > 0) {
                 $(ele).find('.r-model-gen-remark').remove();
                 var _placeholder = $(ele).parent().attr('_placeholder');
@@ -407,5 +417,5 @@ commonHM.component['hmAi'].fn({
                 }
             }
         });
-    }
+    },
 })

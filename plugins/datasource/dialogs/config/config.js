@@ -53,11 +53,31 @@ function init() {
             $('.row.option').show();
             $('.row .check').show();
             $('.row .radio').hide();
+            $('.row.barcode').hide();
+            $('.row.qrcode').hide();
+        } else if (t == '条形码') {
+            $('.reg').hide();
+            $('.check').hide();
+            $('.row.dropdown').hide();
+            $('.row.option').hide();
+            $('.row.barcode').show();
+            $('.row.qrcode').hide();
+            $('.valid').hide();
+        } else if (t == '二维码') {
+            $('.reg').hide();
+            $('.check').hide();
+            $('.row.dropdown').hide();
+            $('.row.option').hide();
+            $('.row.barcode').hide();
+            $('.row.qrcode').show();
+            $('.valid').hide();
         } else {
             $('.reg').show();
             $('.check').hide();
             $('.row.dropdown').hide();
             $('.row.option').hide();
+            $('.row.barcode').hide();
+            $('.row.qrcode').hide();
         }
         textTypeChange(t);
         changeTypeInit('newtextbox',t);
@@ -103,7 +123,7 @@ function editDsInit(ele) {
 function changeTypeInit(val,texttype) {
     initDateSel(val);
     initDsType(val);
-    $('.row.text,.row.searchbox,.row.dropdown,.row.option').hide();
+    $('.row.text,.row.searchbox,.row.dropdown,.row.option,.row.barcode,.row.qrcode').hide();
     $('.row .ds-code').hide();
     $('.row .templatename').hide();
 
@@ -195,6 +215,14 @@ function changeTypeInit(val,texttype) {
             $('.row .radio').hide();
 
             $('.row.dropdown').show();
+        } else if(texttype == '条形码'){
+            $('.row.barcode').show();
+            $('.row .reg').hide();
+            $('.valid').hide();
+        } else if(texttype == '二维码'){
+            $('.row.qrcode').show();
+            $('.row .reg').hide();
+            $('.valid').hide();
         }
         return;
     }
@@ -587,6 +615,12 @@ function config() {
             if (nodeType != 'timebox') {
                 remove([ '_timewidth']);
             }
+        }
+        if (texttype != '条形码') {
+            remove(['_barcode_width', '_barcode_height', '_barcode_bar_width', '_barcode_text_position']);
+        }
+        if (texttype != '二维码') {
+            remove(['_qrcode_width', '_qrcode_height', '_qrcode_error_level', '_qrcode_text_position']);
         }
         function remove(keys) {
             for (var i = 0; i < keys.length; i++) {

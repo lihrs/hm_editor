@@ -2804,6 +2804,11 @@
                 var keyCode = evt.data.$.code;
                 // 选区选到末尾删除时，有可能将零宽删掉，补一个零宽进去
                 if ($(evt.data.$.target).hasClass("new-textbox-content") && (keyCode === 'Backspace' || keyCode === 'Delete') && !range0.endContainer.getNext()) {
+                    // 检查是否包含AI提示内容，如果包含则不添加零宽字符
+                    if ($(evt.data.$.target).find('.r-model-gen-remark').length > 0) {
+                        console.log('检测到AI提示内容，跳过零宽字符补充');
+                        return;
+                    }
                     if (range0.endContainer.type === CKEDITOR.NODE_TEXT && range0.endOffset === range0.endContainer.getLength()) {
                         evt.data.$.target.append('\u200b');
                     }
@@ -2851,6 +2856,23 @@
                         //360浏览器选区不可删除情况下backspace禁止网页回退
                         evt.stop();
                         evt.data.preventDefault();
+                        return;
+                    }
+                    
+                    // 保护 r-model-gen-remark AI提示内容不被删除
+                    var element = range0.startContainer;
+                    if (element && element.type == CKEDITOR.NODE_TEXT) {
+                        element = element.getParent();
+                    }
+                    // 检查是否在r-model-gen-remark元素内或者要删除r-model-gen-remark元素
+                    if (element && (element.hasClass('r-model-gen-remark') || 
+                        element.getAscendant('.r-model-gen-remark', true) ||
+                        (element.hasClass('new-textbox-content') && element.find('.r-model-gen-remark').count() > 0))) {
+                        console.log('防止删除 AI 提示内容');
+                        evt.stop();
+                        if (evt.data && typeof evt.data.preventDefault === 'function') {
+                            evt.data.preventDefault();
+                        }
                         return;
                     }
                     //删除的文本如果是小模板内最后一个文字，连span元素一并删除
@@ -2940,6 +2962,23 @@
                             }
                         }
                     } else if (keyCode === 'Delete' && !range0.startContainer.getNext()) {
+                        // 保护 r-model-gen-remark AI提示内容不被Delete键删除
+                        var element = range0.startContainer;
+                        if (element && element.type == CKEDITOR.NODE_TEXT) {
+                            element = element.getParent();
+                        }
+                        // 检查是否在r-model-gen-remark元素内或者要删除r-model-gen-remark元素
+                        if (element && (element.hasClass('r-model-gen-remark') || 
+                            element.getAscendant('.r-model-gen-remark', true) ||
+                            (element.hasClass('new-textbox-content') && element.find('.r-model-gen-remark').count() > 0))) {
+                            console.log('防止Delete键删除 AI 提示内容');
+                            evt.stop();
+                            if (evt.data && typeof evt.data.preventDefault === 'function') {
+                                evt.data.preventDefault();
+                            }
+                            return;
+                        }
+                        
                         if ((range0.endContainer.type === CKEDITOR.NODE_TEXT && range0.endOffset === range0.startContainer.getLength()) ||
                             (range0.endContainer.type === CKEDITOR.NODE_ELEMENT && range0.endOffset === range0.startContainer.getChildCount())) {
                             // 找之后有没有字符, 如果没有就必须加一个.
@@ -3296,6 +3335,17 @@
                                     console.log('删除新文本数据元');
                                     return;
                                 }
+                                
+                                // 增强删除保护 - 防止删除 r-model-gen-remark AI提示内容
+                                if ($placeholder.find('.r-model-gen-remark').length > 0) {
+                                    console.log('防止删除 AI 提示内容');
+                                    evt.stop();
+                                    if (evt.data && typeof evt.data.preventDefault === 'function') {
+                                        evt.data.preventDefault();
+                                    }
+                                    return false;
+                                }
+                                
                                 console.log('防止删除 placeholder');
                                 // 这一句是必要的, 防止删除 placeholder, 虽然我也不知道为啥这样写就行
                                 lastPlaceholder &&
@@ -3380,6 +3430,46 @@
                         editor.getCommand('horizontalrule').setState(CKEDITOR.TRISTATE_OFF);
                     }
                 }
+                
+                // 表单模式下控制样式按钮状态
+                // 检查element是否有class=emrWidget-content又有_contenteditable="false"属性的父级元素
+                if ($(element.$).parents('.emrWidget-content[_contenteditable="false"]').length > 0) {
+                    var isInDataSource = false;
+                    var current = element;
+                    
+                    // 检查当前点击的元素是否在数据元内
+                    while (current && current.type === CKEDITOR.NODE_ELEMENT) {
+                        if ((current.hasAttribute('data-hm-node') && current.getAttribute('data-hm-node') !== 'labelbox') || 
+                            $(current.$).hasClass('new-textbox') ||
+                            $(current.$).hasClass('new-textbox-content')) {
+                            isInDataSource = true;
+                            break;
+                        }
+                        current = current.getParent();
+                    }
+                    
+                    // 控制样式按钮的启用/禁用状态
+                    // 使用延迟执行确保在basicstyles的状态检测之后执行
+                    setTimeout(function() {
+                        var styleCommands = ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'removeFormat'];
+                        for (var i = 0; i < styleCommands.length; i++) {
+                            var command = editor.getCommand(styleCommands[i]);
+                            if (command) {
+                                command.setState(isInDataSource ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED);
+                            }
+                        }
+                        
+                        // 控制其他UI组件（字体、颜色等）
+                        var uiComponents = ['Font', 'FontSize', 'TextColor', 'BGColor'];
+                        for (var j = 0; j < uiComponents.length; j++) {
+                            var component = editor.ui.get(uiComponents[j]);
+                            if (component) {
+                                component.setState(isInDataSource ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED);
+                            }
+                        }
+                    }, 10); // 延迟10ms确保在basicstyles状态检测之后执行
+                }
+                
                 // 只读模式下新文本获焦可输入问题修复
                 if (editor.readOnly && $(element.$).parents().hasClass('new-textbox')) {
                     // range0.moveToPosition(element, CKEDITOR.POSITION_AFTER_END);

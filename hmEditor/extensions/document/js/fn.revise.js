@@ -61,7 +61,7 @@ commonHM.component['documentModel'].fn({
     acceptAllRevisions: function() {
         var _t = this;
         var $body = $(_t.editor.document.getBody().$);
-        
+
         // 处理新增内容
         $body.find('.hm_revise_ins').each(function() {
             var $ins = $(this);
@@ -81,7 +81,7 @@ commonHM.component['documentModel'].fn({
     rejectAllRevisions: function() {
         var _t = this;
         var $body = $(_t.editor.document.getBody().$);
-        
+
         // 处理新增内容
         $body.find('.hm_revise_ins').each(function() {
             var $ins = $(this);
@@ -93,5 +93,166 @@ commonHM.component['documentModel'].fn({
             var $del = $(this);
             $del.replaceWith($del.text());
         });
+    },
+
+    /**
+     * 手动合并修订内容
+     * @returns {Object} 合并结果 {success: boolean, totalMerged: number, processedElements: number}
+     */
+    mergeRevisions: function() {
+        var _t = this;
+
+        if (!_t.editor) {
+            return {
+                success: false,
+                message: 'Editor 实例未初始化'
+            };
+        }
+
+        if (!_t.editor.mergeUncompletedRevisions) {
+            return {
+                success: false,
+                message: '修订功能未初始化'
+            };
+        }
+
+        return _t.editor.mergeUncompletedRevisions();
+    },
+
+    /**
+     * 获取修订记录
+     * @param {String} code 病历唯一编码，如果为空则获取所有病历的修订记录
+     * @returns {Array} data 修订记录
+     * @returns {Array} data[].traceId 修订记录ID
+     * @returns {Array} data[].modifier 修订记录修改者
+     * @returns {Array} data[].modifyTime 修订记录修改时间
+     * @returns {Array} data[].modifyType 修订记录修改类型
+     * @returns {Array} data[].content 修订记录内容
+     * @returns {Array} data[].code 修订记录所属的病历编码
+     */
+    getRevisionHistory: function(code) {
+        var _t = this;
+        var $body = $(_t.editor.document.getBody().$);
+        var revisionHistory = [];
+
+        // 根据是否有病历编码确定查询范围
+        var $searchScope;
+        if (code) {
+            // 如果指定了病历编码，只在该病历widget内查找
+            $searchScope = $body.find('[data-hm-widgetid="' + code + '"]');
+            if ($searchScope.length === 0) {
+                // 如果找不到对应的widget，返回空数组
+                return revisionHistory;
+            }
+        } else {
+            // 如果没有指定病历编码，在整个文档中查找
+            $searchScope = $body;
+        }
+
+        var $insElements = $searchScope.find('.hm_revise_ins');
+        var $delElements = $searchScope.find('.hm_revise_del');
+
+        // 处理新增修订
+        $insElements.each(function() {
+            var $element = $(this);
+
+            // 获取当前标签的直接文本内容（排除子标签内容）
+            var directTextContent = _t._getDirectTextContent($element);
+
+            // 如果排除子标签后内容为空，则跳过
+            if (!directTextContent || directTextContent.trim() === '') {
+                return; // 相当于continue
+            }
+
+            // 获取修订标签所属的病历编码
+            var $widgetContainer = $element.closest('[data-hm-widgetid]');
+            var revisionCode = $widgetContainer.length > 0 ? $widgetContainer.attr('data-hm-widgetid') : '';
+
+            var revision = {
+                traceId: $element.attr('trace_id') || '',
+                modifier: $element.attr('hm-modify-userName') || '',
+                modifyTime: $element.attr('hm-modify-time') || '',
+                modifyType: '新增',
+                content: directTextContent,
+                code: revisionCode // 添加病历编码字段
+            };
+
+            revisionHistory.push(revision);
+        });
+
+        // 处理删除修订
+        $delElements.each(function() {
+            var $element = $(this);
+
+            // 获取当前标签的直接文本内容（排除子标签内容）
+            var directTextContent = _t._getDirectTextContent($element);
+
+            // 如果排除子标签后内容为空，则跳过
+            if (!directTextContent || directTextContent.trim() === '') {
+                return; // 相当于continue
+            }
+
+            // 获取修订标签所属的病历编码
+            var $widgetContainer = $element.closest('[data-hm-widgetid]');
+            var revisionCode = $widgetContainer.length > 0 ? $widgetContainer.attr('data-hm-widgetid') : '';
+
+            var revision = {
+                traceId: $element.attr('trace_id') || '',
+                modifier: $element.attr('hm-modify-userName') || '',
+                modifyTime: $element.attr('hm-modify-time') || '',
+                modifyType: '删除',
+                content: directTextContent,
+                code: revisionCode // 添加病历编码字段
+            };
+
+            revisionHistory.push(revision);
+        });
+
+        // 按修改开始时间倒序排列
+        revisionHistory.sort(function(a, b) {
+            var timeA = a.startTime || '';
+            var timeB = b.startTime || '';
+
+            // 如果时间为空，则排在后面
+            if (!timeA && !timeB) return 0;
+            if (!timeA) return 1;
+            if (!timeB) return -1;
+
+            // 将时间字符串转换为Date对象进行比较
+            var dateA = new Date(timeA);
+            var dateB = new Date(timeB);
+
+            // 倒序排列：较新的时间排在前面
+            return dateB.getTime() - dateA.getTime();
+        });
+
+        return revisionHistory;
+    },
+
+    /**
+     * 获取元素的直接文本内容（排除子标签内容）
+     * @param {jQuery} $element jQuery元素对象
+     * @returns {String} 直接文本内容
+     */
+    _getDirectTextContent: function($element) {
+        var directText = '';
+
+        // 遍历当前元素的直接子节点
+        $element.contents().each(function() {
+            // 如果是文本节点（nodeType == 3）
+            if (this.nodeType === 3) {
+                directText += this.nodeValue;
+            }
+            // 如果是元素节点但不是修订标签，则获取其文本内容
+            else if (this.nodeType === 1) {
+                var $child = $(this);
+                // 排除修订标签（嵌套的修订标签）
+                if (!$child.hasClass('hm_revise_ins') && !$child.hasClass('hm_revise_del')) {
+                    directText += $child.text();
+                }
+            }
+        });
+
+        return directText;
     }
-}); 
+});

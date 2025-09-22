@@ -1,5 +1,226 @@
 commonHM.component['documentModel'].fn({
     /**
+     * 生成二维码的通用方法
+     * @param {Object} options - 二维码配置选项
+     * @param {string} options.text - 二维码内容文本
+     * @param {string} options.width - 二维码宽度 (默认100)
+     * @param {string} options.height - 二维码高度 (默认100) 
+     * @param {string} options.errorLevel - 纠错等级 L/M/Q/H (默认M)
+     * @param {string} options.textPosition - 文本位置 top/bottom/none (默认bottom)
+     * @param {jQuery} options.container - 容器元素
+     * @returns {Promise} 返回Promise，成功时resolve容器HTML
+     */
+    generateQrcode: function(options) {
+        return new Promise(function(resolve, reject) {
+            var text = options.text || '';
+            var width = options.width || '100';
+            var height = options.height || '100';
+            var errorLevel = options.errorLevel || 'M';
+            var textPosition = options.textPosition || 'bottom';
+            var container = options.container;
+            
+            if (!text) {
+                reject(new Error('二维码内容不能为空'));
+                return;
+            }
+            
+            if (!container || !container.length) {
+                reject(new Error('容器元素不能为空'));
+                return;
+            }
+            
+            try {
+                // 创建二维码容器
+                var qrcodeId = 'qrcode_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                
+                // 创建行内上下布局的容器样式
+                var containerStyle = 'display:inline-flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;vertical-align:bottom;';
+                var textStyle = 'display:block;margin:2px 0;font-size:12px;line-height:1.2;white-space:nowrap;';
+                var qrcodeStyle = 'display:block;margin:2px 0;width:' + width + 'px;height:' + height + 'px;';
+                
+                var qrcodeHtml = '';
+                if (textPosition === 'top') {
+                    qrcodeHtml = '<span class="hm-qrcode-container" style="' + containerStyle + '">' +
+                               '<span style="' + textStyle + '">' + text + '</span>' +
+                               '<span id="' + qrcodeId + '" style="' + qrcodeStyle + '"></span>' +
+                               '</span>';
+                } else if (textPosition === 'bottom') {
+                    qrcodeHtml = '<span class="hm-qrcode-container" style="' + containerStyle + '">' +
+                               '<span id="' + qrcodeId + '" style="' + qrcodeStyle + '"></span>' +
+                               '<span style="' + textStyle + '">' + text + '</span>' +
+                               '</span>';
+                } else {
+                    qrcodeHtml = '<span class="hm-qrcode-container" style="' + containerStyle + '">' +
+                               '<span id="' + qrcodeId + '" style="' + qrcodeStyle + '"></span>' +
+                               '</span>';
+                }
+                
+                container.html(qrcodeHtml);
+                
+                // 保存原始bindVal到属性中，用于保存时提取
+                container.attr('_bindvalue', text);
+                console.log('二维码渲染时设置_bindvalue属性:', text);
+                
+                // 确保DOM更新后再生成二维码
+                setTimeout(function() {
+                    try {
+                        // 在CKEditor的document上下文中查找元素
+                        var editorDoc = container[0].ownerDocument || document;
+                        var qrcodeElement = editorDoc.getElementById(qrcodeId);
+                        
+                        if (qrcodeElement && typeof QRCode !== 'undefined') {
+                            new QRCode(qrcodeElement, {
+                                text: text,
+                                width: parseInt(width) || 100,
+                                height: parseInt(height) || 100,
+                                colorDark: "#000000",
+                                colorLight: "#ffffff",
+                                correctLevel: QRCode.CorrectLevel[errorLevel] || QRCode.CorrectLevel.M
+                            });
+                            
+                            console.log('二维码生成成功:', text);
+                            resolve(qrcodeHtml);
+                        } else if (!qrcodeElement) {
+                            console.error('二维码容器元素未找到:', qrcodeId);
+                            container.html('二维码生成失败 - 容器未找到');
+                            reject(new Error('二维码容器元素未找到'));
+                        } else {
+                            // 如果没有QRCode库，显示文本
+                            container.html(text + ' (需要QRCode库)');
+                            reject(new Error('QRCode库未加载'));
+                        }
+                    } catch (e) {
+                        console.error('二维码生成失败:', e);
+                        container.html('二维码: ' + text);
+                        reject(e);
+                    }
+                }, 50);
+            } catch (e) {
+                console.error('二维码生成失败:', e);
+                container.html(text);
+                reject(e);
+            }
+        });
+    },
+
+    /**
+     * 同步生成条形码的方法
+     * @param {Object} options - 条形码配置选项
+     * @param {string} options.text - 条形码内容文本
+     * @param {string} options.width - 条形码宽度 (默认200)
+     * @param {string} options.height - 条形码高度 (默认50)
+     * @param {string} options.barWidth - 条形码条的宽度 (默认2)
+     * @param {string} options.textPosition - 文本位置 top/bottom/none (默认bottom)
+     * @returns {string} 返回包含IMG元素的HTML字符串
+     */
+    generateBarcodeSync: function(options) {
+        var text = options.text || '';
+        var width = options.width || '200';
+        var height = options.height || '50';
+        var barWidth = options.barWidth || '2';
+        var textPosition = options.textPosition || 'bottom';
+        
+        if (!text) {
+            return '<span>条形码内容不能为空</span>';
+        }
+        
+        if (typeof JsBarcode === 'undefined') {
+            return '<span>' + text + ' (需要JsBarcode库)</span>';
+        }
+        
+        try {
+            // 创建临时Canvas元素
+            var tempCanvas = document.createElement('canvas');
+            tempCanvas.style.display = 'none';
+            document.body.appendChild(tempCanvas);
+            
+            var actualHeight = parseInt(height) || 50;
+            var actualBarWidth = parseInt(barWidth) || 2;
+            var targetWidth = parseInt(width) || 200;
+            
+            console.log('条形码生成参数:', {
+                text: text,
+                width: options.width,
+                height: options.height,
+                actualHeight: actualHeight,
+                barWidth: options.barWidth,
+                actualBarWidth: actualBarWidth,
+                targetWidth: targetWidth,
+                textPosition: textPosition
+            });
+            
+            // 预设Canvas尺寸，确保有足够空间容纳条形码
+            // JsBarcode会自动调整Canvas尺寸，但预设一个合理的初始值
+            tempCanvas.width = Math.max(targetWidth, text.length * actualBarWidth * 10);
+            tempCanvas.height = actualHeight; // 额外增加一些边距空间
+            
+            // 生成条形码到Canvas
+            JsBarcode(tempCanvas, text, {
+                format: "CODE128",
+                width: actualBarWidth,
+                height: actualHeight,
+                displayValue: false,
+                textPosition: textPosition,
+                background: "transparent",
+                lineColor: "#000000",
+                margin: 0
+            });
+            
+            console.log('Canvas最终尺寸:', {
+                width: tempCanvas.width,
+                height: tempCanvas.height
+            });
+            
+            // 同步转换为Base64
+            var dataURL = tempCanvas.toDataURL('image/png');
+            
+            // 清理临时Canvas
+            document.body.removeChild(tempCanvas);
+            
+            // 构建最终HTML
+            var containerStyle = 'display:inline-flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;vertical-align:bottom;';
+            var textStyle = 'display:block;margin:2px 0;font-size:12px;line-height:1.2;white-space:nowrap;';
+            var imgStyle = 'display:block;margin:2px 0;';
+            
+            // 只设置宽度，让高度保持条形码的自然比例，避免变形
+            if (targetWidth && targetWidth > 0) {
+                imgStyle += 'width:' + targetWidth + 'px;';
+            }
+            if (actualHeight) {
+                imgStyle += 'height:' + actualHeight + 'px;';
+            }
+
+            
+            var imgElement = '<img src="' + dataURL + '" style="' + imgStyle + '" />';
+            
+            var barcodeHtml = '';
+            if (textPosition === 'top') {
+                barcodeHtml = '<span class="hm-barcode-container" style="' + containerStyle + '">' +
+                           '<span style="' + textStyle + '">' + text + '</span>' +
+                           imgElement +
+                           '</span>';
+            } else if (textPosition === 'bottom') {
+                barcodeHtml = '<span class="hm-barcode-container" style="' + containerStyle + '">' +
+                           imgElement +
+                           '<span style="' + textStyle + '">' + text + '</span>' +
+                           '</span>';
+            } else {
+                barcodeHtml = '<span class="hm-barcode-container" style="' + containerStyle + '">' +
+                           imgElement +
+                           '</span>';
+            }
+            
+            console.log('条形码同步生成成功:', text);
+            return barcodeHtml;
+            
+        } catch (error) {
+            console.error('条形码同步生成失败:', error);
+            return '<span>条形码: ' + text + '</span>';
+        }
+    },
+
+
+    /**
      * 渲染文档内容
      * @param {*} content
      */
@@ -146,6 +367,8 @@ commonHM.component['documentModel'].fn({
             `);
         }
 
+
+
         $body.find('.emrWidget-content[_contenteditable="false"]').attr('contenteditable', 'false');
 
         _t.updateEditSpaceContainerStyle();
@@ -160,6 +383,8 @@ commonHM.component['documentModel'].fn({
         } else {
             $body.removeClass('only-one-widget');
         }
+        // 将滚动条置顶
+        _t.editor.document.$.documentElement.scrollTop = 0;
     },
     /**
      * 渲染数据
@@ -167,56 +392,219 @@ commonHM.component['documentModel'].fn({
      */
     renderData: function (data) {
         var _t = this;
+
+        // 如果开启了实时分页,先移除所有分页
+        if(_t.editor.HMConfig.realtimePageBreak) {
+            // 保存当前快照
+            _t.editor.fire('saveSnapshot', {
+                name: 'beforeRenderData',
+                tagName: 'beforeRenderData'
+            });
+
+            // 移除所有分页
+            CKEDITOR.plugins.pagebreakCmd.removeAllSplitters(_t.editor);
+        }
+
         // 遍历数据数组
         data.forEach(function (item) {
-            if (item.code && item.data) {
+            if (item.code) {
                 // 查找具有相同 doc_code 属性的节点
                 var $nodes = $(_t.editor.document.$).find('[doc_code="' + item.code + '"]');
                 // 如果找到节点，更新其内容
                 if ($nodes.length > 0) {
                     $nodes.each(function () {
                         var $node = $(this);
-                        // 遍历 data 数组，查找匹配的节点
-                        item.data.forEach(function (dataItem) {
-                            if (dataItem.keyCode || dataItem.keyName) {
-                                var datasourceNode;
-                                // 优先通过 keyCode 查找 data-hm-code 属性
-                                datasourceNode = $node.find('[data-hm-code="' + dataItem.keyCode + '"]:not([data-hm-node="labelbox"])');
-                                // 如果通过 keyCode 没找到，则通过 keyName 查找 data-hm-name 属性
-                                if ((!datasourceNode || datasourceNode.length === 0) && dataItem.keyName) {
-                                    datasourceNode = $node.find('[data-hm-name="' + dataItem.keyName + '"]:not([data-hm-node="labelbox"])');
-                                }
-                                // 获取节点类型
-                                var nodeType = datasourceNode.attr('data-hm-node');
-                                var bindVal = dataItem.keyValue;
-                                var imgFlag = false;
-                                if (Array.isArray(bindVal)) {
-                                    bindVal = bindVal.map(function (item) {
-                                        if (typeof item === 'string' && item.indexOf('data:image/png;base64,') === 0) {
-                                            imgFlag = true;
-                                            return '<img src="' + item + '" style="width: 50px; height: 25px; vertical-align: middle" uname="" />';
-                                        } else if (typeof item === 'string') {
-                                            return item.replace(/↵/g, '<br/>');
-                                        } else {
-                                            return String(item);
-                                        }
-                                    });
-                                } else if (typeof (bindVal) == 'string') {
-                                    bindVal = bindVal.replace(/↵/g, '<br/>');
-                                    if (bindVal && bindVal.indexOf('data:image/png;base64,') == 0) {
-                                        bindVal = '<img  src=' + bindVal + ' style="width: 50px; height: 25px; vertical-align: middle" uname="" />';
-                                        imgFlag = true;
-                                    }
-                                }
-                                if (datasourceNode.length > 0) {
-                                    _t.bindDatasource(datasourceNode, nodeType, bindVal, imgFlag);
-                                }
-                            }
-                        });
+                        // 处理普通数据元
+                        if (item.data) {
+                            item.data.forEach(function (dataItem) {
+                                _t._bindDataItem($node, dataItem, '普通');
+                            });
+                        }
+                        
+                        // 检查是否有护理表单数据需要特殊处理
+                        if (item.nursingData && Array.isArray(item.nursingData) && item.nursingData.length > 0) {
+                            console.log('检测到护理表单数据，开始处理护理数据渲染');
+                            _t._renderNursingData($node, item.nursingData);
+                        }
                     });
                 }
             }
         });
+
+        // 如果开启了实时分页,渲染完成后重新进行分页
+        if(_t.editor.HMConfig.realtimePageBreak) {
+            // 执行分页
+            CKEDITOR.plugins.pagebreakCmd.performAutoPaging(_t.editor, {
+                name: '渲染数据后分页',
+                data: {
+                    source: 'renderData'
+                }
+            });
+
+            // 保存分页后的快照
+            _t.editor.fire('saveSnapshot', {
+                name: 'afterRenderData',
+                tagName: 'afterRenderData'
+            });
+        }
+
+        // 数据渲染完成后，检查是否有新的图片需要初始化
+        console.log('数据渲染完成，检查图片元素:', $(_t.editor.document.$).find('[data-hm-image-resizable="true"]').length);
+        
+        // 为现有的图片widget添加拖拽功能（如果还没有的话）
+        _t.initExistingImageResizers($(_t.editor.document.getBody().$));
+    },
+
+    /**
+     * 渲染护理表单数据
+     * @param {jQuery} $node 包含护理表格的节点
+     * @param {Array} nursingData 护理数据二维数组
+     */
+    _renderNursingData: function ($node, nursingData) {
+        var _t = this;
+        console.log('开始处理护理表单数据，数据行数:', nursingData.length);
+        
+        try {
+            // 查找护理表格
+            var $nursingTable = $node.find('table[data-hm-datatable][data-hm-table-type="list"]');
+            if ($nursingTable.length === 0) {
+                console.warn('未找到护理表单表格');
+                return;
+            }
+            
+            var $tbody = $nursingTable.find('tbody');
+            if ($tbody.length === 0) {
+                console.warn('护理表格中未找到tbody');
+                return;
+            }
+            
+            // 获取现有行数和需要的行数
+            var $existingRows = $tbody.find('tr');
+            var existingRowCount = $existingRows.length;
+            var requiredRowCount = nursingData.length;
+            
+            console.log('现有行数:', existingRowCount, '需要行数:', requiredRowCount);
+            
+            // 如果需要更多行，则添加新行
+            if (requiredRowCount > existingRowCount) {
+                var rowsToAdd = requiredRowCount - existingRowCount;
+                console.log('需要添加', rowsToAdd, '行');
+                
+                for (var i = 0; i < rowsToAdd; i++) {
+                    _t._addTableRow($tbody.find('tr').last());
+                }
+            }
+            
+            // 重新获取所有行（包括新添加的）
+            var $allRows = $tbody.find('tr');
+            
+            // 按行渲染护理数据
+            nursingData.forEach(function (rowData, rowIndex) {
+                if (rowIndex < $allRows.length) {
+                    var $currentRow = $allRows.eq(rowIndex);
+                    console.log('渲染第' + rowIndex + '行护理数据，数据项数量:', rowData.length);
+                    
+                    // 渲染当前行的所有数据项
+                    rowData.forEach(function (dataItem) {
+                        _t._bindNursingDataToRow($currentRow, dataItem);
+                    });
+                }
+            });
+            
+            console.log('护理表单数据渲染完成');
+            
+        } catch (error) {
+            console.error('渲染护理表单数据时发生错误:', error);
+        }
+    },
+
+    /**
+     * 通用数据元绑定方法
+     * @param {jQuery} $container 搜索容器（可以是$node或$row）
+     * @param {Object} dataItem 数据项
+     * @param {String} logPrefix 日志前缀（用于区分普通数据/护理数据）
+     */
+    _bindDataItem: function ($container, dataItem, logPrefix) {
+        var _t = this;
+        
+        if (!dataItem.keyCode && !dataItem.keyName) return;
+        
+        try {
+            var datasourceNode;
+            // 优先通过 keyCode 查找 data-hm-code 属性
+            datasourceNode = $container.find('[data-hm-code="' + dataItem.keyCode + '"]:not([data-hm-node="labelbox"])');
+            // 如果通过 keyCode 没找到，则通过 keyName 查找 data-hm-name 属性
+            if ((!datasourceNode || datasourceNode.length === 0) && dataItem.keyName) {
+                datasourceNode = $container.find('[data-hm-name="' + dataItem.keyName + '"]:not([data-hm-node="labelbox"])');
+            }
+            
+            if (datasourceNode.length > 0) {
+                // 获取节点类型
+                var nodeType = datasourceNode.attr('data-hm-node');
+                var bindVal = dataItem.keyValue;
+                var imgFlag = false;
+                var contentArray = [];
+                
+                // 处理不同类型的bindVal数据
+                if (Array.isArray(bindVal)) {
+                    // 处理数组类型数据（普通数据元可能有此情况）
+                    bindVal.forEach(function(item) {
+                        if (typeof item === 'string') {
+                            // 处理字符串
+                            item = item.replace(/↵/g, '<br/>');
+                            var stringResult = _t.processStringImage(item);
+                            contentArray.push(stringResult.value);
+                            if (stringResult.imgFlag) {
+                                imgFlag = true;
+                            }
+                        } else if (typeof item === 'object' && item !== null) {
+                            // 处理对象（图片对象、expressionbox对象等）
+                            var objectResult = _t.processObjectItem(item);
+                            if (objectResult.imgFlag) {
+                                imgFlag = true;
+                            }
+                            if (objectResult.html) {
+                                contentArray.push(objectResult.html);
+                            }
+                        } else {
+                            contentArray.push(String(item));
+                        }
+                    });
+                    bindVal = contentArray.join('');
+                } else if (typeof bindVal === 'string') {
+                    // 处理单个字符串
+                    bindVal = bindVal.replace(/↵/g, '<br/>');
+                    var stringResult = _t.processStringImage(bindVal);
+                    bindVal = stringResult.value;
+                    if (stringResult.imgFlag) {
+                        imgFlag = true;
+                    }
+                }
+                
+                // 绑定数据到数据源节点
+                _t.bindDatasource(datasourceNode, nodeType, bindVal, imgFlag);
+                
+                // 记录绑定日志
+                if (logPrefix) {
+                    console.log(logPrefix + '数据绑定完成:', dataItem.keyName + '(' + dataItem.keyCode + ') = ' + dataItem.keyValue);
+                }
+            } else {
+                console.warn('未找到匹配的数据元:', dataItem.keyCode, dataItem.keyName, logPrefix ? '(' + logPrefix + ')' : '');
+            }
+            
+        } catch (error) {
+            console.error('绑定数据时发生错误:', error, logPrefix ? '(' + logPrefix + ')' : '');
+        }
+    },
+
+    /**
+     * 将护理数据绑定到指定行
+     * @param {jQuery} $row 表格行元素
+     * @param {Object} dataItem 数据项
+     */
+    _bindNursingDataToRow: function ($row, dataItem) {
+        var _t = this;
+        _t._bindDataItem($row, dataItem, '护理');
     },
     // 设置数据元的值
     bindDatasource: function (datasourceNode, nodeType, bindVal, imgFlag) {
@@ -263,7 +651,59 @@ commonHM.component['documentModel'].fn({
                             }
                         }
                     }
-                    newtextboxcontent.html(bindVal || _placeholder);
+                    // 处理二维码生成
+                    else if (_texttype == '二维码' && bindVal && !imgFlag) {
+                        var qrcodeWidth = newtextboxcontent.attr('_qrcode_width') || '100';
+                        var qrcodeHeight = newtextboxcontent.attr('_qrcode_height') || '100';
+                        var errorLevel = newtextboxcontent.attr('_qrcode_error_level') || 'M';
+                        var textPosition = newtextboxcontent.attr('_qrcode_text_position') || 'bottom';
+                        
+                        // 使用通用二维码生成方法
+                        _t.generateQrcode({
+                            text: bindVal,
+                            width: qrcodeWidth,
+                            height: qrcodeHeight,
+                            errorLevel: errorLevel,
+                            textPosition: textPosition,
+                            container: newtextboxcontent
+                        }).catch(function(error) {
+                            console.error('二维码生成失败:', error);
+                            // 保持原有的容错处理
+                            newtextboxcontent.html(bindVal);
+                        });
+                    }
+                    // 处理条形码生成  
+                    else if (_texttype == '条形码' && bindVal && !imgFlag) {
+                        var barcodeWidth = newtextboxcontent.attr('_barcode_width') || '200';
+                        var barcodeHeight = newtextboxcontent.attr('_barcode_height') || '50';
+                        var barWidth = newtextboxcontent.attr('_barcode_bar_width') || '2';
+                        var textPosition = newtextboxcontent.attr('_barcode_text_position') || 'bottom';
+                        
+                        // 使用同步条形码生成方法
+                        try {
+                            if (_t.generateBarcodeSync) {
+                                var barcodeHTML = _t.generateBarcodeSync({
+                                    text: bindVal,
+                                    width: barcodeWidth,
+                                    height: barcodeHeight,
+                                    barWidth: barWidth,
+                                    textPosition: textPosition
+                                });
+                                newtextboxcontent.html(barcodeHTML);
+                                console.log('数据绑定条形码生成成功:', bindVal);
+                            } else {
+                                console.warn('同步条形码生成方法不可用，使用文本显示');
+                                newtextboxcontent.html(bindVal);
+                            }
+                        } catch (error) {
+                            console.error('条形码生成失败:', error);
+                            // 保持原有的容错处理
+                            newtextboxcontent.html(bindVal);
+                        }
+                    }
+                    else {
+                        newtextboxcontent.html(bindVal || _placeholder);
+                    }
                     _handleRelevance(datasourceNode);
                 }
                 break;
@@ -545,6 +985,128 @@ commonHM.component['documentModel'].fn({
             _t.editor.widgets.initOn(new CKEDITOR.dom.element(this), 'emrWidget');
         });
 
+        // 为现有的图片添加拖拽功能
+        _t.initExistingImageResizers($body);
+
+        // 阻止图片的默认拖拽行为
+        $body.on('dragstart', '[data-hm-image-resizable="true"] img', function(evt) {
+            evt.preventDefault();
+            return false;
+        });
+
+        // 使用事件委托方式绑定图片拖拽改变尺寸功能
+        $body.on('mousedown', '[data-hm-image-resizable="true"] .cke_image_resizer', function(evt) {
+            console.log('图片拖拽事件触发'); // 调试信息
+            evt.preventDefault();
+            evt.stopPropagation();
+
+            var $resizer = $(this);
+            var $imageWrapper = $resizer.closest('[data-hm-image-resizable="true"]');
+            var $image = $imageWrapper.find('img');
+
+            if ($image.length === 0) {
+                console.log('未找到图片元素'); // 调试信息
+                return;
+            }
+
+            console.log('开始拖拽，图片尺寸:', $image[0].clientWidth, 'x', $image[0].clientHeight); // 调试信息
+
+            var image = $image[0];
+            var startX = evt.originalEvent.screenX;
+            var startY = evt.originalEvent.screenY;
+            var startWidth = image.clientWidth;
+            var startHeight = image.clientHeight;
+            var ratio = startWidth / startHeight;
+
+            // 添加拖拽样式类
+            $body.addClass('cke_image_resizing');
+            $resizer.addClass('cke_image_resizing');
+
+            var newWidth, newHeight, updateData;
+            var listeners = [];
+
+            // 鼠标移动处理
+            function onMouseMove(e) {
+                console.log('鼠标移动事件触发'); // 调试信息
+                var nativeEvt = e.data.$;
+                var moveDiffX = nativeEvt.screenX - startX;
+                var moveDiffY = startY - nativeEvt.screenY;
+
+                // 计算新尺寸，优先基于宽度计算
+                newWidth = startWidth + moveDiffX;
+                newHeight = Math.round(newWidth / ratio);
+
+                console.log('计算新尺寸:', newWidth, 'x', newHeight); // 调试信息
+
+                // 限制最小尺寸
+                if (newWidth >= 15 && newHeight >= 15) {
+                    $image.attr({
+                        'width': newWidth,
+                        'height': newHeight
+                    });
+                    $image.css({
+                        'width': newWidth + 'px',
+                        'height': newHeight + 'px'
+                    });
+                    updateData = true;
+                } else {
+                    updateData = false;
+                }
+            }
+
+            // 鼠标释放处理
+            function onMouseUp(e) {
+                console.log('拖拽结束，最终尺寸:', newWidth, 'x', newHeight); // 调试信息
+                
+                // 移除事件监听器
+                var l;
+                while ((l = listeners.pop())) {
+                    l.removeListener();
+                }
+                
+                // 移除拖拽样式类
+                $body.removeClass('cke_image_resizing');
+                $resizer.removeClass('cke_image_resizing');
+
+                // 如果尺寸有效，保存最终尺寸
+                if (updateData && newWidth && newHeight) {
+                    // 触发编辑器变化事件
+                    if (_t.editor && _t.editor.fire) {
+                        _t.editor.fire('change');
+                    }
+                }
+
+                updateData = false;
+            }
+
+            // 参考plugin.js的attachToDocuments实现
+            function attachToDocuments(name, callback, collection) {
+                var globalDoc = CKEDITOR.document,
+                    doc = _t.editor.document,
+                    listeners = [];
+
+                if (!doc.equals(globalDoc)) {
+                    listeners.push(globalDoc.on(name, callback));
+                }
+                listeners.push(doc.on(name, callback));
+
+                if (collection) {
+                    for (var i = listeners.length; i--;) {
+                        collection.push(listeners.pop());
+                    }
+                }
+            }
+
+            // 绑定鼠标事件
+            attachToDocuments('mousemove', onMouseMove, listeners);
+            attachToDocuments('mouseup', onMouseUp, listeners);
+
+            // 触发保存快照
+            if (_t.editor && _t.editor.fire) {
+                // _t.editor.fire('saveSnapshot');
+            }
+        });
+
         // 单选 & 多选初始添加级联事件
         $body.find("[data-hm-node=radiobox]").each(function () {
             $(this).on('click', function () {
@@ -556,34 +1118,51 @@ commonHM.component['documentModel'].fn({
                 _handleCascade(this);
             });
         });
-        $body.find("div[data-hm-widgetid]").each(function () {
-            $(this).on('click', function () {
-                if ($(this).attr('contenteditable') == 'false') {
-                    return;
-                }
-                if (!window.hmEditor.hmAi.awekenAiWidget[$(this).attr('data-hm-widgetid')]) {
-                    console.log('点击了widget');
-                    _t._handleEditorTool(this);
-                }
-            });
+        $body.on('click', 'div[data-hm-widgetid]', function () {
+            // 获取父窗口的window对象
+            var parentWindow = window.parent || window.top;
+            var widgetId = $(this).attr('data-hm-widgetid').trim();
+            parentWindow.lastClickedDocCode = widgetId;
+            if (_t.editor.HMConfig.designMode) { // 设计模式下不触发
+                return;
+            }
+            if ($(this).attr('contenteditable') == 'false') {
+                return;
+            }
+            if (!window.hmEditor.hmAi.awekenAiWidget[$(this).attr('data-hm-widgetid')]) {
+                console.log('点击了widget');
+                _t._handleEditorTool(this);
+            }
         });
-        $body.find('table[data-hm-datatable][is_nursing_form="true"]').on('mouseleave','tbody tr',function(){
+        // $body.find('table[data-hm-datatable][data-hm-table-type="list"]').on('mouseleave','tbody tr',function(){
+        $body.on('mouseleave', 'table[data-hm-datatable][data-hm-table-type="list"] tbody tr', function () {
             $body.find('.table-row-actions').remove();
-        }).on('mouseenter.tableActions', 'tbody tr', function (event) {
+        }).on('mouseenter.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] tbody tr', function (event) {
             // 使用 event.target 来获取实际触发的元素
             var $tr = $(event.target).closest('tr');
             _t._handleTrMouseEnter($tr[0], $tr.index());
-        }).on('click.tableActions', '.add-row-icon', function (e) {
+        }).off('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] .add-row-icon').
+          on('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] .add-row-icon', function (e) {
             e.stopPropagation();
             e.preventDefault();
             console.log('=====增加行=====');
             _t._addTableRow($(this).closest('tr'));
-        }).on('click.tableActions', '.delete-row-icon', function (e) {
+        }).on('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] .delete-row-icon', function (e) {
             e.stopPropagation();
-            e.preventDefault(); 
+            e.preventDefault();
             console.log('=====删除行=====');
             _t._deleteTableRow($(this).closest('tr'));
         });
+        
+        // 检查是否存在护理表单表格，如果存在则初始化日期导航功能
+        var nursingFormTables = $body.find('table[data-hm-datatable][data-hm-table-type="list"]');
+        if (nursingFormTables.length > 0) {
+            console.log('检测到护理表单表格，初始化日期导航功能');
+            _t._initDateNavigation($body);
+        } else {
+            console.log('未检测到护理表单表格，跳过日期导航功能初始化');
+        }
+        
     },
   
     _handleTrMouseEnter: function (tr, index) {
@@ -646,11 +1225,14 @@ commonHM.component['documentModel'].fn({
         var widgetId = $(widget).attr('data-hm-widgetid').trim();
         var widgetName = $(widget).attr('data-hm-widgetname').trim();
         var recordType = _t.getRecordType(widgetName);
+        if (!recordType) {
+            return;
+        }
         const params = {
             recordType: recordType,
             progressGuid: widgetId
         };
-        window.hmEditor.hmAi.setContainer(params);
+        window.hmEditor.aiActive(params);
     },
     /**
      * 根据病历文书名称，获取文书类型
@@ -659,7 +1241,7 @@ commonHM.component['documentModel'].fn({
      */
     getRecordType: function (widgetName) {
         var _t = this;
-        var _pWindow = parent.window;;
+        var _pWindow = parent.window;
         var recordMap = _pWindow.HMEditorLoader && _pWindow.HMEditorLoader.recordMap;
         if (!recordMap) {
             console.warn('recordMap is not available on HMEditorLoader.');
@@ -912,7 +1494,7 @@ commonHM.component['documentModel'].fn({
         var _t = this;
         var selection = _t.editor.getSelection().getRanges()[0];
         if (!selection) {
-            console.error('未找到光标位置');
+            console.warn('未找到光标位置');
             return;
         }
         _t.editor.insertHtml(content);
@@ -935,14 +1517,19 @@ commonHM.component['documentModel'].fn({
             $newRow.find('.table-row-actions').remove();
             
             // 清空新行中的内容
-            $newRow.find('td').each(function() {
+            $newRow.find('td').each(function () {
                 var $td = $(this);
                 
                 // 清空文本框内容
                 var $textbox = $td.find('.new-textbox-content');
-                if ($textbox.attr('_placeholder') && $textbox.attr('_placeholder') != '') {
-                    $textbox.text($textbox.attr('_placeholder'));
-                    $textbox.attr('_placeholdertext', 'true');
+                if ($textbox.length > 0) {
+                    if ($textbox.attr('_placeholder') && $textbox.attr('_placeholder') != '') {
+                        $textbox.text($textbox.attr('_placeholder'));
+                        $textbox.attr('_placeholdertext', 'true');
+                    } else {
+                        $textbox.text('');
+                        $textbox.removeAttr('_placeholdertext');
+                    }
                 }
                 
                 // 清空单选框选中状态
@@ -958,8 +1545,10 @@ commonHM.component['documentModel'].fn({
                 $td.find('select').prop('selectedIndex', 0);
                 
                 // 清空普通文本内容
-                if(!$td.find('[data-hm-node]').length) {
-                    $td.text('');
+                if (!$td.find('[data-hm-node]').length) {
+                    $td.empty();
+                    // 添加<br>标签，避免单元格无高度
+                    $td.append('<br>');
                 }
             });
             
@@ -1002,4 +1591,911 @@ commonHM.component['documentModel'].fn({
             console.warn('删除表格行时发生错误:', error);
         }
     },
+
+    /**
+     * 初始化日期导航功能
+     * @param {jQuery} $body 编辑器body元素
+     */
+    _initDateNavigation: function ($body) {
+        var _t = this;
+        
+        // 创建日期导航面板
+        _t._createDateNavigationPanel($body);
+        
+
+
+
+
+
+    },
+
+    /**
+     * 创建日期导航面板
+     */
+    _createDateNavigationPanel: function ($body) {
+        
+        var _t = this;
+        
+        // 检查是否已经存在快速定位按钮
+        var editorDocument = _t.editor.document.$;
+        var $editorDoc = $(editorDocument);
+        if ($editorDoc.find('.quick-location-btn').length > 0) {
+            return;
+        }
+        
+        // 再次检查是否存在护理表单表格
+        var nursingFormTables = $body.find('table[data-hm-datatable][data-hm-table-type="list"]');
+        if (nursingFormTables.length === 0) {
+            console.log('未检测到护理表单表格，不创建日期导航面板');
+            return;
+        }
+        
+
+        
+        // 创建快速定位按钮HTML
+        var quickLocationHTML = `
+            <div class="date-navigation quick-location-btn" contenteditable="false" style="cursor: pointer;">
+                <div class="unfold-icon"></div>
+            </div>
+        `;
+        
+        // 创建日期导航面板HTML - 基于Figma设计规范
+        var dateNavigationHTML = `
+            <div class="date-navigation date-navigation-container" contenteditable="false" style="display: none;">
+                <div class="date-navigation-bar">
+                    <button class="date-nav-button date-nav-first-day">
+                        <span class="button-icon"><i class="fa fa-angle-double-left"></i></span>
+                        <span class="button-text">第一天</span>
+                    </button>
+                    <div class="date-nav-button-wrapper date-nav-previous-day-wrapper">
+                        <button class="date-nav-button date-nav-previous-day">
+                            <span class="button-icon"><i class="fa fa-angle-left"></i></span>
+                        </button>
+                    </div>
+                    <div class="date-display date-nav-date-select">
+                        <input type="text" class="date-picker-input" style="width: 72px; border: none; font-size: 14px; text-align: center; cursor: pointer;" placeholder="请选择日期">
+                    </div>
+                    <div class="date-nav-button-wrapper date-nav-next-day-wrapper">
+                        <button class="date-nav-button date-nav-next-day">
+                            <span class="button-icon"><i class="fa fa-angle-right"></i></span>
+                        </button>
+                    </div>
+                    <button class="date-nav-button date-nav-last-day">
+                        <span class="button-text">最后一天</span>
+                        <span class="button-icon"><i class="fa fa-angle-double-right"></i></span>
+                    </button>
+                    <div class="date-nav-separator"></div>
+                   <div class="collapse-icon-wrapper">
+                       <div class="collapse-icon"></div>
+                   </div>
+                    
+                </div>
+            </div>
+        `;
+        
+        // 将快速定位按钮和日期导航面板添加到页面
+        $body.append(quickLocationHTML);
+        $body.append(dateNavigationHTML);
+        
+        // 预初始化日期选择器
+        var $datePickerInput = $body.find('.date-picker-input');
+        if ($datePickerInput.length > 0) {
+            // 先设置全局语言
+            $.datetimepicker.setLocale('ch');
+            
+            $datePickerInput.datetimepicker({
+                value: new Date(),
+                timepicker: false,
+                datepicker: true,
+                format: 'Y-m-d',
+                inline: false,
+                scrollMonth: false,
+                scrollYear: false,
+                // yearStart: 2020,
+                // yearEnd: 2030,
+                dayOfWeekStart: 1,
+                closeOnDateSelect: true,
+                closeOnWithoutClick: true,
+                defaultSelect: true,
+                onGenerate: function (ct) {
+                    $datePickerInput.css('display', 'block');
+                },
+                onSelectDate: function (dateText, inst) {
+                    // 将日期格式转换为中文格式
+                    var date = new Date(dateText);
+                    var year = date.getFullYear();
+                    var month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    var day = date.getDate().toString().padStart(2, '0');
+                    var chineseDate = year + '-' + month + '-' + day;
+                    
+                    $datePickerInput.val(chineseDate);
+                    console.log('选择的日期:', chineseDate);
+                    
+                    // 查找表格中匹配的日期时间数据元
+                    _t._findAndScrollToDate($body, chineseDate);
+                    
+                },
+                onShow: function (ct) {
+                    // 重新定位日期选择框到输入框下方
+                    var $picker = $('.xdsoft_datetimepicker');
+                    if ($picker.length > 0) {
+                        var $dateNavigationContainer = $body.find('.date-navigation-container');
+                        var containerTop = parseInt($dateNavigationContainer.css('top')) || 20;
+                        
+                        // 使用setTimeout确保picker已经渲染完成
+                        setTimeout(function () {
+                            $picker.css({
+                                position: 'fixed',
+                                top: '100px',
+                                bottom: 'auto',
+                                zIndex: 9999
+                            });
+                        }, 10);
+                    }
+                }
+            });
+        }
+        
+        // 绑定事件
+        _t._bindDateNavigationEvents($body);
+        
+        console.log('快速定位按钮和日期导航面板已创建（检测到护理表单表格）');
+    },
+
+    /**
+     * 绑定日期导航事件
+     */
+    _bindDateNavigationEvents: function ($body) {
+        var _t = this;
+        
+        // 绑定快速定位按钮点击事件
+        $body.on('click', '.quick-location-btn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('点击了快速定位按钮');
+            _t._handleQuickLocationClick($body);
+        });
+        
+        // 绑定收起按钮点击事件
+        $body.on('click', '.collapse-icon-wrapper', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('点击了收起按钮');
+            _t._handleCollapseClick($body);
+        });
+        
+        // 绑定其他日期导航按钮事件
+        $body.on('click', '.date-nav-first-day', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('点击了【<<第一天】按钮');
+            _t._handleFirstDayClick($body);
+        });
+
+        $body.on('click', '.date-nav-previous-day', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('点击了【<前一天】按钮');
+            _t._handlePreviousDayClick($body);
+        });
+
+        $body.on('click', '.date-nav-date-select, .date-picker-input', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('点击了日期显示区域或输入框');
+            _t._handleDateSelectClick($body);
+        });
+
+        $body.on('click', '.date-nav-next-day', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('点击了【后一天>】按钮');
+            _t._handleNextDayClick($body);
+        });
+
+        $body.on('click', '.date-nav-last-day', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('点击了【最后一天>>】按钮');
+            _t._handleLastDayClick($body);
+        });
+        
+        console.log('事件绑定完成，使用$body对象');
+    },
+
+    /**
+     * 处理快速定位按钮点击事件
+     */
+    _handleQuickLocationClick: function ($body) {
+        var _t = this;
+        console.log('执行快速定位操作');
+        
+        var $panel = $body.find('.date-navigation-container');
+        var $btn = $body.find('.quick-location-btn');
+        // 如果日期输入框没有值，设置为当前日期
+        var $dateInput = $panel.find('.date-picker-input');
+        if (!$dateInput.val()) {
+            var now = new Date();
+            var year = now.getFullYear();
+            var month = String(now.getMonth() + 1).padStart(2, '0');
+            var day = String(now.getDate()).padStart(2, '0');
+            $dateInput.val(year + '-' + month + '-' + day);
+            console.log('设置默认日期:', year + '-' + month + '-' + day);
+        }
+        
+        if ($panel.length > 0 && $btn.length > 0) {
+            $panel.show();
+            $btn.hide();
+            console.log('操作完成 - 面板显示，按钮隐藏');
+        } else {
+            console.log('错误：找不到面板或按钮元素');
+            console.log('面板数量:', $panel.length);
+            console.log('按钮数量:', $btn.length);
+        }
+    },
+
+    /**
+     * 处理收起按钮点击事件
+     */
+    _handleCollapseClick: function ($body) {
+        var _t = this;
+        console.log('执行收起操作');
+        
+        var $panel = $body.find('.date-navigation-container');
+        var $btn = $body.find('.quick-location-btn');
+        
+        if ($panel.length > 0 && $btn.length > 0) {
+            $panel.hide();
+            $btn.show();
+            console.log('操作完成 - 面板隐藏，按钮显示');
+        } else {
+            console.log('错误：找不到面板或按钮元素');
+            console.log('面板数量:', $panel.length);
+            console.log('按钮数量:', $btn.length);
+        }
+    },
+
+    /**
+     * 处理第一天按钮点击事件
+     */
+    _handleFirstDayClick: function ($body) {
+        var _t = this;
+        console.log('执行第一天导航操作');
+        
+        // 查找护理表单表格
+        var $tables = $body.find('table[data-hm-datatable][data-hm-table-type="list"]');
+        if ($tables.length === 0) {
+            console.log('未找到护理表单表格');
+            return;
+        }
+        
+        // 获取最后一个表格的第一行
+        var $lastTable = $tables.first();
+        var $firstRow = $lastTable.find('tbody tr').first();
+        
+        if ($firstRow.length > 0) {
+            console.log('跳转到表格第一行');
+            
+            // 滚动到第一行
+            $firstRow[0].scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            
+            // 高亮显示第一行
+            $firstRow.addClass('highlighted-row');
+            setTimeout(function () {
+                $firstRow.removeClass('highlighted-row');
+            }, 3000);
+        } else {
+            console.log('未找到表格行');
+        }
+    },
+
+    /**
+     * 处理前一天按钮点击事件
+     */
+    _handlePreviousDayClick: function ($body) {
+        var _t = this;
+        console.log('执行前一天导航操作');
+        
+        // 获取当前选中的日期
+        var $datePickerInput = $body.find('.date-picker-input');
+        var currentDateText = $datePickerInput.val();
+        
+        if (!currentDateText) {
+            console.log('未选择当前日期，无法计算前一天');
+            return;
+        }
+        
+        // 解析当前日期
+        var currentDate = new Date(currentDateText);
+        if (isNaN(currentDate.getTime())) {
+            console.log('当前日期格式无效');
+            return;
+        }
+        
+        // 计算前一天
+        var previousDate = new Date(currentDate);
+        previousDate.setDate(currentDate.getDate() - 1);
+        
+        // 格式化为中文格式
+        var year = previousDate.getFullYear();
+        var month = (previousDate.getMonth() + 1).toString().padStart(2, '0');
+        var day = previousDate.getDate().toString().padStart(2, '0');
+        var previousDateText = year + '-' + month + '-' + day;
+        
+        console.log('查找前一天:', previousDateText);
+        
+        // 使用_findAndScrollToDate函数查找前一天
+        _t._findAndScrollToDate($body, previousDateText);
+        
+        // 更新日期输入框显示
+        var chineseDate = year + '-' + month + '-' + day;
+        $datePickerInput.val(chineseDate);
+    },
+
+    /**
+     * 处理日期选择按钮点击事件
+     */
+    _handleDateSelectClick: function ($body) {
+        var _t = this;
+        console.log('执行日期选择操作');
+        
+        var $dateDisplay = $body.find('.date-nav-date-select');
+        var $datePickerInput = $dateDisplay.find('.date-picker-input');
+        
+        // 直接触发日期选择器
+        if ($datePickerInput.length > 0) {
+            $datePickerInput.focus();
+        }
+    },
+
+    /**
+     * 处理后一天按钮点击事件
+     */
+    _handleNextDayClick: function ($body) {
+        var _t = this;
+        console.log('执行后一天导航操作');
+        
+        // 获取当前选中的日期
+        var $datePickerInput = $body.find('.date-picker-input');
+        var currentDateText = $datePickerInput.val();
+        
+        if (!currentDateText) {
+            console.log('未选择当前日期，无法计算后一天');
+            return;
+        }
+        
+        // 解析当前日期
+        var currentDate = new Date(currentDateText);
+        if (isNaN(currentDate.getTime())) {
+            console.log('当前日期格式无效');
+            return;
+        }
+        
+        // 计算后一天
+        var nextDate = new Date(currentDate);
+        nextDate.setDate(currentDate.getDate() + 1);
+        
+        // 格式化为中文格式
+        var year = nextDate.getFullYear();
+        var month = (nextDate.getMonth() + 1).toString().padStart(2, '0');
+        var day = nextDate.getDate().toString().padStart(2, '0');
+        var nextDateText = year + '-' + month + '-' + day;
+        
+        console.log('查找后一天:', nextDateText);
+        
+        // 使用_findAndScrollToDate函数查找后一天
+        _t._findAndScrollToDate($body, nextDateText);
+        
+        // 更新日期输入框显示
+        var chineseDate = year + '-' + month + '-' + day;
+        $datePickerInput.val(chineseDate);
+    },
+
+    /**
+     * 处理最后一天按钮点击事件
+     */
+    _handleLastDayClick: function ($body) {
+        var _t = this;
+        console.log('执行最后一天导航操作');
+        
+        // 查找护理表单表格
+        var $tables = $body.find('table[data-hm-datatable][data-hm-table-type="list"]');
+        if ($tables.length === 0) {
+            console.log('未找到护理表单表格');
+            return;
+        }
+        
+        // 获取最后一个表格的最后一行
+        var $lastTable = $tables.last();
+        var $lastRow = $lastTable.find('tbody tr').last();
+        
+        if ($lastRow.length > 0) {
+            console.log('跳转到表格最后一行');
+            
+            // 滚动到最后一行
+            $lastRow[0].scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            
+            // 高亮显示最后一行
+            $lastRow.addClass('highlighted-row');
+            setTimeout(function () {
+                $lastRow.removeClass('highlighted-row');
+            }, 3000);
+        } else {
+            console.log('未找到表格行');
+        }
+    },
+
+    /**
+     * 查找并滚动到指定日期的表格行
+     */
+    _findAndScrollToDate: function ($body, targetDate) {
+        var _t = this;
+        console.log('开始查找日期:', targetDate);
+        
+        // 查找护理表单表格
+        var $tables = $body.find('table[data-hm-datatable][data-hm-table-type="list"]');
+        if ($tables.length === 0) {
+            console.log('未找到护理表单表格');
+            return;
+        }
+        
+        var found = false;
+        $tables.each(function () {
+            var $table = $(this);
+            var $rows = $table.find('tbody tr');
+            // 如果已经找到匹配行,跳出循环
+            if (found) {
+                return false;
+            }
+            $rows.each(function () {
+                var $row = $(this);
+                // 查找第一列的单元格（日期时间数据元）
+                var $firstCell = $row.find('td:first-child');
+                
+                if ($firstCell.length > 0) {
+                    var $cell = $firstCell.first();
+                    var cellText = $cell.text().trim();
+                    
+                    console.log('检查第一列单元格:', cellText);
+                    
+                    // 检查单元格内容是否包含目标日期
+                    if (cellText && cellText.indexOf(targetDate) !== -1) {
+                        console.log('找到匹配的日期行:', cellText);
+                        
+                        // 滚动到该行
+                        $row[0].scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                        
+                        // 高亮显示找到的行
+                        $row.addClass('highlighted-row');
+                        setTimeout(function () {
+                            $row.removeClass('highlighted-row');
+                        }, 3000);
+                        
+                        found = true;
+                        return false; // 跳出外层循环
+                    }
+                }
+            });
+        });
+        
+        if (!found) {
+            console.log('未找到匹配的日期:', targetDate);
+        }
+    },
+
+    /**
+     * 处理对象项（图片对象、expressionbox对象等）
+     * @param {Object} item - 要处理的对象
+     * @returns {Object} - 包含html和imgFlag的结果对象
+     */
+    processObjectItem: function(item) {
+        var result = {
+            html: null,
+            imgFlag: false
+        };
+
+        if (item.类型 === 'img' && item.值) {
+            // 处理图片对象
+            result.html = this.createImageWidget(item);
+            result.imgFlag = true;
+        } else if (item.类型 === 'expressionbox' && item.值) {
+            // 处理expressionbox对象
+            result.html = this.createExpressionBoxWidget(item);
+        } else {
+            // 其他对象转为字符串
+            result.html = String(item);
+        }
+
+        return result;
+    },
+
+    /**
+     * 生成图片widget HTML（通用方法）
+     * @param {String} imageSrc - 图片源
+     * @param {String} style - 图片样式 
+     * @returns {String} - 图片widget HTML
+     */
+    _generateImageWidgetHtml: function(imageSrc, style) {
+        style = style || 'max-width:755px;max-height:320px;';
+        var widgetId = Math.floor(Math.random() * 10000);
+        var imgId = 'cms' + Math.random().toString(36).substr(2, 8) + '-' + 
+                   Math.random().toString(36).substr(2, 4) + '-' +
+                   Math.random().toString(36).substr(2, 4) + '-' +
+                   Math.random().toString(36).substr(2, 4) + '-' +
+                   Math.random().toString(36).substr(2, 12);
+        
+        // 使用与原始CKEditor完全一致的结构，添加resizable标识
+        var imgHtml = '<span>';
+        imgHtml += '<span tabindex="-1" contenteditable="false" ';
+        imgHtml += 'data-cke-widget-wrapper="1" data-cke-filter="off" ';
+        imgHtml += 'data-hm-image-resizable="true" '; // 使用data属性而不是class
+        imgHtml += 'class="cke_widget_wrapper cke_widget_inline cke_widget_image cke_image_nocaption" ';
+        imgHtml += 'data-cke-display-name="图像" data-cke-widget-id="' + widgetId + '" ';
+        imgHtml += 'role="region" aria-label=" 图像 小部件">';
+        imgHtml += '<img style="' + style + '" ';
+        imgHtml += 'id="' + imgId + '" ';
+        imgHtml += 'src="' + imageSrc + '" ';
+        imgHtml += 'data-cke-widget-upcasted="1" ';
+        imgHtml += 'data-cke-widget-keep-attr="0" ';
+        imgHtml += 'data-widget="image" ';
+        imgHtml += 'class="cke_widget_element" alt="">';
+        imgHtml += '<span class="cke_image_resizer" title="点击并拖拽以改变尺寸">&ZeroWidthSpace;</span>';
+        imgHtml += '</span>';
+        imgHtml += '</span>';
+        
+        return imgHtml;
+    },
+
+    /**
+     * 创建图片widget HTML
+     * @param {Object} item - 图片对象
+     * @returns {String} - 图片widget HTML
+     */
+    createImageWidget: function(item) {
+        return this._generateImageWidgetHtml(item.值, item.style);
+    },
+
+    /**
+     * 创建expressionbox widget HTML
+     * @param {Object} item - expressionbox对象
+     * @returns {String} - expressionbox widget HTML
+     */
+    createExpressionBoxWidget: function(item) {
+        var style = item._style || 'display: inline-table; vertical-align: middle;';
+        // 转义HTML属性中的引号
+        var safeStyle = style.replace(/"/g, '&quot;');
+        var safeExpressionOption = (item._expressionoption || '').replace(/"/g, '&quot;');
+        var safeExpressionValue = (item.值 || '').replace(/"/g, '&quot;');
+        var safeId = (item.id || '').replace(/"/g, '&quot;');
+        
+        var expressionHtml = '<span contenteditable="false" data-hm-node="expressionbox" ';
+        expressionHtml += '_expressionoption="' + safeExpressionOption + '" ';
+        expressionHtml += 'data-hm-id="' + safeId + '" ';
+        expressionHtml += '_expressionvalue="' + safeExpressionValue + '" ';
+        expressionHtml += 'style="' + safeStyle + '">&ZeroWidthSpace;</span>';
+        
+        return expressionHtml;
+    },
+
+    /**
+     * 处理单个字符串中的图片
+     * @param {String} bindVal - 要处理的字符串
+     * @returns {Object} - 包含处理后的值和imgFlag的结果对象
+     */
+    processStringImage: function(bindVal) {
+        var result = {
+            value: bindVal,
+            imgFlag: false
+        };
+
+        if (bindVal && bindVal.indexOf('data:image/png;base64,') === 0) {
+            result.value = this._generateImageWidgetHtml(bindVal);
+            result.imgFlag = true;
+        }
+
+        return result;
+    },
+
+
+
+    /**
+     * 为现有的图片widget添加拖拽改变尺寸功能
+     * @param {jQuery} $body 编辑器body元素
+     */
+    initExistingImageResizers: function($body) {
+        var _t = this;
+        
+        // 查找所有CKEditor图片widget但没有拖拽标识的
+        $body.find('.cke_widget_image:not([data-hm-image-resizable])').each(function() {
+            var $widget = $(this);
+            
+            // 检查是否已经有resizer元素
+            if ($widget.find('.cke_image_resizer').length === 0) {
+                // 添加resizer元素
+                var $img = $widget.find('img');
+                if ($img.length > 0) {
+                    $img.after('<span class="cke_image_resizer" title="点击并拖拽以改变尺寸">&ZeroWidthSpace;</span>');
+                }
+            }
+            
+            // 添加拖拽标识
+            $widget.attr('data-hm-image-resizable', 'true');
+            
+            console.log('为现有图片添加拖拽功能');
+        });
+    },
+    /**
+     * 自定义属性对象结构
+     * @property {string} widget - 病历唯一编码
+     * @property {string} section - 节点标识（病历ID、表格ID或数据元CODE）
+     * @property {Array} customProperty - 自定义属性数组
+     * @property {string} customProperty[].name - 属性名（如：data-custom-status）
+     * @property {string} customProperty[].value - 属性值
+     */
+    setCustomProperties:function(widget,section,customProperty){
+        var _t = this;
+        
+        // 验证参数
+        if (!widget || !section || !customProperty || !Array.isArray(customProperty) || customProperty.length === 0) {
+            console.warn('setCustomProperties: 缺少必要参数或customProperty不是有效的数组');
+            return;
+        }
+        
+        // 验证数组中的每个属性对象
+        for (var i = 0; i < customProperty.length; i++) {
+            if (!customProperty[i] || !customProperty[i].name) {
+                console.warn('setCustomProperties: customProperty数组中第' + i + '个元素缺少name属性');
+                return;
+            }
+        }
+        
+        try {
+            // 1. 根据widget获取编辑器中对应的病历
+            var $body = $(_t.editor.document.getBody().$);
+            var $widgetElement = $body.find('[data-hm-widgetid="' + widget + '"]');
+            
+            if ($widgetElement.length === 0) {
+                console.warn('setCustomProperties: 未找到对应的病历widget, widgetId=' + widget);
+                return;
+            }
+            
+            console.log('找到病历widget:', widget);
+            
+            // 2. 根据section获取编辑器中对应的<hm-custom-properties>标签
+            var $customPropertiesElement = $widgetElement.find('hm-custom-properties[section="' + section + '"]');
+            
+            if ($customPropertiesElement.length > 0) {
+                // 如果找到了，则将customProperty数组中的每个name和value设置到<hm-custom-properties>标签属性中
+                console.log('找到现有的hm-custom-properties标签，更新属性');
+                
+                for (var j = 0; j < customProperty.length; j++) {
+                    var property = customProperty[j];
+                    $customPropertiesElement.attr('data-custom-'+ property.name, property.value || '');
+                    console.log('更新属性:', property.name + '=' + (property.value || ''));
+                }
+            } else {
+                // 如果获取不到，则创建一个<hm-custom-properties>标签
+                console.log('未找到hm-custom-properties标签，创建新标签');
+                
+                var $newCustomPropertiesElement = $('<hm-custom-properties></hm-custom-properties>');
+                $newCustomPropertiesElement.attr('section', section);
+                
+                // 设置customProperty数组中的所有属性
+                for (var k = 0; k < customProperty.length; k++) {
+                    var property = customProperty[k];
+                    $newCustomPropertiesElement.attr('data-custom-'+ property.name, property.value || '');
+                    console.log('设置属性:', property.name + '=' + (property.value || ''));
+                }
+                
+                // 追加到widget下
+                $widgetElement.append($newCustomPropertiesElement);
+                
+                console.log('已创建并追加新的hm-custom-properties标签到widget');
+            }
+            
+            console.log('setCustomProperties执行成功:', {
+                widget: widget,
+                section: section,
+                propertiesCount: customProperty.length,
+                properties: customProperty.map(function(prop) {
+                    return prop.name + '=' + (prop.value || '');
+                }).join(', ')
+            });
+            
+        } catch (error) {
+            console.error('setCustomProperties执行失败:', error);
+        }
+    },
+    deleteCustomProperties:function(widget,section,propertyNames){
+        var _t = this;
+        
+        // 验证参数
+        if (!widget || !section) {
+            console.warn('removeCustomProperties: 缺少必要参数widget或section');
+            return;
+        }
+        
+        try {
+            // 1. 根据widget获取编辑器中对应的病历
+            var $body = $(_t.editor.document.getBody().$);
+            var $widgetElement = $body.find('[data-hm-widgetid="' + widget + '"]');
+            
+            if ($widgetElement.length === 0) {
+                console.warn('removeCustomProperties: 未找到对应的病历widget, widgetId=' + widget);
+                return;
+            }
+            
+            console.log('找到病历widget:', widget);
+            
+            // 2. 根据section获取编辑器中对应的<hm-custom-properties>标签
+            var $customPropertiesElement = $widgetElement.find('hm-custom-properties[section="' + section + '"]');
+            
+            if ($customPropertiesElement.length === 0) {
+                console.warn('removeCustomProperties: 未找到对应的hm-custom-properties标签, section=' + section);
+                return;
+            }
+            
+            console.log('找到hm-custom-properties标签:', section);
+            
+            // 3. 如果存在propertyNames数组则移除指定属性
+            if (propertyNames && Array.isArray(propertyNames) && propertyNames.length > 0) {
+                // 遍历数组，移除每个指定的属性
+                var removedProperties = [];
+                var notFoundProperties = [];
+                
+                for (var i = 0; i < propertyNames.length; i++) {
+                    var propertyName = propertyNames[i];
+                    if ($customPropertiesElement.attr('data-custom-'+ propertyName) !== undefined) {
+                        $customPropertiesElement.removeAttr('data-custom-'+ propertyName);
+                        removedProperties.push(propertyName);
+                        console.log('已移除属性:', propertyName);
+                    } else {
+                        notFoundProperties.push(propertyName);
+                        console.warn('removeCustomProperties: 属性不存在, propertyName=' + propertyName);
+                    }
+                }
+                
+                // 判断当前标签剩余属性个数，如果除section外属性个数为0，则移除当前标签
+                var attributes = $customPropertiesElement[0].attributes;
+                var remainingAttributesCount = 0;
+                
+                // 统计除section外的属性个数
+                for (var j = 0; j < attributes.length; j++) {
+                    var attrName = attributes[j].name;
+                    if (attrName !== 'section') {
+                        remainingAttributesCount++;
+                    }
+                }
+                
+                console.log('剩余属性个数（除section外）:', remainingAttributesCount);
+                
+                if (remainingAttributesCount === 0) {
+                    $customPropertiesElement.remove();
+                    console.log('除section外无其他属性，已移除整个hm-custom-properties标签');
+                }
+                
+                console.log('removeCustomProperties执行成功:', {
+                    widget: widget,
+                    section: section,
+                    removedProperties: removedProperties,
+                    notFoundProperties: notFoundProperties
+                });
+                
+            } else {
+                // 如果没有指定propertyNames数组，则移除整个hm-custom-properties标签
+                $customPropertiesElement.remove();
+                console.log('已移除整个hm-custom-properties标签');
+                
+                console.log('removeCustomProperties执行成功:', {
+                    widget: widget,
+                    section: section,
+                    action: '移除整个标签'
+                });
+            }
+            
+        } catch (error) {
+            console.error('removeCustomProperties执行失败:', error);
+        }
+    },
+    /**
+     * 获取自定义属性值
+     * @param {string} widget - 病历唯一编码
+     * @param {string} section - 节点标识（病历ID、表格ID或数据元CODE）
+     * @param {Array} propertyNames - 要获取的属性名数组（可选，如果不传则返回所有自定义属性）
+     * @returns {Object} 属性名值对对象，格式：{属性名: 属性值}
+     */
+    getCustomProperties:function(widget,section,propertyNames){
+        var _t = this;
+        
+        // 验证参数
+        if (!widget || !section) {
+            console.warn('getCustomProperties: 缺少必要参数widget或section');
+            return {};
+        }
+        
+        try {
+            // 1. 根据widget获取编辑器中对应的病历
+            var $body = $(_t.editor.document.getBody().$);
+            var $widgetElement = $body.find('[data-hm-widgetid="' + widget + '"]');
+            
+            if ($widgetElement.length === 0) {
+                console.warn('getCustomProperties: 未找到对应的病历widget, widgetId=' + widget);
+                return {};
+            }
+            
+            console.log('找到病历widget:', widget);
+            
+            // 2. 根据section获取编辑器中对应的<hm-custom-properties>标签
+            var $customPropertiesElement = $widgetElement.find('hm-custom-properties[section="' + section + '"]');
+            
+            if ($customPropertiesElement.length === 0) {
+                console.warn('getCustomProperties: 未找到对应的hm-custom-properties标签, section=' + section);
+                return {};
+            }
+            
+            console.log('找到hm-custom-properties标签:', section);
+            
+            var result = {};
+            var attributes = $customPropertiesElement[0].attributes;
+            
+            // 3. 如果指定了propertyNames数组，则只获取指定的属性
+            if (propertyNames && Array.isArray(propertyNames) && propertyNames.length > 0) {
+                console.log('获取指定属性:', propertyNames);
+                
+                for (var i = 0; i < propertyNames.length; i++) {
+                    var propertyName = propertyNames[i];
+                    var attrValue = $customPropertiesElement.attr('data-custom-' + propertyName);
+                    
+                    if (attrValue !== undefined) {
+                        result[propertyName] = attrValue;
+                        console.log('获取到属性:', propertyName + '=' + attrValue);
+                    } else {
+                        console.warn('getCustomProperties: 属性不存在, propertyName=' + propertyName);
+                        // 对于不存在的属性，可以选择不添加到结果中，或者添加为null
+                        // result[propertyName] = null;
+                    }
+                }
+            } else {
+                // 4. 如果没有指定propertyNames，则获取所有自定义属性（除section外）
+                console.log('获取所有自定义属性');
+                
+                for (var j = 0; j < attributes.length; j++) {
+                    var attrName = attributes[j].name;
+                    var attrValue = attributes[j].value;
+                    
+                    // 只获取data-custom-开头的属性，排除section属性
+                    if (attrName.indexOf('data-custom-') === 0) {
+                        // 提取属性名（去掉data-custom-前缀）
+                        var propertyName = attrName.substring('data-custom-'.length);
+                        result[propertyName] = attrValue;
+                        console.log('获取到属性:', propertyName + '=' + attrValue);
+                    }
+                }
+            }
+            
+            console.log('getCustomProperties执行成功:', {
+                widget: widget,
+                section: section,
+                requestedProperties: propertyNames || '所有属性',
+                resultCount: Object.keys(result).length,
+                result: result
+            });
+            
+            return result;
+            
+        } catch (error) {
+            console.error('getCustomProperties执行失败:', error);
+            return {};
+        }
+    }
 });

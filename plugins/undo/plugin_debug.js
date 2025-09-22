@@ -18,6 +18,43 @@
 		],
 		backspaceOrDelete = { 8: 1, 46: 1 };
 
+	// 全局Debug配置 - 可以通过控制台动态开启/关闭
+	if (typeof window.CKEDITOR_UNDO_DEBUG === 'undefined') {
+		window.CKEDITOR_UNDO_DEBUG = true;
+	}
+
+	// Debug 工具函数
+	var debugLog = function(message, data) {
+		if (window.CKEDITOR_UNDO_DEBUG) {
+			var timestamp = new Date().toLocaleTimeString();
+			console.log('[UNDO DEBUG ' + timestamp + ']', message, data || '');
+		}
+	};
+
+	// 先定义debug方法，确保在插件初始化时可用
+	var debugMethods = {
+		enable: function() {
+			window.CKEDITOR_UNDO_DEBUG = true;
+			console.log('[UNDO DEBUG] Debug模式已启用');
+		},
+		disable: function() {
+			window.CKEDITOR_UNDO_DEBUG = false;
+			console.log('[UNDO DEBUG] Debug模式已关闭');
+		},
+		toggle: function() {
+			window.CKEDITOR_UNDO_DEBUG = !window.CKEDITOR_UNDO_DEBUG;
+			console.log('[UNDO DEBUG] Debug模式已' + (window.CKEDITOR_UNDO_DEBUG ? '启用' : '关闭'));
+		},
+		status: function() {
+			console.log('[UNDO DEBUG] 当前状态:', window.CKEDITOR_UNDO_DEBUG ? '启用' : '关闭');
+			return window.CKEDITOR_UNDO_DEBUG;
+		}
+	};
+
+	// 为所有编辑器实例添加debug方法
+	CKEDITOR.plugins.undo = CKEDITOR.plugins.undo || {};
+	CKEDITOR.plugins.undo.debug = debugMethods;
+
 	CKEDITOR.plugins.add( 'undo', {
 		// jscs:disable maximumLineLength
 		lang: 'af,ar,az,bg,bn,bs,ca,cs,cy,da,de,de-ch,el,en,en-au,en-ca,en-gb,eo,es,es-mx,et,eu,fa,fi,fo,fr,fr-ca,gl,gu,he,hi,hr,hu,id,is,it,ja,ka,km,ko,ku,lt,lv,mk,mn,ms,nb,nl,no,oc,pl,pt,pt-br,ro,ru,si,sk,sl,sq,sr,sr-latn,sv,th,tr,tt,ug,uk,vi,zh,zh-cn', // %REMOVE_LINE_CORE%
@@ -25,14 +62,63 @@
 		icons: 'redo,redo-rtl,undo,undo-rtl', // %REMOVE_LINE_CORE%
 		hidpi: true, // %REMOVE_LINE_CORE%
 		init: function( editor ) {
+			debugLog('初始化Undo插件', { editorId: editor.name });
+
 			var undoManager = editor.undoManager = new UndoManager( editor ),
 				editingHandler = undoManager.editingHandler = new NativeEditingHandler( undoManager );
 
+			// 为编辑器实例添加debug方法
+			editor.undoDebug = {
+				enable: debugMethods.enable,
+				disable: debugMethods.disable,
+				toggle: debugMethods.toggle,
+				status: debugMethods.status,
+				logSnapshots: function() {
+					if (undoManager.snapshots) {
+						console.log('[UNDO DEBUG] 当前快照栈:', {
+							count: undoManager.snapshots.length,
+							currentIndex: undoManager.index,
+							canUndo: undoManager.undoable(),
+							canRedo: undoManager.redoable(),
+							typing: undoManager.typing
+						});
+						undoManager.snapshots.forEach(function(snapshot, index) {
+							console.log('[UNDO DEBUG] 快照 ' + index + ':', {
+								content: snapshot.contents.substring(0, 100) + (snapshot.contents.length > 100 ? '...' : ''),
+								tags: snapshot.tags,
+								paperSize: snapshot.paperSize
+							});
+						});
+					}
+				},
+				logCurrentState: function() {
+					console.log('[UNDO DEBUG] 当前状态:', {
+						enabled: undoManager.enabled,
+						locked: undoManager.locked,
+						typing: undoManager.typing,
+						currentIndex: undoManager.index,
+						snapshotsCount: undoManager.snapshots ? undoManager.snapshots.length : 0,
+						canUndo: undoManager.undoable(),
+						canRedo: undoManager.redoable(),
+						strokesRecorded: undoManager.strokesRecorded,
+						previousKeyGroup: undoManager.previousKeyGroup
+					});
+				}
+			};
+
 			var undoCommand = editor.addCommand( 'undo', {
 				exec: function() {
+					debugLog('执行撤销命令', {
+						canUndo: undoManager.undoable(),
+						currentIndex: undoManager.index,
+						snapshotsCount: undoManager.snapshots.length
+					});
 					if ( undoManager.undo() ) {
 						editor.selectionChange();
 						this.fire( 'afterUndo' );
+						debugLog('撤销命令执行成功');
+					} else {
+						debugLog('撤销命令执行失败');
 					}
 				},
 				startDisabled: true,
@@ -41,9 +127,17 @@
 
 			var redoCommand = editor.addCommand( 'redo', {
 				exec: function() {
+					debugLog('执行重做命令', {
+						canRedo: undoManager.redoable(),
+						currentIndex: undoManager.index,
+						snapshotsCount: undoManager.snapshots.length
+					});
 					if ( undoManager.redo() ) {
 						editor.selectionChange();
 						this.fire( 'afterRedo' );
+						debugLog('重做命令执行成功');
+					} else {
+						debugLog('重做命令执行失败');
 					}
 				},
 				startDisabled: true,
@@ -57,12 +151,25 @@
 			] );
 
 			undoManager.onChange = function() {
+				debugLog('Undo状态变化', {
+					canUndo: undoManager.undoable(),
+					canRedo: undoManager.redoable(),
+					typing: undoManager.typing,
+					snapshotsCount: undoManager.snapshots.length,
+					currentIndex: undoManager.index
+				});
 				undoCommand.setState( undoManager.undoable() ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED );
 				redoCommand.setState( undoManager.redoable() ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED );
 			};
 
 			function recordCommand( event ) {
-				// If the command hasn't been marked to not support undo.
+				debugLog('记录命令', {
+					commandName: event.data.name,
+					canUndo: event.data.command.canUndo,
+					enabled: undoManager.enabled,
+					eventType: event.name
+				});
+
 				// 禁止保存操作和纸张大小设置触发onchange
 				if (undoManager.enabled &&
 					event.data.name !== 'save' &&
@@ -78,6 +185,11 @@
 
 			// Save snapshots before doing custom changes.
 			editor.on( 'saveSnapshot', function( evt ) {
+				debugLog('保存快照事件触发', {
+					contentOnly: evt.data && evt.data.contentOnly,
+					tagName: evt.data && evt.data.tagName,
+					eventName: evt.name
+				});
 				undoManager.save(
 					evt.data && evt.data.contentOnly,
 					undefined,
@@ -90,6 +202,7 @@
 			editor.on( 'contentDom', editingHandler.attachListeners, editingHandler );
 
 			editor.on( 'instanceReady', function(e) {
+				debugLog('编辑器实例准备就绪，保存初始快照');
 				// Saves initial snapshot.
 				editor.fire( 'saveSnapshot', e );
 			} );
@@ -97,11 +210,18 @@
 			// Always save an undo snapshot - the previous mode might have
 			// changed editor contents.
 			editor.on( 'beforeModeUnload', function() {
+				debugLog('模式卸载前保存快照', { mode: editor.mode });
 				editor.mode == 'wysiwyg' && undoManager.save( true );
 			} );
 
 			function toggleUndoManager() {
-				undoManager.enabled = editor.readOnly ? false : editor.mode == 'wysiwyg';
+				var newEnabled = editor.readOnly ? false : editor.mode == 'wysiwyg';
+				debugLog('切换Undo管理器状态', {
+					enabled: newEnabled,
+					readOnly: editor.readOnly,
+					mode: editor.mode
+				});
+				undoManager.enabled = newEnabled;
 				undoManager.onChange();
 			}
 
@@ -131,6 +251,7 @@
 			 * @member CKEDITOR.editor
 			 */
 			editor.resetUndo = function() {
+				debugLog('重置撤销栈');
 				// Reset the undo stack.
 				undoManager.reset();
 
@@ -154,6 +275,7 @@
 			 * @param {CKEDITOR.editor} editor This editor instance.
 			 */
 			editor.on( 'updateSnapshot', function() {
+				debugLog('更新快照');
 				if ( undoManager.currentImage )
 					undoManager.update();
 			} );
@@ -180,6 +302,7 @@
 			 * with the current content and selection. Read more in the {@link CKEDITOR.plugins.undo.UndoManager#lock} method.
 			 */
 			editor.on('lockSnapshot', function (evt) {
+				debugLog('锁定快照', evt.data);
 				var data = evt.data;
 				if (data) {
 					undoManager.lock(data.dontUpdate, data.forceUpdate, data);
@@ -196,7 +319,10 @@
 			 * @member CKEDITOR.editor
 			 * @param {CKEDITOR.editor} editor This editor instance.
 			 */
-			editor.on( 'unlockSnapshot', undoManager.unlock, undoManager );
+			editor.on( 'unlockSnapshot', function() {
+				debugLog('解锁快照');
+				undoManager.unlock();
+			});
 		}
 	} );
 
@@ -274,6 +400,14 @@
 		 * behave as if the strokes limit was exceeded regardless of the {@link #strokesRecorded} value.
 		 */
 		type: function (keyCode, strokesPerSnapshotExceeded, evt) {
+			debugLog('处理按键输入', {
+				keyCode: keyCode,
+				strokesPerSnapshotExceeded: strokesPerSnapshotExceeded,
+				eventName: evt && evt.name,
+				typing: this.typing,
+				strokesRecorded: this.strokesRecorded
+			});
+
 			// region 处理数据元的 placeholder
 			var $boundaryPair = this.editor.plugins.datasource.getRangeBoundaryNewtextbox();
 			if ($boundaryPair) {
@@ -286,8 +420,6 @@
 				});
 			}
 			// endregion
-
-
 
 			var keyGroup = UndoManager.getKeyGroup( keyCode ),
 				// Count of keystrokes in current a row.
@@ -303,9 +435,14 @@
 			if ( strokesPerSnapshotExceeded ) {
 				// Reset the count of strokes, so it'll be later assigned to this.strokesRecorded.
 				strokesRecorded = 0;
+				debugLog('按键次数达到限制，保存快照', {
+					keyCode: keyCode,
+					strokesLimit: this.strokesLimit
+				});
 				this.editor.fire('saveSnapshot', {name: 'type', keyCode: keyCode});
 			} else {
 				// Fire change event.
+				debugLog('触发change事件', { keyCode: keyCode });
 				this.editor.fire('change', {name: 'type', keyCode: keyCode});
 			}
 
@@ -330,6 +467,7 @@
 		 * Resets the undo stack.
 		 */
 		reset: function() {
+			debugLog('重置撤销栈');
 			// Stack for all the undo and redo snapshots, they're always created/removed
 			// in consistency.
 			this.snapshots = [];
@@ -352,6 +490,7 @@
 		 * @see #type
 		 */
 		resetType: function() {
+			debugLog('重置输入状态');
 			this.strokesRecorded = [ 0, 0 ];
 			this.typing = false;
 			this.previousKeyGroup = -1;
@@ -362,6 +501,7 @@
 		 * as well as the state of the `undo` and `redo` commands.
 		 */
 		refreshState: function() {
+			debugLog('刷新撤销状态');
 			// These lines can be handled within onChange() too.
 			this.hasUndo = !!this.getNextImage(true, this.editor.HMConfig.realtimePageBreak ? 'afterPaging' : '-afterPaging');
 			this.hasRedo = !!this.getNextImage(false, this.editor.HMConfig.realtimePageBreak ? 'afterPaging' : '-afterPaging');
@@ -380,19 +520,37 @@
 		 * @param {string[]} [tags] YanJunwei - 镜像的标签
 		 */
 		save: function( onContentOnly, image, autoFireChange, event, tags ) {
+			debugLog('尝试保存快照', {
+				onContentOnly: onContentOnly,
+				hasImage: !!image,
+				autoFireChange: autoFireChange,
+				eventName: event && event.name,
+				tags: tags,
+				locked: this.locked,
+				editorStatus: this.editor.status,
+				mode: this.editor.mode
+			});
+
 			// YanJunwei - 纸张大小设置前不触发保存, 应该在设置纸张大小之后再进行保存.
 			if (event && event.name === 'beforeCommandExec' && event.data.name === 'paperSize') {
+				debugLog('跳过纸张大小设置前的保存');
 				return;
 			}
 			var editor = this.editor;
 			// Do not change snapshots stack when locked, editor is not ready,
 			// editable is not ready or when editor is in mode difference than 'wysiwyg'.
-			if ( this.locked || editor.status != 'ready' || editor.mode != 'wysiwyg' )
+			if ( this.locked || editor.status != 'ready' || editor.mode != 'wysiwyg' ) {
+				debugLog('保存快照被跳过', {
+					reason: this.locked ? 'locked' : (editor.status != 'ready' ? 'editor not ready' : 'not wysiwyg mode')
+				});
 				return false;
+			}
 
 			var editable = editor.editable();
-			if ( !editable || editable.status != 'ready' )
+			if ( !editable || editable.status != 'ready' ) {
+				debugLog('保存快照被跳过', { reason: 'editable not ready' });
 				return false;
+			}
 
 			var snapshots = this.snapshots;
 
@@ -401,33 +559,53 @@
 				image = new Image( editor, false, tags );
 
 			// Do nothing if it was not possible to retrieve an image.
-			if ( image.contents === false )
+			if ( image.contents === false ) {
+				debugLog('无法创建内容镜像，跳过保存');
 				return false;
+			}
 
 			// Check if this is a duplicate. In such case, do nothing.
 			if ( this.currentImage ) {
 				if ( image.equalsContent( this.currentImage ) ) {
 					if (onContentOnly || image.equalsSelection(this.currentImage)) {
+						debugLog('内容相同，更新标签后跳过保存', {
+							onContentOnly: onContentOnly,
+							selectionSame: image.equalsSelection(this.currentImage),
+							tags: tags
+						});
 						// 更新tags
 						this.currentImage.updateTagsFrom(image);
 						return false;
 					}
 				} else if ( autoFireChange !== false ) {
+					debugLog('内容已变化，触发change事件', { eventName: event && event.name });
 					editor.fire('change', event);
 				}
 			}
 
 			// Drop future snapshots.
+			var removedCount = snapshots.length - this.index - 1;
+			if (removedCount > 0) {
+				debugLog('删除未来快照', { count: removedCount });
+			}
 			snapshots.splice( this.index + 1, snapshots.length - this.index - 1 );
 
 			// If we have reached the limit, remove the oldest one.
-			if ( snapshots.length >= this.limit )
+			if ( snapshots.length >= this.limit ) {
+				debugLog('达到快照限制，删除最旧的快照', { limit: this.limit });
 				snapshots.shift();
+			}
 
 			// Add the new image, updating the current index.
 			this.index = snapshots.push( image ) - 1;
-
 			this.currentImage = image;
+
+			debugLog('快照保存成功', {
+				newIndex: this.index,
+				totalSnapshots: snapshots.length,
+				contentPreview: image.contents.substring(0, 100) + (image.contents.length > 100 ? '...' : ''),
+				tags: image.tags
+			});
 
 			if ( autoFireChange !== false )
 				this.refreshState();
@@ -440,6 +618,12 @@
 		 * @param {CKEDITOR.plugins.undo.Image} image
 		 */
 		restoreImage: function (image, evt) {
+			debugLog('开始恢复镜像', {
+				imageIndex: image.index,
+				contentPreview: image.contents.substring(0, 100) + (image.contents.length > 100 ? '...' : ''),
+				tags: image.tags
+			});
+
 			var that=this;
 			function callback4RestoreImage(){
 
@@ -500,6 +684,7 @@
 				that.refreshState();
 
 				editor.fire('change', {name: 'restoreImage', data: evt});
+				debugLog('镜像恢复完成');
 			}
 
 			if (!CKEDITOR.plugins.pagebreakCmd.autoPaging) {
@@ -524,6 +709,13 @@
 		 * @returns {CKEDITOR.plugins.undo.Image} Next image or `null`.
 		 */
 		getNextImage: function(isUndo, tagName) {
+			debugLog('查找下一个镜像', {
+				isUndo: isUndo,
+				tagName: tagName,
+				currentIndex: this.index,
+				snapshotsCount: this.snapshots.length
+			});
+
 			var snapshots = this.snapshots,
 				currentImage = this.currentImage,
 				image, i,
@@ -565,6 +757,7 @@
 							if (i === 2 && snapshots[i - 1].contents.startsWith('<div class="emrWidget">')) {
 								return null;
 							}
+							debugLog('找到可撤销的镜像', { index: i, contentPreview: image.contents.substring(0, 50) + '...' });
 							return image;
 						}
 					}
@@ -587,12 +780,14 @@
 
 						if ( !currentImage.equalsContent( image ) ) {
 							image.index = i;
+							debugLog('找到可重做的镜像', { index: i, contentPreview: image.contents.substring(0, 50) + '...' });
 							return image;
 						}
 					}
 				}
 			}
 
+			debugLog('未找到匹配的镜像');
 			return null;
 		},
 
@@ -618,6 +813,12 @@
 		 * Performs an undo operation on current index.
 		 */
 		undo: function() {
+			debugLog('开始撤销操作', {
+				canUndo: this.undoable(),
+				currentIndex: this.index,
+				snapshotsCount: this.snapshots.length
+			});
+
 			if ( this.undoable() ) {
 				var that = this;
 				var undoWaitPagingComplete = setInterval(function () {
@@ -626,10 +827,20 @@
 						that.save(true, undefined, undefined, {name: 'undo'});
 
 						var image = that.getNextImage(true, that.editor.HMConfig.realtimePageBreak ? 'afterPaging' :  '-afterPaging');
-						if (image)
+						if (image) {
+							debugLog('找到可撤销的快照', {
+								imageIndex: image.index,
+								contentPreview: image.contents.substring(0, 100) + (image.contents.length > 100 ? '...' : ''),
+								tags: image.tags
+							});
 							return that.restoreImage(image, {name: 'undo'}), true;
+						} else {
+							debugLog('未找到可撤销的快照');
+						}
 					}
 				},10);
+			} else {
+				debugLog('无法执行撤销操作', { reason: 'not undoable' });
 			}
 
 			return false;
@@ -639,6 +850,12 @@
 		 * Performs a redo operation on current index.
 		 */
 		redo: function() {
+			debugLog('开始重做操作', {
+				canRedo: this.redoable(),
+				currentIndex: this.index,
+				snapshotsCount: this.snapshots.length
+			});
+
 			if ( this.redoable() ) {
 				// Try to save. If no changes have been made, the redo stack
 				// will not change, so it will still be redoable.
@@ -647,9 +864,21 @@
 				// If instead we had changes, we can't redo anymore.
 				if ( this.redoable() ) {
 					var image = this.getNextImage(false, this.editor.HMConfig.realtimePageBreak ? 'afterPaging' :  '-afterPaging');
-					if ( image ){}
+					if ( image ) {
+						debugLog('找到可重做的快照', {
+							imageIndex: image.index,
+							contentPreview: image.contents.substring(0, 100) + (image.contents.length > 100 ? '...' : ''),
+							tags: image.tags
+						});
 						return this.restoreImage(image, {name: 'redo'}), true;
+					} else {
+						debugLog('未找到可重做的快照');
+					}
+				} else {
+					debugLog('重做操作被取消，因为内容已变化');
 				}
+			} else {
+				debugLog('无法执行重做操作', { reason: 'not redoable' });
 			}
 
 			return false;
@@ -663,6 +892,11 @@
 		 * @param {string[]} [tags] 创建镜像时添加标签
 		 */
 		update: function( newImage, tags ) {
+			debugLog('更新快照', {
+				hasNewImage: !!newImage,
+				tags: tags,
+				locked: this.locked
+			});
 			// Do not change snapshots stack is locked.
 			if ( this.locked )
 				return;
@@ -693,6 +927,10 @@
 		 * @returns {Boolean} Returns `true` if selection was amended.
 		 */
 		updateSelection: function( newSnapshot ) {
+			debugLog('更新选择', {
+				hasNewSnapshot: !!newSnapshot,
+				snapshotsLength: this.snapshots.length
+			});
 			if ( !this.snapshots.length )
 				return false;
 
@@ -703,6 +941,7 @@
 				if ( !lastImage.equalsSelection( newSnapshot ) ) {
 					snapshots[ snapshots.length - 1 ] = newSnapshot;
 					this.currentImage = newSnapshot;
+					debugLog('选择已更新');
 					return true;
 				}
 			}
@@ -737,6 +976,12 @@
 		 * 					data.image @return {CKEDITOR.plugin.undo.Image}: 创建的镜像(如有)
 		 */
 		lock: function( dontUpdate, forceUpdate , data) {
+			debugLog('锁定撤销管理器', {
+				dontUpdate: dontUpdate,
+				forceUpdate: forceUpdate,
+				data: data,
+				currentLocked: this.locked
+			});
 			if (!data) {
 				data = {};
 			}
@@ -786,6 +1031,10 @@
 		 * @since 4.0
 		 */
 		unlock: function() {
+			debugLog('解锁撤销管理器', {
+				locked: this.locked,
+				level: this.locked ? this.locked.level : 0
+			});
 			if ( this.locked ) {
 				// Decrease level of lock and check if equals 0, what means that undoM is completely unlocked.
 				if ( !--this.locked.level ) {
@@ -804,6 +1053,9 @@
 						if ( !update.equalsContent( newImage ) )
 							this.update(null, tags);
 					}
+					debugLog('撤销管理器已完全解锁');
+				} else {
+					debugLog('撤销管理器锁定级别减少', { remainingLevel: this.locked.level });
 				}
 			}
 		}

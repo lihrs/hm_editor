@@ -203,9 +203,9 @@
 			isResizing = 0;
 
 			resizer.setOpacity( 0 );
-
+			
 			currentShift && resizeColumn();
-
+			
 			var table = pillar.table;
 			setTimeout( function() {
 				table.removeCustomData( '_cke_table_pillars' );
@@ -299,14 +299,14 @@
 						table.setStyle( 'width', pxUnit( tableNewWidth + sizeShift * ( rtl ? -1 : 1 ) ) );
 
 					// Cells resizing is asynchronous-y, so we have to use syncing
-					// to save snapshot only after all cells are resized. (http://dev.ckeditor.com/ticket/13388)
-					editor.fire('saveSnapshot', {
-						name: 'resizeColumn',
-						leftSideCol: leftSideCol,
-						rightSideCol: rightSideCol,
-						leftShiftBoundary: leftShiftBoundary,
-						rightShiftBoundary: rightShiftBoundary
-					});
+                    // to save snapshot only after all cells are resized. (http://dev.ckeditor.com/ticket/13388)
+                    editor.fire('saveSnapshot', {
+                        name: 'resizeColumn',
+                        leftSideCol: leftSideCol,
+                        rightSideCol: rightSideCol,
+                        leftShiftBoundary: leftShiftBoundary,
+                        rightShiftBoundary: rightShiftBoundary
+                    });
 				// }, 0, this);
 			}
 		}
@@ -316,6 +316,7 @@
 
 			// Save editor's state before we do any magic with cells. (http://dev.ckeditor.com/ticket/13388)
 			editor.fire( 'saveSnapshot',{name:'beforeTableResize'} );
+			
 			resizeStart();
 
 			document.on( 'mouseup', onMouseUp, this );

@@ -44,10 +44,17 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 				if ( focusedNode )
 					onBlur( null, focusedNode );
 
-				var htmlPreview = dialog.getContentElement( 'info', 'htmlPreview' ).getElement();
+				// 查找新位置的预览元素
+				var container = dialog.getContentElement( 'info', 'charContainer' ).getElement();
+				var charPreview = container.findOne('[id^="charPreview_"]');
+				var htmlPreview = container.findOne('[id^="htmlPreview_"]');
 
-				dialog.getContentElement( 'info', 'charPreview' ).getElement().setHtml( value );
-				htmlPreview.setHtml( CKEDITOR.tools.htmlEncode( value ) );
+				if ( charPreview ) {
+					charPreview.setHtml( value );
+				}
+				if ( htmlPreview ) {
+					htmlPreview.setHtml( CKEDITOR.tools.htmlEncode( value ) );
+				}
 				target.getParent().addClass( 'cke_light_background' );
 
 				// Memorize focused node.
@@ -62,8 +69,17 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 				target = target.getParent();
 
 			if ( target.getName() == 'a' ) {
-				dialog.getContentElement( 'info', 'charPreview' ).getElement().setHtml( '&nbsp;' );
-				dialog.getContentElement( 'info', 'htmlPreview' ).getElement().setHtml( '&nbsp;' );
+				// 查找新位置的预览元素
+				var container = dialog.getContentElement( 'info', 'charContainer' ).getElement();
+				var charPreview = container.findOne('[id^="charPreview_"]');
+				var htmlPreview = container.findOne('[id^="htmlPreview_"]');
+
+				if ( charPreview ) {
+					charPreview.setHtml( '&nbsp;' );
+				}
+				if ( htmlPreview ) {
+					htmlPreview.setHtml( '&nbsp;' );
+				}
 				target.getParent().removeClass( 'cke_light_background' );
 
 				focusedNode = undefined;
@@ -78,7 +94,6 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 		var relative, nodeToMove;
 		var keystroke = ev.getKeystroke(),
 			rtl = editor.lang.dir == 'rtl';
-
 		switch ( keystroke ) {
 			// UP-ARROW
 			case 38:
@@ -168,7 +183,7 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 
 	return {
 		title: lang.title,
-		minWidth: 430,
+		minWidth: 500,
 		minHeight: 280,
 		buttons: [ CKEDITOR.dialog.cancelButton ],
 		charColumns: 12,
@@ -179,8 +194,8 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 				chars2 = editor.config.allSubSpecialChar;
 
 			var charsTableLabel = CKEDITOR.tools.getNextId() + '_specialchar_table_label';
-			var html = ['<div style="width:100%;height:400px"><div style="height:auto"><table role="listbox" aria-labelledby="' + charsTableLabel + '"' +
-				' style="width: 320px; height: 100%; border-collapse: separate;"' +
+			var html = ['<div style="width:100%;height:400px;position:relative;"><div style="height:auto;"><table role="listbox" aria-labelledby="' + charsTableLabel + '"' +
+				' style="width: 320px; height: 100%;margin-left:0px; border-collapse: separate;"' +
 				' align="center" cellspacing="2" cellpadding="2" border="0">' ];
 
 			var i = 0,
@@ -306,7 +321,19 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 				}
 				html.push( '</tr>' );
 			}
-			html.push( '</tbody></table>', '<span id="' + charsTableLabel + '" class="cke_voice_label">' + lang.options + '</span></div></div>' );
+			html.push( '</tbody></table>', '<span id="' + charsTableLabel + '" class="cke_voice_label">' + lang.options + '</span>' );
+			
+			// 添加预览区域到符号表格右侧
+			html.push('<div style="position:absolute;top:10px;right:10px;width:120px;">');
+			html.push('<div style="margin-bottom:10px;">');
+			html.push('<div id="charPreview_' + CKEDITOR.tools.getNextNumber() + '" class="cke_dark_background" style="border:1px solid #eeeeee;font-size:28px;height:50px;width:110px;padding-top:9px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;">&nbsp;</div>');
+			html.push('</div>');
+			html.push('<div>');
+			html.push('<div id="htmlPreview_' + CKEDITOR.tools.getNextNumber() + '" class="cke_dark_background" style="border:1px solid #eeeeee;font-size:14px;height:20px;width:70px;padding-top:2px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;">&nbsp;</div>');
+			html.push('</div>');
+			html.push('</div>');
+			
+			html.push('</div></div>' );
 
 			this.getContentElement( 'info', 'charContainer' ).getElement().setHtml( html.join( '' ) );
 		},
@@ -317,62 +344,28 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 			padding: 0,
 			align: 'top',
 			elements: [ {
-				type: 'hbox',
-				align: 'top',
-				widths: [ '320px', '90px' ],
-				children: [ {
-					type: 'html',
-					id: 'charContainer',
-					html: '',
-					onMouseover: onFocus,
-					onMouseout: onBlur,
-					focus: function() {
-						var firstChar = this.getElement().getElementsByTag( 'a' ).getItem( 0 );
-						setTimeout( function() {
-							firstChar.focus();
-							onFocus( null, firstChar );
-						}, 0 );
-					},
-					onShow: function() {
-						var firstChar = this.getElement().getChild( [ 0, 0, 0, 0, 0 ] );
-						setTimeout( function() {
-							firstChar.focus();
-							onFocus( null, firstChar );
-						}, 0 );
-					},
-					onLoad: function( event ) {
-						dialog = event.sender;
-					}
+				type: 'html',
+				id: 'charContainer',
+				html: '',
+				onMouseover: onFocus,
+				onMouseout: onBlur,
+				focus: function() {
+					var firstChar = this.getElement().getElementsByTag( 'a' ).getItem( 0 );
+					setTimeout( function() {
+						firstChar.focus();
+						onFocus( null, firstChar );
+					}, 0 );
 				},
-				{
-					type: 'hbox',
-					align: 'top',
-					widths: [ '100%' ],
-					children: [ {
-						type: 'vbox',
-						align: 'top',
-						children: [
-							{
-								type: 'html',
-								html: '<div></div>'
-							},
-							{
-								type: 'html',
-								id: 'charPreview',
-								className: 'cke_dark_background',
-								style: 'border:1px solid #eeeeee;font-size:28px;height:50px;width:110px;padding-top:9px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;',
-								html: '<div>&nbsp;</div>'
-							},
-							{
-								type: 'html',
-								id: 'htmlPreview',
-								className: 'cke_dark_background',
-								style: 'border:1px solid #eeeeee;font-size:14px;height:20px;width:70px;padding-top:2px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;',
-								html: '<div>&nbsp;</div>'
-							}
-						]
-					} ]
-				} ]
+				onShow: function() {
+					var firstChar = this.getElement().getChild( [ 0, 0, 0, 0, 0 ] );
+					setTimeout( function() {
+						firstChar.focus();
+						onFocus( null, firstChar );
+					}, 0 );
+				},
+				onLoad: function( event ) {
+					dialog = event.sender;
+				}
 			} ]
 		} ]
 	};

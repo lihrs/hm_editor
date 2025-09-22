@@ -2,6 +2,10 @@
  * HM Editor 标签页 Demo
  * 该脚本实现标签页和多编辑器的创建和管理
  */
+
+// 全局变量：存储最后点击的文档信息
+window.lastClickedDocCode = '';
+
 class TabEditorManager {
     constructor(options) {
         this.options = options || {};
@@ -59,8 +63,6 @@ class TabEditorManager {
         this.tabHeader.append(tabItem);
         this.tabContents.append(tabContent);
 
-        // 显示新标签
-        this.activateTab(tabId);
         // 创建编辑器
         try {
             const mergedOptions = Object.assign({}, {
@@ -70,12 +72,19 @@ class TabEditorManager {
                     width: '100%',
                     height: '100%',
                     border: '1px solid #ddd'
-                }
+                },
+                readOnly: false,
+                editorConfig: {
+                    contentsCss: []
+                },
+                editShowPaddingTopBottom: true,
+               
             }, editorOptions);
             // 存储编辑器实例
             this.editors[tabId] = {
                 tabId: tabId,
-                editorId: editorId
+                editorId: editorId,
+                designMode: editorOptions.designMode || false
             };
 
             // 创建编辑器
@@ -93,6 +102,9 @@ class TabEditorManager {
             }
             // 存储编辑器实例
             this.editors[tabId].editor = editorInstance;
+
+            // 显示新标签
+            this.activateTab(tabId);
 
             return {
                 tabId: tabId,
@@ -129,10 +141,16 @@ class TabEditorManager {
         // 根据serialNumber状态控制AI相关按钮
         controlAiButtons(serialNumber != '001');
 
+        // 检查当前tab是否为设计模式，控制插入数据元按钮
+        updateInsertDataElementBtnState();
+
         // 自动滚动tab-header，使新tab可见
         setTimeout(() => {
             this.scrollTabIntoView(tabId);
         }, 0);
+
+        // 切换tab时，更新window.lastClickedDocCode为当前页签中第一个widget的code
+        this.updateLastClickedDocCodeFromCurrentTab(tabId);
     }
     scrollTabIntoView(tabId) {
         const $tabHeader = this.tabHeader;
@@ -174,6 +192,46 @@ class TabEditorManager {
     }
 
     /**
+     * 从当前tab中获取第一个widget的code并更新window.lastClickedDocCode
+     * @param {String} tabId 标签页ID
+     */
+    async updateLastClickedDocCodeFromCurrentTab(tabId) {
+        try {
+            // 获取当前tab的编辑器实例
+            const tabObj = this.editors[tabId];
+            if (!tabObj || !tabObj.editor) {
+                console.log('Tab切换：未找到编辑器实例');
+                return;
+            }
+
+            const editor = tabObj.editor;
+            if (!editor.editor || !editor.editor.document) {
+                console.log('Tab切换：编辑器文档未准备好');
+                return;
+            }
+
+            // 获取编辑器body
+            const $body = $(editor.editor.document.getBody().$);
+
+            // 查找第一个widget
+            const $firstWidget = $body.find('div[data-hm-widgetid]').first();
+
+            if ($firstWidget.length > 0) {
+                const widgetId = $firstWidget.attr('data-hm-widgetid').trim();
+
+                // 更新全局变量
+                window.lastClickedDocCode = widgetId;
+
+                console.log('Tab切换：更新lastClickedDocCode为第一个widget的code:', widgetId);
+            } else {
+                console.log('Tab切换：未找到widget元素');
+            }
+        } catch (error) {
+            console.error('Tab切换：更新lastClickedDocCode失败:', error);
+        }
+    }
+
+    /**
      * 关闭标签页
      * @param {String} tabId 标签页ID
      */
@@ -203,6 +261,8 @@ class TabEditorManager {
                 this.activateTab(otherTab.data('id'));
             } else {
                 this.currentTabId = null;
+                // 没有标签时，禁用插入数据元按钮
+                updateInsertDataElementBtnState();
             }
         }
         if (this.tabHeader.find('.tab-item').length == 0) {
@@ -337,6 +397,7 @@ class DocumentTreeManager {
     }
 
     onNodeClick(docCode, $node) {
+        window.lastClickedDocCode = docCode;
         const docPath = $node.find('.doc-name').attr('title');
         const docName = $node.find('.doc-name').text();
 
@@ -411,9 +472,9 @@ class DocumentTreeManager {
             const removeMask = function () {
                 loadingMask.remove()
             };
-            console.log('调用initAiAuth，docCode:', docParam[0].code);
+            // console.log('调用initAiAuth，docCode:', docParam[0].code);
             await initAiAuth(docParam[0].code);
-            console.log('initAiAuth执行完成');
+            // console.log('initAiAuth执行完成');
             removeMask();
         }
 
@@ -473,15 +534,18 @@ $(document).ready(function () {
     window.documentTree.expandAll();
     window.aiDocumentTree.expandAll();
 
+    // 自动打开当前激活tab的第一份文档
+    autoOpenFirstDocument();
+
     // 初始化工具栏快捷键控制
     initToolbarShortcuts();
 
-    // 页面加载时默认显示工具栏
-    showBtnPanel();
-    // 显示工具栏切换按钮（因为工具栏默认显示，需要可以收起）
+    // 页面加载时默认隐藏工具栏（因为默认选中AI病历演示tab）
+    hideBtnPanel();
+    // 显示工具栏切换按钮
     $('#toolbarToggleBtn').show();
-    // 设置切换按钮图标为向上（表示可以收起）
-    $('#toolbarToggleBtn i').removeClass('fa-caret-down').addClass('fa-caret-up');
+    // 设置切换按钮图标为向下（表示可以展开）
+    $('#toolbarToggleBtn i').removeClass('fa-caret-up').addClass('fa-caret-down');
     // 页面加载时默认启用AI按钮（因为默认选中AI病历演示tab）
     controlAiButtons(true);
 
@@ -510,19 +574,24 @@ $(document).ready(function () {
             controlAiButtons(false);
         } else if (tabType === 'ai') {
             $('#aiDocumentTree').addClass('active');
-            // 选中"AI病历演示"时显示工具栏，显示切换按钮，启用AI按钮
-            showBtnPanel();
+            // 选中"AI病历演示"时隐藏工具栏，显示切换按钮，启用AI按钮
+            hideBtnPanel();
             $('#toolbarToggleBtn').show();
-            // 设置切换按钮图标为向上（表示可以收起）
-            $('#toolbarToggleBtn i').removeClass('fa-caret-down').addClass('fa-caret-up');
+            // 设置切换按钮图标为向下（表示可以展开）
+            $('#toolbarToggleBtn i').removeClass('fa-caret-up').addClass('fa-caret-down');
             controlAiButtons(true);
         }
 
         console.log('切换到', tabType === 'normal' ? '普通病历' : 'AI病历', '文档列表');
+
+        // 切换tab后自动打开对应类列表的第一份文档
+        setTimeout(() => {
+            autoOpenFirstDocument();
+        }, 500); // 延迟500ms确保DOM更新完成
     });
 
     // 工具栏切换按钮点击事件
-    $('#toolbarToggleBtn').on('click', function() {
+    $('#toolbarToggleBtn').on('click', function () {
         const $btnPanel = $('#btnPanel');
         const $toggleBtn = $(this);
         const $icon = $toggleBtn.find('i');
@@ -540,8 +609,7 @@ $(document).ready(function () {
 
     // 根据URL参数判断AI服务器地址
     const serverParam = urlParams.get('aiServer');
-
-    if (serverParam === 'http://172.16.8.150') {
+    if (serverParam === 'http://172.16.8.150' || window.location.host == '127.0.0.1:3071') {
         window.aiServer = 'http://172.16.8.150';
     } else {
         window.aiServer = 'https://editor.huimei.com';
@@ -556,6 +624,24 @@ $(document).ready(function () {
 
         // 默认总是选中"在新标签中打开"选项
         $('#openInNewTab').prop('checked', true);
+    });
+
+    // 插入数据元按钮事件
+    $('#btnInsMetaData').on('click', function () {
+        if (!window.tabManager.currentTabId) {
+            showEditorNotOpenDialog('插入数据元');
+            return;
+        }
+
+        // 检查当前tab是否为设计模式
+        const currentTabEditor = window.tabManager.editors[window.tabManager.currentTabId];
+        if (!currentTabEditor || currentTabEditor.designMode !== true) {
+            showAlertDialog('只有在制作模板模式下才能插入数据元');
+            return;
+        }
+
+        // 显示插入数据元信息输入对话框
+        $('.insertMetaDataInfo').show();
     });
 
     // 确认文档信息
@@ -604,6 +690,49 @@ $(document).ready(function () {
         }
     });
 
+    // 确认插入数据元
+    $('#btnConfirmMetaData').on('click', async function () {
+        const textContent = $('.insertMetaDataInfo textarea').val();
+        const autoLablebox = $('#autoLablebox').is(':checked');
+
+        if (!textContent) {
+            showAlertDialog('请输入数据元配置！');
+            return;
+        }
+
+        let datasource = null;
+        try {
+            datasource = JSON.parse(textContent);
+        } catch (e) {
+            showAlertDialog('输入的内容不是有效的JSON格式！');
+            return;
+        }
+
+        try {
+            // 获取编辑器实例并插入数据元
+            const editor = await window.tabManager.getCurrentEditor();
+            if (editor && editor.insertDataSource) {
+                datasource.autoLable = autoLablebox;
+                editor.insertDataSource(datasource);
+
+                // 隐藏对话框并清空输入
+                $('.insertMetaDataInfo').hide();
+                $('.insertMetaDataInfo textarea').val('');
+            } else {
+                showAlertDialog('编辑器不支持插入数据元功能');
+            }
+        } catch (e) {
+            console.error('插入数据元失败:', e);
+            showAlertDialog('插入数据元失败: ' + e.message);
+        }
+    });
+
+    // 取消插入数据元
+    $('#btnCancelMetaData').on('click', function () {
+        $('.insertMetaDataInfo').hide();
+        $('.insertMetaDataInfo textarea').val('');
+    });
+
     // 快速输入链接点击事件
     $('.quick-links .quick-link-loadDoc').on('click', function () {
         const filePath = $(this).data('file');
@@ -626,6 +755,80 @@ $(document).ready(function () {
                 console.error('加载JSON文件失败:', error);
             });
     });
+
+    // 快速插入数据元链接点击事件
+    $('.quick-links .quick-link-metadata').on('click', function () {
+        const filePath = $(this).data('file');
+
+        // 显示加载中状态
+        const $textarea = $('.insertMetaDataInfo textarea');
+        console.debug('加载数据元示例中...');
+
+        // 如果有文件路径，尝试加载JSON文件
+        if (filePath) {
+            $.getJSON(filePath)
+                .done(function (data) {
+                    // 将JSON内容格式化显示在文本框中
+                    $textarea.val(JSON.stringify(data, null, 2));
+                })
+                .fail(function (jqxhr, textStatus, error) {
+                    // 加载失败，使用内置示例
+                    console.warn('加载JSON文件失败，使用内置示例:', error);
+                    loadBuiltinMetadataExample($(this));
+                });
+        } else {
+            // 没有文件路径，使用内置示例
+            loadBuiltinMetadataExample($(this));
+        }
+    });
+
+    // 加载内置数据元示例
+    function loadBuiltinMetadataExample($link) {
+        const $textarea = $('.insertMetaDataInfo textarea');
+        const linkText = $link.text();
+
+        let exampleData = {};
+
+        if (linkText.includes('患者姓名')) {
+            exampleData = {
+                code: 'PATIENT_NAME',
+                name: '患者姓名',
+                nodeName: '纯文本'
+            };
+        } else if (linkText.includes('诊断信息')) {
+            exampleData = {
+                code: 'DIAGNOSIS',
+                name: '诊断',
+                nodeName: '搜索',
+                searchOption: '诊断名称'
+            };
+        } else if (linkText.includes('下拉选项')) {
+            exampleData = {
+                code: 'TREATMENT_TYPE',
+                name: '治疗方式',
+                nodeName: '下拉',
+                dictList: [{
+                        description: '手术治疗',
+                        val: '1'
+                    },
+                    {
+                        description: '药物治疗',
+                        val: '2'
+                    },
+                    {
+                        description: '康复治疗',
+                        val: '3'
+                    },
+                    {
+                        description: '保守治疗',
+                        val: '4'
+                    }
+                ]
+            };
+        }
+
+        $textarea.val(JSON.stringify(exampleData, null, 2));
+    }
 
     // 打开模板文件点击事件
     $('#loadTemplateFile').on('click', function (e) {
@@ -713,23 +916,110 @@ $(document).ready(function () {
         );
         $('.customMenuDialog').show();
     });
+
+    //设置分段页眉
+    $('#btnMultiPartHeader').on('click', async function () {
+        $('.multiPartHeaderDialog #multiPartHeaderJson').val(
+            `{
+    "controlElementName": "记录时间",
+    "headerList": [
+        {
+            "startTime": "2025-08-24", 
+            "endTime": "2025-08-25", 
+            "headerData": {
+                "科室名称": "内科",
+                "病区名称": "内科病区",
+                "床位号": "001"
+            }
+        },
+        {
+            "startTime": "2025-08-25", 
+            "endTime": "2025-08-26", 
+            "headerData": {
+                "科室名称": "外科",
+                "病区名称": "外科病区",
+                "床位号": "002"
+            }
+        }
+    ]
+}`
+        );
+        $('.multiPartHeaderDialog').show();
+    });
+    
+    //分段页眉设置弹框
+    $('#multiPartHeaderCancelBtn').on('click', function () {
+        $('.multiPartHeaderDialog').hide();
+    });
+    $('#multiPartHeaderOkBtn').on('click', async function () {
+        try {
+            const val = $('#multiPartHeaderJson').val();
+            const multiPartHeaderData = JSON.parse(val);
+            
+            const editor = await window.tabManager.getCurrentEditor();
+            // 这里可以调用编辑器的设置分段页眉方法
+            editor.setDocMultiPartHeader(multiPartHeaderData);
+            
+            // 暂时显示收集到的数据，供调试使用
+            console.log('分段页眉数据:', multiPartHeaderData);
+            showAlertDialog('分段页眉设置已保存！');
+            $('.multiPartHeaderDialog').hide();
+        } catch (e) {
+            console.error('设置分段页眉失败:', e);
+            showAlertDialog('JSON格式错误或设置失败！');
+        }
+    });
+
     //只读模式
     $('#btnReadOnly').on('click', async function () {
         if (!window.tabManager.currentTabId) {
             showEditorNotOpenDialog('只读模式');
             return;
         }
-        // 重置弹窗状态
-        $('#readOnlyCode').val('');
-        $('#readOnlyFlag').prop('checked', false);
-        // 同步开关按钮的样式状态
-        const slider = $('#readOnlyFlag').siblings('.slider');
-        const sliderCircle = slider.find('.slider-circle');
-        const labelText = $('#readOnlyFlag').closest('label').find('.switch-label-text');
-        slider.css('background-color', '#ccc');
-        sliderCircle.css('transform', 'translateX(0)');
-        labelText.text('关闭');
-        $('.readOnlyDialog').show();
+
+        try {
+            // 获取当前编辑器实例
+            const editor = await window.tabManager.getCurrentEditor();
+            const docCode = window.lastClickedDocCode || '';
+
+            // 根据最后点击的文档的doc_code设置编码值
+            $('#readOnlyCode').val(docCode);
+
+            // 检查指定文档的只读状态
+            const isDocReadOnly = checkDocumentReadOnlyStatus(editor, docCode);
+
+            // 根据当前选中病历的只读状态设置开关按钮的样式状态
+            $('#readOnlyFlag').prop('checked', isDocReadOnly);
+            // 同步开关按钮的样式状态
+            const slider = $('#readOnlyFlag').siblings('.slider');
+            const sliderCircle = slider.find('.slider-circle');
+            const labelText = $('#readOnlyFlag').closest('label').find('.switch-label-text');
+
+            if (isDocReadOnly) {
+                // 当前为只读状态，设置开关为开启状态
+                slider.css('background-color', '#4CAF50');
+                sliderCircle.css('transform', 'translateX(26px)');
+                labelText.text('启用');
+            } else {
+                // 当前为可编辑状态，设置开关为关闭状态
+                slider.css('background-color', '#ccc');
+                sliderCircle.css('transform', 'translateX(0)');
+                labelText.text('关闭');
+            }
+            $('.readOnlyDialog').show();
+        } catch (error) {
+            console.error('获取当前病历信息失败:', error);
+            // 如果获取编辑器失败，仍然尝试显示最后点击的docCode
+            $('#readOnlyCode').val(window.lastClickedDocCode || '');
+            $('#readOnlyFlag').prop('checked', false);
+            const slider = $('#readOnlyFlag').siblings('.slider');
+            const sliderCircle = slider.find('.slider-circle');
+            const labelText = $('#readOnlyFlag').closest('label').find('.switch-label-text');
+            slider.css('background-color', '#ccc');
+            sliderCircle.css('transform', 'translateX(0)');
+            labelText.text('关闭');
+            $('.readOnlyDialog').show();
+        }
     });
     //修订模式
     $('#btnRevise').on('click', async function () {
@@ -798,13 +1088,15 @@ $(document).ready(function () {
         $('.dataInputDialog textarea').val(JSON.stringify([{
             code: 'DOC001',
             data: [{
-                keyCode: '',
-                keyValue: ''
-            },
-            {
-                keyCode: '',
-                keyValue: ['诊断1']
-            }
+                    keyCode: '',
+                    keyName: '',
+                    keyValue: ''
+                },
+                {
+                    keyCode: '',
+                    keyName: '',
+                    keyValue: ['诊断1']
+                }
             ]
         }], null, 2));
         $('.dataInputDialog').show();
@@ -934,9 +1226,75 @@ $(document).ready(function () {
         }
     }
 
+    async function getTableData() {
+        var _val = $('.getDataDialog textarea').val();
+        try {
+            var params = {};
+            if (_val) {
+                try {
+                    params = JSON.parse(_val);
+                } catch (e) {
+                    showAlertDialog('输入的JSON格式不正确，请检查格式！');
+                    return;
+                }
+            }
+            
+            var code = params.tableCode || '';
+            if (!code) {
+                showAlertDialog('表格编码不能为空！');
+                return;
+            }
+            
+            const editor = await window.tabManager.getCurrentEditor();
+            
+            // 调用编辑器的获取表格数据方法
+            const tableData = await editor.getTableData(params);
+
+            // 显示内容
+            $('#contentTitle').text('表格数据内容');
+            $('#contentDisplay').val(JSON.stringify(tableData));
+            // 隐藏"保存HTML原文"按钮
+            $('#btnSaveHtmlRaw').addClass('hidden');
+            $('.contentDisplayDialog').show();
+            closeGetDataDialog();
+        } catch (e) {
+            console.error('获取表格数据失败:', e);
+            showAlertDialog('获取表格数据失败: ' + e.message);
+        }
+    }
+
     function closeGetDataDialog() {
         $('.getDataDialog').hide();
         $('.getDataDialog textarea').val('');
+        // 隐藏数据类型选择选项
+        $('#dataTypeSelection').hide();
+    }
+
+    // 根据数据类型更新弹窗界面
+    function updateDataDialogByType(dataType) {
+        if (dataType === 'metadata') {
+            // 数据元模式
+            var _placeholder = JSON.stringify({
+                code: '', // 文档唯一编号
+                keyList: [] //指定数据元编码列表
+            });
+            $('#getDataDialogTitle').text('演示用 - 输入获取数据元参数');
+            $('.getDataDialog textarea').attr('placeholder', _placeholder);
+            $('.getDataDialog .help-text').text('参数为空，获取所有数据');
+            flag = 3;
+        } else if (dataType === 'tabledata') {
+            // 表格数据模式
+            var _placeholder = JSON.stringify({
+                tableCode: '', // 表格编码，必填
+                colKeyList: [], //指定数据元编码列表，可选
+                rowIndex: 0 // 可选，指定行索引
+            });
+            $('#getDataDialogTitle').text('演示用 - 输入获取表格数据参数');
+            $('.getDataDialog textarea').attr('placeholder', _placeholder);
+            $('.getDataDialog .help-text').text('*表格编码必填,指定列编码列表可选,指定行索引可选');
+            flag = 4;
+        }
+        $('#btnAddParamsText').show();
     }
     var flag;
     // 获取HTML文本
@@ -975,10 +1333,22 @@ $(document).ready(function () {
     });
 
     $('#btnAddParamsText').on('click', function () {
-        $('.getDataDialog textarea').val(JSON.stringify({
-            code: "",
-            keyList: [""]
-        }, null, 2));
+        let quickData = {};
+        if (flag == 3) {
+            // 获取数据元Data的快速录入格式
+            quickData = {
+                code: "",
+                keyList: [""]
+            };
+        } else if (flag == 4) {
+            // 获取表格数据的快速录入格式
+            quickData = {
+                tableCode: "TABLE_001", // 表格编码，必填
+                colKeyList: [], // 可选，指定列编码
+                rowIndex: null // 可选，指定行索引
+            };
+        }
+        $('.getDataDialog textarea').val(JSON.stringify(quickData, null, 2));
     });
     // 根据不同按钮，调用不同方法获取数据
     $('#btnGetDataByParams').on('click', function () {
@@ -986,6 +1356,8 @@ $(document).ready(function () {
             getText();
         } else if (flag == 3) {
             getData();
+        } else if (flag == 4) {
+            getTableData();
         }
     });
 
@@ -1000,8 +1372,14 @@ $(document).ready(function () {
             showEditorNotOpenDialog('获取TEXT文本');
             return;
         }
+        
+        // 隐藏数据类型选择选项
+        $('#dataTypeSelection').hide();
+        
         var _placeholder = '请输入文档唯一编号';
+        $('#getDataDialogTitle').text('演示用 - 输入获取TEXT参数');
         $('.getDataDialog textarea').attr('placeholder', _placeholder);
+        $('.getDataDialog .help-text').text('参数为空，获取所有TEXT内容');
         flag = 2;
         $('#btnAddParamsText').hide(); //隐藏添加参数按钮
         $('.getDataDialog').show();
@@ -1013,15 +1391,19 @@ $(document).ready(function () {
             showEditorNotOpenDialog('获取数据元Data');
             return;
         }
-        var _placeholder = JSON.stringify({
-            code: '', // 文档唯一编号
-            keyList: [] //指定数据元编码列表
-        });
-        $('.getDataDialog textarea').attr('placeholder', _placeholder);
-        flag = 3;
-        $('#btnAddParamsText').show();
+        
+        // 显示数据类型选择选项
+        $('#dataTypeSelection').show();
+        
+        // 设置默认选择为数据元
+        $('input[name="dataTypeMode"][value="metadata"]').prop('checked', true);
+        
+        // 根据默认选择设置界面
+        updateDataDialogByType('metadata');
+        
         $('.getDataDialog').show();
     });
+
     // 复制内容
     $('#btnCopyContent').on('click', function () {
         const content = $('#contentDisplay').val();
@@ -1278,13 +1660,13 @@ $(document).ready(function () {
             return;
         }
         $('.insertDocDialog textarea').val(JSON.stringify([{
-            code: '新插入文档_1',
-            docContent: "<body><p>新插入文档_1</p></body>"
-        },
-        {
-            code: '新插入文档_2',
-            docContent: "<body><p>新插入文档_2</p></body>"
-        }
+                code: '新插入文档_1',
+                docContent: "<body><p>新插入文档_1</p></body>"
+            },
+            {
+                code: '新插入文档_2',
+                docContent: "<body><p>新插入文档_2</p></body>"
+            }
         ], null, 2));
         $('.insertDocDialog').show();
     });
@@ -1644,7 +2026,9 @@ $(document).ready(function () {
         }
         // 重置弹窗状态
         const editor = await window.tabManager.getCurrentEditor();
-        const { docCode } = await getCurrentDocumentInfo();
+        const {
+            docCode
+        } = await getCurrentDocumentInfo();
         // 使用公共方法更新params
         let params = window.aiParams[docCode];
         params = await updateProgressMessage(editor, docCode, params);
@@ -1660,11 +2044,11 @@ $(document).ready(function () {
         let progressNoteList = [];
         // 检查recordName是否存在于recordMapData中
         if (recordMapData.some(item => {
-            if (Array.isArray(item.recordName)) {
-                return item.recordName.includes(recordName);
-            }
-            return item.recordName === recordName;
-        })) {
+                if (Array.isArray(item.recordName)) {
+                    return item.recordName.includes(recordName);
+                }
+                return item.recordName === recordName;
+            })) {
             const recordInfo = getRecordInfo(recordName); // 根据当前tab的名称获取病历类型
             const textContent = await editor.getDocText('');
             if (textContent.length > 0) {
@@ -1806,7 +2190,10 @@ $(document).ready(function () {
         }
 
         // 获取当前选中的文档信息
-        const { docCode, serialNumber } = await getCurrentDocumentInfo();
+        const {
+            docCode,
+            serialNumber
+        } = await getCurrentDocumentInfo();
         let aiParam = null;
         // 如果有docCode，尝试获取对应的aiParam
         if (docCode && window.aiParams && window.aiParams[docCode]) {
@@ -1870,8 +2257,7 @@ $(document).ready(function () {
                 return;
             }
             // 使用Promise处理认证初始化
-            const mayson = await HMEditorLoader.aiAuth(params, params.recordMap || recordMapData, ai);
-            window.mayson = mayson;
+            await HMEditorLoader.aiAuth(params, params.recordMap || recordMapData, false, ai);
             ai == 1 && maysonListenWindowSize(); // mayson 内嵌展示，先不发布
             window.isInitHMAuth = true;
             // 隐藏对话框并清空输入
@@ -1903,7 +2289,10 @@ $(document).ready(function () {
             return;
         }
         // 重置弹窗状态
-        const { recordName, docCode } = await getCurrentDocumentInfo();
+        const {
+            recordName,
+            docCode
+        } = await getCurrentDocumentInfo();
         const recordInfo = getRecordInfo(recordName);
         const params = {
             recordType: recordInfo.recordType,
@@ -2163,6 +2552,360 @@ $(document).ready(function () {
         // 显示提示信息
         showAlertDialog('已切换到"常用病历模板"，您可以体验普通编辑功能而无需AI令牌。');
     });
+
+    // ==================== 修订记录相关代码 ====================
+    // 修订记录按钮点击事件
+    $('#btnRevisionHistory').on('click', function () {
+        if (!window.tabManager.currentTabId) {
+            showEditorNotOpenDialog('修订记录');
+            return;
+        }
+        $('.getRevisionHistoryDialog').show();
+    });
+
+    // 确认获取修订记录
+    $('#btnConfirmGetRevisionHistory').on('click', async function () {
+        const code = $('.getRevisionHistoryDialog textarea').val();
+        try {
+            // 获取当前编辑器实例
+            const editor = await window.tabManager.getCurrentEditor();
+            
+            // 检查编辑器是否支持getDocRevisionHistory方法
+            if (!editor || typeof editor.getDocRevisionHistory !== 'function') {
+                showAlertDialog('编辑器不支持获取修订记录功能');
+                return;
+            }
+            
+            // 调用获取修订记录方法
+            const revisionHistory = await editor.getDocRevisionHistory(code);
+            
+            // 显示修订记录内容
+            $('#contentTitle').text('修订记录');
+            $('#contentDisplay').val(JSON.stringify(revisionHistory, null, 2));
+            // 隐藏"保存HTML原文"按钮
+            $('#btnSaveHtmlRaw').addClass('hidden');
+            $('.contentDisplayDialog').show();
+            $('.getRevisionHistoryDialog').hide();
+            $('.getRevisionHistoryDialog textarea').val('');
+        } catch (error) {
+            console.error('获取修订记录失败:', error);
+            showAlertDialog('获取修订记录失败: ' + error.message);
+        }
+    });
+
+    // 取消获取修订记录
+    $('#btnCancelGetRevisionHistory').on('click', function () {
+        $('.getRevisionHistoryDialog').hide();
+        $('.getRevisionHistoryDialog textarea').val('');
+    });
+
+    // ==================== 设置自定义属性相关代码 ====================
+    // 设置自定义属性按钮点击事件
+    $('#btnCustomProperties').on('click', async function () {
+        if (!window.tabManager.currentTabId) {
+            showEditorNotOpenDialog('设置自定义属性');
+            return;
+        }
+
+        try {
+            // 获取当前编辑器实例和文档信息
+            const editor = await window.tabManager.getCurrentEditor();
+            const {docCode} = await getCurrentDocumentInfo();
+
+            // 重置对话框状态
+            resetCustomPropertiesDialog();
+            
+            // 预填充病历编码
+            $('#customPropsDocCode').val(docCode || '');
+
+            // 显示对话框
+            $('.customPropertiesDialog').show();
+        } catch (error) {
+            console.error('获取当前文档信息失败:', error);
+            // 如果获取失败，仍然显示对话框
+            resetCustomPropertiesDialog();
+            $('.customPropertiesDialog').show();
+        }
+    });
+
+    // 自定义属性模式切换
+    $('input[name="customPropsMode"]').on('change', function () {
+        const selectedMode = $(this).val();
+        toggleCustomPropsMode(selectedMode);
+    });
+
+    // 数据类型切换事件
+    $('input[name="dataTypeMode"]').on('change', function () {
+        const selectedType = $(this).val();
+        updateDataDialogByType(selectedType);
+    });
+
+    // 快速载入自定义属性示例
+    $('.quick-link-customProps').on('click', function () {
+        const type = $(this).data('type');
+        const selectedMode = $('input[name="customPropsMode"]:checked').val();
+        
+        let exampleData = [];
+        let $targetTextarea;
+        
+        if (selectedMode === 'add') {
+            // 添加模式
+            $targetTextarea = $('#customPropsData');
+            
+            if (type === 'example1') {
+                exampleData = [
+                    {
+                        "name": "patientId",
+                        "value": "P123456789",
+                    },
+                    {
+                        "name": "department",
+                        "value": "心内科",
+                    },
+                    {
+                        "name": "doctorId",
+                        "value": "D001",
+                    }
+                ];
+            } else if (type === 'example2') {
+                exampleData = [
+                    {
+                        "name": "templateVersion",
+                        "value": "v2.1.0",
+                    },
+                    {
+                        "name": "printMode",
+                        "value": "landscape",
+                    },
+                    {
+                        "name": "watermarkEnabled",
+                        "value": true,
+                    }
+                ];
+            }
+            
+            $targetTextarea.val(JSON.stringify(exampleData, null, 2));
+        } else if (selectedMode === 'delete') {
+            // 删除模式
+            $targetTextarea = $('#customPropsDeleteNames');
+            
+            if (type === 'delete1') {
+                exampleData = ["patientId", "department", "doctorId"];
+            } else if (type === 'delete2') {
+                exampleData = ["templateVersion", "printMode", "watermarkEnabled"];
+            }
+            
+            $targetTextarea.val(JSON.stringify(exampleData, null, 2));
+        } else if (selectedMode === 'get') {
+            // 获取数据模式
+            $targetTextarea = $('#customPropsGetParams');
+            
+            if (type === 'get1') {
+                exampleData = ["patientId", "department", "doctorId"];
+            } else if (type === 'get2') {
+                exampleData = ["templateVersion", "printMode", "watermarkEnabled"];
+            }
+            
+            $targetTextarea.val(JSON.stringify(exampleData, null, 2));
+        }
+    });
+
+    // 确认设置自定义属性
+    $('#btnConfirmCustomProps').on('click', async function () {
+        const docCode = $('#customPropsDocCode').val().trim();
+        const nodeId = $('#customPropsNodeId').val().trim();
+        const selectedMode = $('input[name="customPropsMode"]:checked').val();
+        
+        let inputData = null;
+        let inputText = '';
+        
+        if (selectedMode === 'add') {
+            // 添加模式
+            inputText = $('#customPropsData').val().trim();
+            if (!inputText) {
+                showAlertDialog('请输入自定义属性数据！');
+                return;
+            }
+            
+            try {
+                inputData = JSON.parse(inputText);
+                
+                // 验证数据格式：应该是数组
+                if (!Array.isArray(inputData)) {
+                    showAlertDialog('自定义属性数据应该是数组格式！');
+                    return;
+                }
+            } catch (e) {
+                showAlertDialog('输入的内容不是有效的JSON格式！');
+                return;
+            }
+        } else if (selectedMode === 'delete') {
+            // 删除模式
+            inputText = $('#customPropsDeleteNames').val().trim();
+            if (!inputText) {
+                showAlertDialog('请输入要删除的属性名称！');
+                return;
+            }
+            
+            try {
+                inputData = JSON.parse(inputText);
+                
+                // 验证数据格式：应该是数组
+                if (!Array.isArray(inputData)) {
+                    showAlertDialog('要删除的属性名称应该是数组格式！');
+                    return;
+                }
+                
+                // 验证数组元素都是字符串
+                if (!inputData.every(item => typeof item === 'string')) {
+                    showAlertDialog('属性名称数组中的每个元素都应该是字符串！');
+                    return;
+                }
+            } catch (e) {
+                showAlertDialog('输入的内容不是有效的JSON格式！');
+                return;
+            }
+        } else if (selectedMode === 'get') {
+            // 获取数据模式
+            inputText = $('#customPropsGetParams').val().trim(); 
+            
+            try {
+                inputData = inputText?JSON.parse(inputText):[];
+                
+                // 验证数据格式：应该是对象
+                if (!Array.isArray(inputData)) {
+                    showAlertDialog('要获取的属性名称应该是数组格式！');
+                    return;
+                }
+            } catch (e) {
+                showAlertDialog('输入的内容不是有效的JSON格式！');
+                return;
+            }
+        }
+
+        try {
+            // 获取编辑器实例
+            const editor = await window.tabManager.getCurrentEditor();
+            
+            if (selectedMode === 'add') {
+                // 添加模式：调用setCustomProperties方法
+                if (editor && typeof editor.setCustomProperties === 'function') {
+                    const params = {
+                        code: docCode || '',
+                        section: nodeId || '',
+                        customProperty: inputData
+                    };
+                    
+                    editor.setCustomProperties(params);
+                    showAlertDialog('自定义属性添加成功！');
+                } else {
+                    showAlertDialog('编辑器不支持setCustomProperties方法');
+                }
+            } else if (selectedMode === 'delete') {
+                // 删除模式：调用deleteCustomProperties方法
+                if (editor && typeof editor.deleteCustomProperties === 'function') {
+                    const params = {
+                        code: docCode || '',
+                        section: nodeId || '',
+                        propertyNames: inputData
+                    };
+                    
+                    editor.deleteCustomProperties(params);
+                    showAlertDialog('自定义属性删除成功！');
+                } else {
+                    showAlertDialog('编辑器不支持deleteCustomProperties方法');
+                }
+            } else if (selectedMode === 'get') {
+                // 获取数据模式：调用getCustomProperties方法
+                if (editor && typeof editor.getCustomProperties === 'function') {
+                    const params = {
+                        code: inputData.code || docCode || '',
+                        section: inputData.section || nodeId || '',
+                        propertyNames: inputData
+                    };
+                    
+                    const result = await editor.getCustomProperties(params);
+                    
+                    // 显示获取结果
+                    $('#contentTitle').text('自定义属性数据');
+                    $('#contentDisplay').val(JSON.stringify(result, null, 2));
+                    // 隐藏"保存HTML原文"按钮
+                    $('#btnSaveHtmlRaw').addClass('hidden');
+                    $('.contentDisplayDialog').show();
+                    
+                    showAlertDialog('自定义属性获取成功！');
+                } else {
+                    showAlertDialog('编辑器不支持getCustomProperties方法，该方法后续将实现');
+                }
+            }
+
+            // 隐藏对话框并清空输入
+            $('.customPropertiesDialog').hide();
+            resetCustomPropertiesDialog();
+
+        } catch (e) {
+            console.error('操作自定义属性失败:', e);
+            showAlertDialog('操作自定义属性失败: ' + e.message);
+        }
+    });
+
+    // 取消设置自定义属性
+    $('#btnCancelCustomProps').on('click', function () {
+        $('.customPropertiesDialog').hide();
+        resetCustomPropertiesDialog();
+    });
+
+    // 重置自定义属性对话框
+    function resetCustomPropertiesDialog() {
+        $('#customPropsDocCode').val('');
+        $('#customPropsNodeId').val('');
+        $('#customPropsData').val('');
+        $('#customPropsDeleteNames').val('');
+        $('#customPropsGetParams').val('');
+        // 重置为添加模式
+        $('input[name="customPropsMode"][value="add"]').prop('checked', true);
+        toggleCustomPropsMode('add');
+    }
+    
+    // 切换自定义属性操作模式
+    function toggleCustomPropsMode(selectedMode) {
+        const $title = $('#customPropsTitle');
+        const $helpText = $('#customPropsHelpText');
+        const $addGroup = $('#customPropsAddGroup');
+        const $deleteGroup = $('#customPropsDeleteGroup');
+        const $getGroup = $('#customPropsGetGroup');
+        const $addLinks = $('.quick-link-customProps[data-type="example1"], .quick-link-customProps[data-type="example2"]');
+        const $deleteLinks = $('.quick-link-customProps[data-type="delete1"], .quick-link-customProps[data-type="delete2"]');
+        const $getLinks = $('.quick-link-customProps[data-type="get1"], .quick-link-customProps[data-type="get2"]');
+        
+        // 隐藏所有输入组和链接
+        $addGroup.hide();
+        $deleteGroup.hide();
+        $getGroup.hide();
+        $addLinks.hide();
+        $deleteLinks.hide();
+        $getLinks.hide();
+        
+        if (selectedMode === 'add') {
+            // 添加模式
+            $title.text('演示用 - 添加自定义属性');
+            $helpText.text('添加文档的自定义属性信息');
+            $addGroup.show();
+            $addLinks.show();
+        } else if (selectedMode === 'delete') {
+            // 删除模式
+            $title.text('演示用 - 删除自定义属性');
+            $helpText.text('删除文档的指定自定义属性');
+            $deleteGroup.show();
+            $deleteLinks.show();
+        } else if (selectedMode === 'get') {
+            // 获取数据模式
+            $title.text('演示用 - 获取自定义属性');
+            $helpText.text('获取文档的自定义属性数据');
+            $getGroup.show();
+            $getLinks.show();
+        }
+    }
 });
 
 // 根据病历名称获取病历类型
@@ -2297,7 +3040,7 @@ function maysonAutoHeight(bean) {
                     window.mayson.MaysonQuality.calculationHomeHeight();
                 }
                 window.mayson.setAutoHeight2();
-            } catch (e) { }
+            } catch (e) {}
         }
         $('#hm-mayson-iframe-part').height($("#assistantSmartPanel").height());
     }
@@ -2326,44 +3069,39 @@ function maysonListenWindowSize() {
         autoRightPanel(bean);
     };
     window.mayson.listenViewData = function (data) {
-        var temp = data[0] || {};
+        const temp = data[0] || {};
 
+        // 处理外部链接类型
         if (['11', '12', '18'].includes(temp.type)) {
-            window.open(temp.items[0].text);
+            if (temp.items && temp.items[0] && temp.items[0].text) {
+                window.open(temp.items[0].text);
+            }
             return;
         }
-        if (temp.type == '39') {
-            var ruleId = temp.items && temp.items[0] && temp.items[0].id;
-            if (!ruleId) return;
 
+        // 处理AI质控推荐规则类型
+        if (temp.type === '39') {
+            const ruleId = temp.items && temp.items[0] && temp.items[0].id;
+            if (!ruleId) {
+                console.warn('AI质控规则ID为空');
+                return;
+            } 
             window.tabManager.getCurrentEditor().then(function (editor) {
-                var $span;
-                var $body = $(editor.editor.document.getBody().$);
-                $span = $body.find('span[rule-code="' + ruleId + '"]:not(.doc-warn-lack-ignore)');
-                if ($body.find('.doc-composer').length > 0) {
-                    return;
-                }
-                if ($span && $span.length > 0) {
-                    $span[0].scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    });
-                    setTimeout(function () {
-                        $span[0].click();
-                        // 质控AI推荐调用
-                        if ($span.hasClass('doc-warn-lack-title') || $span.hasClass('doc-warn-txt') && $body.find('.d-btt-ai').length > 0) {
-                            if ($span.hasClass('doc-warn-lack-title')) {
-                                $span.parent().addClass('doc-ai-correct-active');
-                            }
-                            if ($span.hasClass('doc-warn-txt')) {
-                                $span.addClass('doc-ai-correct-active');
-                            }
-                            editor.hmAi.composer.manageLableShow(1)
-                        }
-                    }, 300);
-                } else {
-                    console.warn('未找到对应的AI推荐规则span:', ruleId);
-                }
+                // 调用ai辅助修正方法
+                editor.aiAssistCorrect(ruleId);
+            });
+        }
+        if (temp.type == '40') {
+            // 处理大模型生成的报表图片
+            var imgSrc = temp.items && temp.items[0] && temp.items[0].src;
+            // 回写到光标位置
+            window.tabManager.getCurrentEditor().then(function (editor) {
+                // 调用新的插入图片方法
+                editor.insertImageAtCursor({
+                    src: imgSrc,
+                    width: '514',
+                    height: 'auto'
+                });
             });
         }
     }
@@ -2434,6 +3172,30 @@ function updateDestroyEditorBtnState() {
     }
 }
 
+/**
+ * 更新插入数据元按钮状态
+ * 只有在制作模板模式(designMode=true)时才启用
+ */
+function updateInsertDataElementBtnState() {
+    const $btnInsMetaData = $('#btnInsMetaData');
+
+    // 检查是否有活动的tab
+    if (!window.tabManager || !window.tabManager.currentTabId) {
+        $btnInsMetaData.prop('disabled', true).addClass('disabled');
+        return;
+    }
+
+    // 获取当前tab的编辑器信息
+    const currentTabEditor = window.tabManager.editors[window.tabManager.currentTabId];
+
+    // 检查是否为设计模式
+    if (currentTabEditor && currentTabEditor.designMode === true) {
+        $btnInsMetaData.prop('disabled', false).removeClass('disabled next-feature-btn');
+    } else {
+        $btnInsMetaData.prop('disabled', true).addClass('disabled next-feature-btn');
+    }
+}
+
 // 通用alert弹框，只有一个确认按钮
 function showAlertDialog(msg, onOk) {
     $('#customAlertMsg').text(msg);
@@ -2447,9 +3209,9 @@ function showAlertDialog(msg, onOk) {
 // AI认证初始化方法
 async function initAiAuth(docCode) {
     // 检查并等待AI令牌设置完成
-    console.log('准备调用waitForValidAiToken...');
+    // console.log('准备调用waitForValidAiToken...');
     const tokenValid = await waitForValidAiToken();
-    console.log('waitForValidAiToken执行完成，结果:', tokenValid);
+    // console.log('waitForValidAiToken执行完成，结果:', tokenValid);
 
     // 如果用户取消了令牌设置，直接返回
     if (tokenValid === false) {
@@ -2457,7 +3219,7 @@ async function initAiAuth(docCode) {
         return;
     }
 
-    console.log('AI令牌验证完成，开始执行认证流程');
+    // console.log('AI令牌验证完成，开始执行认证流程');
 
     const node = findNodeByDocCode(docCode, window.aiDocumentTreeData);
     const serialNumber = node ? node.serialNumber : '';
@@ -2479,8 +3241,7 @@ async function initAiAuth(docCode) {
         "flag": "m"
     };
     // 使用Promise处理认证初始化
-    const mayson = await HMEditorLoader.aiAuth(params, params.recordMap || recordMapData, ai);
-    window.mayson = mayson;
+    await HMEditorLoader.aiAuth(params, params.recordMap || recordMapData, false, ai);
     window.isInitHMAuth = true;
     ai == 1 && maysonListenWindowSize(); // mayson 内嵌展示，先不发布
     showQualityRemindSet(docCode, node);
@@ -2489,51 +3250,51 @@ async function initAiAuth(docCode) {
 // 等待AI令牌设置完成的函数
 function waitForValidAiToken() {
     return new Promise((resolve) => {
-        console.log('开始等待AI令牌设置...');
+        // console.log('开始等待AI令牌设置...');
 
         const checkToken = () => {
             const token = localStorage.getItem('HMAccessToken');
-            console.log('检查AI令牌:', token ? '存在' : '不存在');
+            // console.log('检查AI令牌:', token ? '存在' : '不存在');
 
             let valid = true;
 
             if (!token) {
                 valid = false;
-                console.log('AI令牌不存在，设置为无效');
+                // console.log('AI令牌不存在，设置为无效');
             } else {
-                console.log('AI令牌存在，开始验证...');
+                // console.log('AI令牌存在，开始验证...');
                 // 验证AI令牌
                 valid = checkAiToken(token);
-                console.log('checkAiToken返回结果:', valid);
+                // console.log('checkAiToken返回结果:', valid);
             }
 
-            console.log('AI令牌验证最终结果:', valid);
+            // console.log('AI令牌验证最终结果:', valid);
 
             if (!valid) {
-                console.log('AI令牌无效，显示设置对话框');
+                // console.log('AI令牌无效，显示设置对话框');
                 // 显示设置AI令牌的对话框
                 showAlertDialog('请先设置AI令牌', function () {
-                    console.log('用户点击确定，打开AI令牌设置对话框');
+                    // console.log('用户点击确定，打开AI令牌设置对话框');
                     // 点击确定后直接打开AI令牌设置对话框
                     $('.aiTokenDialog').show();
 
                     // 监听AI令牌设置完成事件
                     const handleTokenSet = () => {
-                        console.log('检测到AI令牌设置完成事件');
+                        // console.log('检测到AI令牌设置完成事件');
                         // 移除事件监听器
                         $(document).off('aiTokenSet.tokenSet');
                         $('#btnCloseAiToken').off('click.tokenSet');
 
                         // 直接继续执行，因为设置按钮已经验证过令牌了
-                        console.log('AI令牌设置完成，直接继续执行');
+                        // console.log('AI令牌设置完成，直接继续执行');
                         resolve(true); // 令牌有效，继续执行
                     };
 
-                    console.log('绑定aiTokenSet事件监听器');
+                    // console.log('绑定aiTokenSet事件监听器');
                     // 绑定设置完成事件
                     $(document).on('aiTokenSet.tokenSet', handleTokenSet);
                     $('#btnCloseAiToken').on('click.tokenSet', () => {
-                        console.log('用户取消AI令牌设置');
+                        // console.log('用户取消AI令牌设置');
                         // 移除事件监听器
                         $(document).off('aiTokenSet.tokenSet');
                         $('#btnCloseAiToken').off('click.tokenSet');
@@ -2542,7 +3303,7 @@ function waitForValidAiToken() {
                     });
                 });
             } else {
-                console.log('AI令牌有效，直接继续执行');
+                // console.log('AI令牌有效，直接继续执行');
                 resolve(true); // 令牌有效，继续执行
             }
         };
@@ -2552,7 +3313,7 @@ function waitForValidAiToken() {
 }
 
 function checkAiToken(token) {
-    console.log('开始验证AI令牌:', token ? token.substring(0, 10) + '...' : 'null');
+    // console.log('开始验证AI令牌:', token ? token.substring(0, 10) + '...' : 'null');
 
     // 验证AI令牌
     var valid = false;
@@ -2560,29 +3321,28 @@ function checkAiToken(token) {
         url: window.aiServer + "/aigc/recommend/cdss_stream_chat",
         type: "POST",
         headers: {
-            'Huimei_id': 'D7928B9182ABF6E0A6A6EBB71B353585',
             "Authorization": "Bearer " + token
         },
         contentType: 'application/json; charset=utf-8',
         data: JSON.stringify({}),
         async: false, // 设置为同步请求
         success: function (result) {
-            console.log('AI认证检查结果:', result);
+            // console.log('AI认证检查结果:', result);
             if (result.code == 200) {
                 valid = true;
-                console.log('AI令牌验证成功');
+                // console.log('AI令牌验证成功');
             } else {
                 valid = false;
                 console.log('AI令牌验证失败，code:', result.code);
             }
         },
         error: function (error) {
-            console.error('AI令牌验证请求失败:', error);
+            // console.error('AI令牌验证请求失败:', error);        
             valid = false;
         }
     });
 
-    console.log('AI令牌验证最终结果:', valid);
+    // console.log('AI令牌验证最终结果:', valid);
     return valid;
 }
 
@@ -2818,4 +3578,161 @@ async function getCurrentDocumentInfo() {
         serialNumber: serialNumber,
         recordName: recordName
     };
+}
+
+/**
+ * 检查指定文档的只读状态
+ * @param {Object} editor 编辑器实例
+ * @param {String} docCode 文档唯一编号
+ * @returns {Boolean} 如果文档为只读状态返回true，否则返回false
+ */
+function checkDocumentReadOnlyStatus(editor, docCode) {
+    try {
+        if (!editor || !editor.editor || !docCode) {
+            return false;
+        }
+
+        const $body = $(editor.editor.document.getBody().$);
+
+        // 查找指定docCode的文档元素
+        const $docElement = $body.find(`[data-hm-widgetid="${docCode}"]`);
+
+        if ($docElement.length === 0) {
+            console.warn(`未找到docCode为 ${docCode} 的文档元素`);
+            return false;
+        }
+
+        // 检查文档是否设置了只读状态
+        // 1. 检查contenteditable属性是否为false
+        const isContentEditableFalse = $docElement.prop('contenteditable') === false;
+
+        // 2. 检查是否有只读背景色类
+        const hasReadOnlyBgColor = $docElement.find('.hm-readonly-bgcolor').length > 0 ||
+            $docElement.hasClass('hm-readonly-bgcolor');
+
+        // 3. 检查文档内容是否可编辑
+        const isEditable = $docElement.find('[contenteditable="true"]').length > 0;
+
+        // 如果文档设置了contenteditable为false或有只读背景色，且没有可编辑内容，则认为文档为只读状态
+        const isReadOnly = (isContentEditableFalse || hasReadOnlyBgColor) && !isEditable;
+        return isReadOnly;
+
+    } catch (error) {
+        console.error('检查文档只读状态失败:', error);
+        return false;
+    }
+}
+
+// 页面初始化时设置插入数据元按钮状态
+$(document).ready(function () {
+    // 初始化时禁用插入数据元按钮，因为没有打开任何标签页
+    updateInsertDataElementBtnState();
+});
+
+/**
+ * 自动打开当前激活tab的第一份文档
+ */
+function autoOpenFirstDocument() {
+    // 延迟执行，确保DOM和组件都已初始化完成
+    setTimeout(() => {
+        try {
+            // 获取当前激活的tab类型
+            const activeTab = $('.tree-tab.active').data('tab');
+
+            if (activeTab === 'ai') {
+                // AI病历演示tab
+                openFirstDocumentFromTree(window.aiDocumentTreeData, window.aiDocumentTree);
+            } else if (activeTab === 'normal') {
+                // 常用病历模板tab
+                openFirstDocumentFromTree(window.documentTreeData, window.documentTree);
+            }
+        } catch (error) {
+            console.error('自动打开第一份文档失败:', error);
+        }
+    }, 1000); // 延迟1秒执行，确保所有组件都已初始化
+}
+
+/**
+ * 从指定文档树中打开第一份文档
+ * @param {Array} treeData - 文档树数据
+ * @param {Object} treeInstance - 文档树实例
+ */
+function openFirstDocumentFromTree(treeData, treeInstance) {
+    if (!treeData || !treeData.length > 0) {
+        console.warn('文档树数据为空');
+        return;
+    }
+
+    let firstDocument = null;
+    let categoryName = '';
+
+    // 判断数据结构类型
+    const firstItem = treeData[0];
+
+    // 通过serialNumber字段区分数据结构：aiDocumentTreeData的顶层有serialNumber，documentTreeData的顶层没有
+    if (firstItem.serialNumber) {
+        // AI病历演示结构：病人 -> 病历分类文件夹 -> 文档
+        const firstPatient = firstItem;
+        const firstRecordCategory = firstPatient.children[0];
+
+        if (firstRecordCategory && firstRecordCategory.children && firstRecordCategory.children.length > 0) {
+            const firstDoc = firstRecordCategory.children[0];
+
+            if (firstDoc && firstDoc.type === 'file-edit' && firstDoc.docCode) {
+                firstDocument = firstDoc;
+                categoryName = `${firstPatient.docName} - ${firstRecordCategory.docName}`;
+            }
+        }
+    } else if (firstItem.type === 'folder' && firstItem.children && firstItem.children.length > 0) {
+        // 普通病历模板结构：直接是分类文件夹
+        const firstCategory = firstItem;
+        const firstDoc = firstCategory.children[0];
+
+        if (firstDoc && firstDoc.type === 'file-edit' && firstDoc.docCode) {
+            firstDocument = firstDoc;
+            categoryName = firstCategory.docName;
+        }
+    }
+
+    if (firstDocument && firstDocument.docCode) {
+        console.log('自动打开第一份文档:', {
+            categoryName: categoryName,
+            documentName: firstDocument.docName,
+            docCode: firstDocument.docCode
+        });
+
+        // 模拟点击第一个文档节点
+        const $firstNode = treeInstance.container.find(`[data-doc-code="${firstDocument.docCode}"]`);
+        if ($firstNode.length > 0) {
+            $firstNode.find('.tree-node-content').click();
+        } else {
+            console.warn('未找到对应的DOM节点，尝试通过程序方式打开');
+            // 如果找不到DOM节点，直接调用文档加载方法
+            const docParams = [{
+                "code": firstDocument.docCode,
+                "docTplName": firstDocument.docName,
+                "docContent": "",
+                "serialNumber": firstDocument.serialNumber || '',
+                "recordName": firstDocument.recordName || ''
+            }];
+
+            // 如果有文档路径，先加载内容
+            if (firstDocument.docPath) {
+                $.get(firstDocument.docPath)
+                    .done((htmlContent) => {
+                        docParams[0].docContent = htmlContent;
+                        treeInstance.onDocumentLoaded(docParams);
+                    })
+                    .fail((jqXHR, textStatus, errorThrown) => {
+                        console.error('自动加载文档内容失败:', errorThrown);
+                        // 即使加载失败，也尝试打开文档
+                        treeInstance.onDocumentLoaded(docParams);
+                    });
+            } else {
+                treeInstance.onDocumentLoaded(docParams);
+            }
+        }
+    } else {
+        console.warn('未找到可打开的文档');
+    }
 }

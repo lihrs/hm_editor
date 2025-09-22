@@ -3,19 +3,30 @@ commonHM.component['hmAi'].fnSub("utils", {
         var _t = this;
     },
     // 查找并加粗
-    findAndStyle: function ($progreeContent, keycode, searchText, attrs) {
+    findAndStyle: function ($progreeContent, item, attrs) {
+        var searchText = item.surroundingText;
+        var keycode = item.emrAttributeCode;
+        var attrId = item.cdssAttributeId;
+
         if (!searchText) return;
+
         var editor = this.parent.editor;
         var doc = editor.document;
         var ranges = [];
         var selrange = editor.createRange();
-        var item = $progreeContent.find('span[data-hm-code="' + keycode + '"]');
-        if (!item.length) {
+        var item = [];
+        var keyCodeItem = $progreeContent.find('span[data-hm-code="' + keycode + '"]');
+        var attrIdItem = $progreeContent.find('span[data-hm-code="' + attrId + '"]');
+        // 如果都没有找到，直接返回
+        if (!keyCodeItem.length && !attrIdItem.length) {
             return;
         }
+        // type 1 按照节点code查找 2 按照标准id查找
+        var type = keyCodeItem.length ? 1 : 2;  
+        attrs['attr-code'] = type == 1 ? keycode : attrId;
+        item = type == 1 ? keyCodeItem : attrIdItem;
         // selrange.selectNodeContents(editor.editable());
         selrange.selectNodeContents(new CKEDITOR.dom.element(item[0]));
-
         // 3. 遍历所有匹配的文本
         var walker = new CKEDITOR.dom.walker(selrange);
         // 遍历所有文本节点
@@ -126,10 +137,9 @@ commonHM.component['hmAi'].fnSub("utils", {
     request: function (opts) {
         var _t = this;
         var headers = {
-            'Huimei_id': 'D7928B9182ABF6E0A6A6EBB71B353585',
-            "Authorization" : "Bearer " + localStorage.getItem('HMAccessToken')
-        },
-        headers = Object.assign(headers, opts.heders || {});
+                "Authorization": "Bearer " + localStorage.getItem('HMAccessToken')
+            },
+            headers = Object.assign(headers, opts.heders || {});
         $.ajax({
             type: opts.type || "POST",
             url: opts.url,
@@ -384,13 +394,47 @@ commonHM.component['hmAi'].fnSub("utils", {
      * @returns
      */
     getPosition: function (el) {
-        var $body = this.parent.editor.document.$.documentElement;
+        var _t = this;
+        var editor = this.parent.editor;
+        var $body = editor.document.$.documentElement;
+        
+        // 获取当前缩放比例
+        var currentZoom = parseFloat(getComputedStyle(editor.document.getBody().$).zoom) || 1;
+        
+        // 获取元素的offset位置
+        var pos = $(el).offset();
+        
+        // 获取元素高度和编辑器顶部高度
+        var elHeight = $(el).height();
+        var editorTopHeight = $('#cke_1_top').height();
+        var scrollTop = $body.scrollTop;
+        
+        // jQuery的offset()返回的是缩放后的值，需要除以zoom得到实际坐标
+        var actualLeft = pos.left / currentZoom;
+        var actualTop = pos.top / currentZoom;
+        var actualElHeight = elHeight / currentZoom;
+        var actualEditorTopHeight = editorTopHeight / currentZoom;
+        var actualScrollTop = scrollTop; // scrollTop通常不受缩放影响
+        
+        // 计算最终位置：元素顶部 + 元素高度 + 编辑器顶部高度 - 滚动距离
+        var finalTop = actualTop + actualElHeight + actualEditorTopHeight - actualScrollTop;
+        
+        // 添加调试信息
+        // if (window.console && console.log) {
+        //     console.log('缩放计算调试:', {
+        //         zoom: currentZoom,
+        //         原始值: { top: pos.top, height: elHeight, editorTop: editorTopHeight, scroll: scrollTop },
+        //         调整后: { top: actualTop, height: actualElHeight, editorTop: actualEditorTopHeight, scroll: actualScrollTop },
+        //         最终结果: finalTop
+        //     });
+        // }
+        
         return {
-            left: el.offsetLeft,
-            top: el.offsetTop + el.offsetHeight + $('#cke_1_top').height() - $body.scrollTop
-        }
-    },
-   
+            left: Math.round(actualLeft * 100) / 100,
+            top: Math.round(finalTop * 100) / 100
+        };
+    }, 
+    
     //替换内容
     // function replaceHighlighted(editor, replaceText) {
     //     var spans = editor.document.getElementsByTag('span');

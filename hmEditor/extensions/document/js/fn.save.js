@@ -15,6 +15,25 @@ commonHM.component['documentModel'].fn({
     getDocumentHtml: function (widget) {
         var _t = this;
         var $body = _t.editor.document.getBody();
+        // 清除AI助手文案 
+        $(widget).find('.new-textbox-content').each(function (i, ele) {
+            if ($(ele).attr('generate') == '1' && $(ele).find('.r-model-gen-remark').length > 0) {
+                $(ele).find('.r-model-gen-remark').remove();
+                var _placeholder = $(ele).parent().attr('_placeholder');
+                $(ele).attr('_placeholder', _placeholder);
+                $(ele).attr('_placeholdertext', true);
+                if (_placeholder) {
+                    $(ele).html(_placeholder);
+                }
+            }
+        });  
+        // 清除 质控
+        $(widget).find('.doc-warn-p').each(function(){
+            $(this).remove();
+        });
+        $(widget).find('.doc-warn-txt').each(function(i,ele){
+            new CKEDITOR.dom.element(ele).remove(true);
+        });
         var paperSize = $body.getAttribute('data-hm-papersize');
         var meta_json = $body.getAttribute('meta_json');
         //提取widget中的文档属性
@@ -30,7 +49,7 @@ commonHM.component['documentModel'].fn({
             $(this).css("display", "");
         });
         var _class = '';
-        if ($($body.$).find('.switchModel').length > 0) {
+        if ($($body.$).find('.switchModel').length > 0 || $($body.$).find('[_contenteditable="false"]').length > 0) {
             _class = 'switchModel';
         }
         var widgetContent = '<body data-hm-papersize="' + (papersize || "") + '" meta_json="' + (meta_json || "") + '" style="' + (style || "") + '" class="' + (_class || "") + '">' + $recordContent[0].innerHTML + '</body>';
@@ -77,15 +96,14 @@ commonHM.component['documentModel'].fn({
     getSourceData: function ($body) {
         var _t = this;
         var sourceObj = {
-            data: [], // 非护理表单数据
-            nursingData: [] // 护理表单数据
+            data: [], // 非护理表单数据 
         };
 
         // 处理普通数据元
         _t.handleNormalDataElements($body, sourceObj);
 
-        // 处理护理表单数据
-        _t.handleNursingFormData($body, sourceObj);
+        // 处理列表类表格数据
+        _t.handleTableListData($body, sourceObj);
 
         return sourceObj;
     },
@@ -97,11 +115,13 @@ commonHM.component['documentModel'].fn({
      */
     handleNormalDataElements: function ($body, sourceObj) {
         var _t = this;
-        var dataSourceList = $body.find('[data-hm-name]:not([data-hm-node="labelbox"])');
+        var $copyBody = $body.clone(true);
+        $copyBody.find('.r-model-gen-remark').remove();
+        var dataSourceList = $copyBody.find('[data-hm-name]:not([data-hm-node="labelbox"])');
 
         for (var i = 0; i < dataSourceList.length; i++) {
             var ele = dataSourceList[i];
-            if ($(ele).parents('[is_nursing_form]').length > 0) {
+            if ($(ele).parents('[data-hm-table-type="list"]').length > 0) {
                 continue;
             }
 
@@ -117,13 +137,19 @@ commonHM.component['documentModel'].fn({
      * @param {*} $body 文档内容
      * @param {*} sourceObj 数据源对象
      */
-    handleNursingFormData: function ($body, sourceObj) {
+    handleTableListData: function ($body, sourceObj) {
         var _t = this;
-        var $nursingForms = $body.find('table[data-hm-datatable][is_nursing_form="true"]');
+        var $tablelist = $body.find('table[data-hm-table-type="list"]');
 
-        if (!$nursingForms.length) return;
+        if (!$tablelist.length) return;
 
-        $nursingForms.each(function () {
+        $tablelist.each(function () {
+            var tableData = {
+                keyCode: $(this).attr('data-hm-table-code') || '',
+                keyName: $(this).attr('data-hm-datatable') || '',
+                keyId: $(this).attr('hm-table-id') || '',
+                keyValue: []
+            };
             var $rows = $(this).find('tbody tr');
 
             $rows.each(function () {
@@ -138,14 +164,92 @@ commonHM.component['documentModel'].fn({
                 });
 
                 if (rowData.length) {
-                    sourceObj.nursingData.push(rowData);
+                    tableData.keyValue.push(rowData);
                 }
             });
+            sourceObj.data.push(tableData);
         });
-    },
-
+    }, 
     /**
-     * 创建数据元对象
+     * 根据表格编码、列列表、行索引获取表格数据
+     * @param {string} tableCode 表格编码
+     * @param {Array} colKeyList 获取列列表（数据元编码数组），为空时获取全部列
+     * @param {number} rowIndex 获取行索引，为空时获取全部行
+     * @returns {Object} 表格数据对象
+     */
+    getTableListData:function(tableCode,colKeyList,rowIndex){
+        var _t = this;
+        var $body = $(_t.editor.document.getBody().$);
+        var $table = $body.find('table[data-hm-table-code="' + tableCode + '"]');
+        
+        if (!$table.length) {
+            return null;
+        }
+        
+        // 构建表格数据对象
+        var tableData = {
+            keyCode: tableCode,
+            keyName: $table.attr('data-hm-datatable') || '',
+            keyId: $table.attr('hm-table-id') || '',
+            keyValue: []
+        };
+        
+        var $rows = $table.find('tbody tr');
+        
+        // 如果指定了行索引，只处理该行
+        if (typeof rowIndex === 'number' && rowIndex >= 0) {
+            if (rowIndex < $rows.length) {
+                var $targetRow = $rows.eq(rowIndex);
+                var rowData = _t.getRowData($targetRow, colKeyList);
+                if (rowData.length) {
+                    tableData.keyValue.push(rowData);
+                }
+            } else {
+                console.warn('行索引 ' + rowIndex + ' 超出表格行数范围');
+            }
+        } else {
+            // 处理所有行
+            $rows.each(function () {
+                var rowData = _t.getRowData($(this), colKeyList);
+                if (rowData.length) {
+                    tableData.keyValue.push(rowData);
+                }
+            });
+        }
+        
+        return tableData;
+    },
+    
+    /**
+     * 获取表格行数据
+     * @param {jQuery} $row 行元素
+     * @param {Array} colKeyList 列编码列表，为空时获取全部列
+     * @returns {Array} 行数据数组
+     */
+    getRowData: function($row, colKeyList) {
+        var _t = this;
+        var rowData = [];
+        var $tds = $row.find('[data-hm-node]');
+        
+        $tds.each(function () {
+            var cellObj = _t.getDataElementObject($(this));
+            if (cellObj) {
+                // 如果指定了列编码列表，只返回匹配的列
+                if (colKeyList && colKeyList.length > 0) {
+                    if (colKeyList.indexOf(cellObj.keyCode) !== -1) {
+                        rowData.push(cellObj);
+                    }
+                } else {
+                    // 未指定列编码列表，返回所有列
+                    rowData.push(cellObj);
+                }
+            }
+        });
+        
+        return rowData;
+    },
+    /**
+     * 获取数据元对象
      * @param {*} ele 数据元元素
      * @returns 数据元对象
      */
@@ -159,7 +263,7 @@ commonHM.component['documentModel'].fn({
             keyName: $ele.attr('data-hm-name') || '',
             keyValue: ''
         };
-        console.log(type)
+        // console.log(type)
         switch (type) {
             case 'newtextbox':
                 spanObj = _t.handleNewTextbox(ele, spanObj);
@@ -170,7 +274,6 @@ commonHM.component['documentModel'].fn({
             case 'cellbox':
                 var value = !$ele.attr('_placeholdertext') ? $ele.text() : '';
                 spanObj.keyValue = value ? value.replace(/\u200B/g, '') : '';
-                console.log(value)
                 break;
             case 'textboxwidget':
                 var value = !$ele.attr('_placeholdertext') ? $ele.text() : '';
@@ -229,9 +332,102 @@ commonHM.component['documentModel'].fn({
             if (selectType == '多选') {
                 spanObj.keyName = code && code.split(',');
             }
+        } else if (_type == '二维码') {
+            // 对于二维码类型，只取原始的bindVal值，不保存生成的HTML结构
+            if (!_con.attr('_placeholdertext')) {
+                var bindVal = _con.attr('_bindvalue') || _con.text();
+                spanObj.keyValue = bindVal.replace(/\u200B/g, '').replace(/\uFEFF/g, '').trim();
+                console.log('二维码保存处理，提取bindVal:', bindVal);
+            }
+        } else if (_type == '条形码') {
+            // 对于条形码类型，只取原始的bindVal值，不保存生成的HTML结构
+            if (!_con.attr('_placeholdertext')) {
+                var bindVal = _con.attr('_bindvalue') || _con.text();
+                spanObj.keyValue = bindVal.replace(/\u200B/g, '').replace(/\uFEFF/g, '').trim();
+                console.log('条形码保存处理，提取bindVal:', bindVal);
+            }
         } else {
             if (!_con.attr('_placeholdertext')) {
-                spanObj.keyValue = _con.text();
+                // 优化文本获取逻辑，处理包含expressionbox等复杂内容的情况
+                var contentArray = [];
+                
+                // 遍历所有子节点，按顺序获取内容
+                _con.contents().each(function() {
+                    if (this.nodeType === 3) { // 文本节点
+                        var text = $(this).text();
+                        if (text && text.trim()) {
+                            // 清理文本内容，移除零宽空格等特殊字符
+                            text = text.replace(/\u200B/g, '').replace(/\uFEFF/g, '').trim();
+                            if (text) {
+                                contentArray.push(text);
+                            }
+                        }
+                    } else if (this.nodeType === 1) { // 元素节点
+                        var $element = $(this);
+                        
+                        // 如果是expressionbox，创建对象结构
+                        if ($element.attr('data-hm-node') === 'expressionbox') {
+                            var expressionObj = {
+                                "类型": "expressionbox",
+                                "值": $element.attr('_expressionvalue') || '',
+                                "_style": $element.attr('style') || '',
+                                "_expressionoption": $element.attr('_expressionoption') || '',
+                                "id": $element.attr('data-hm-id') || ''
+                            };
+                            contentArray.push(expressionObj);
+                        } else if ($element.is('img')) {
+                            // 如果是图片元素，创建图片对象结构
+                            var imgObj = {
+                                "名称": "img",
+                                "类型": "img",
+                                "值": $element.attr('src') || '',
+                                "src": $element.attr('src') || '',
+                                "id": $element.attr('id') || '',
+                                "style": $element.attr('style') || ''
+                            };
+                            contentArray.push(imgObj);
+                        } else {
+                            // 检查元素内部是否包含img
+                            var $img = $element.find('img');
+                            if ($img.length > 0) {
+                                // 如果找到img元素，创建图片对象结构
+                                var imgObj = {
+                                    "名称": "img",
+                                    "类型": "img",
+                                    "值": $img.attr('src') || '',
+                                    "src": $img.attr('src') || '',
+                                    "id": $img.attr('id') || '',
+                                    "style": $img.attr('style') || ''
+                                };
+                                contentArray.push(imgObj);
+                            } else {
+                                // 其他元素，获取其文本内容
+                                var elementText = $element.text();
+                                if (elementText && elementText.trim()) {
+                                    elementText = elementText.replace(/\u200B/g, '').replace(/\uFEFF/g, '').trim();
+                                    if (elementText) {
+                                        contentArray.push(elementText);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // 如果只有一个元素且是字符串，直接返回该元素；否则返回数组
+                if (contentArray.length === 1) {
+                    var firstElement = contentArray[0];
+                    // 如果是字符串，直接返回；如果是对象，仍然返回数组
+                    if (typeof firstElement === 'string') {
+                        spanObj.keyValue = firstElement;
+                    } else {
+                        spanObj.keyValue = contentArray;
+                    }
+                } else if (contentArray.length > 1) {
+                    spanObj.keyValue = contentArray;
+                } else {
+                    spanObj.keyValue = '';
+                }
             }
         }
         return spanObj;
@@ -394,7 +590,7 @@ commonHM.component['documentModel'].fn({
      * @returns
      */
     getFilterData: function (keyList, dataList) {
-        var result = [];
+        var result = [];      
         if (keyList.length) {
             if (dataList.length > 0) {
                 dataList.forEach(item => {
@@ -419,7 +615,7 @@ commonHM.component['documentModel'].fn({
         var _config = _t.editor.HMConfig || {};
         var realtimePageBreak = _config.realtimePageBreak || false;
         // 开启分页时需要先去除分页.
-        var $cloneBody = realtimePageBreak ? CKEDITOR.plugins.pagebreakCmd.removeAllSplitters(_t.editor, true) : $(_t.editor.document.getBody().$).clone(true);
+        var $cloneBody = realtimePageBreak ? $(CKEDITOR.plugins.pagebreakCmd.removeAllSplitters(_t.editor, true)) : $(_t.editor.document.getBody().$).clone(true);
         if (code) { // 如果存在code，则获取指定文档内容
             widgetList = $cloneBody.find("[data-hm-widgetid=" + "\'" + code + "\'" + "]");
         } else {
@@ -431,11 +627,13 @@ commonHM.component['documentModel'].fn({
     /**
      * 获取文档内容数据
      * code 为空时，获取所有文档内容
-     * @param {Object} code 文档唯一编号
+     * @param {Object} params 获取文档内容参数
      * {
      *   code: '文档唯一编号',
      *   flag: 1, // 1:获取html文本 2:获取text文本 3:获取数据元Data
-     *   keyList: ['数据元编码1','数据元编码2'] // 指定数据元编码列表
+     *   keyList: ['数据元编码1','数据元编码2'] // 指定数据元编码列表，为空时：
+     *                                           // - 如果code不为空，获取该文档的所有数据元
+     *                                           // - 如果code为空，获取所有文档的所有数据元
      * }
      * @returns {Array} 文档内容列表，格式如下：
      * [{
@@ -471,7 +669,20 @@ commonHM.component['documentModel'].fn({
         var _html = _t.getDocumentHtml(widget);
         var _text = _t.getDocumentText(widget);
         var _sourceData = _t.getContentData(widget); // 所有数据
-        var _data = _t.getFilterData(params.keyList || [], _sourceData.data); // 非护理表单数据
+        
+        // 优化逻辑：如果params.code不为空且keyList为空或只包含空字符串，则获取该文档的所有数据元
+        var _data;
+        var isEmptyKeyList = !params.keyList || params.keyList.length === 0 || 
+                           (params.keyList.length === 1 && params.keyList[0] === '');
+        
+        if (params.code && isEmptyKeyList) {
+            // 当code不为空且keyList为空或只包含空字符串时，获取该文档的所有数据元
+            _data = _sourceData.data;
+        } else {
+            // 其他情况使用原有的过滤逻辑
+            _data = _t.getFilterData(params.keyList || [], _sourceData.data);
+        }
+        
         var _id = $(widget).attr('data-hm-widgetid') || '';
         if (!params.code && !params.flag) {
             result.push({
@@ -506,7 +717,7 @@ commonHM.component['documentModel'].fn({
             }
         }
         // 如果存在护理表单数据,则添加到result中
-        if ($(widget).find('[is_nursing_form="true"]').length > 0) {
+        if ($(widget).find('[data-hm-table-type="list"]').length > 0) {
             result[0].nursingData = _sourceData.nursingData;
         }
         return result;

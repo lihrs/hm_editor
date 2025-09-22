@@ -427,12 +427,15 @@
 			 * @returns {Boolean} Informs whether the insertion was successful.
 			 */
 			insertElementIntoRange: function( element, range ) {
+                if(!range){
+                    return false;
+                }
 				var editor = this.editor,
 					enterMode = editor.config.enterMode,
 					elementName = element.getName(),
 					isBlock = CKEDITOR.dtd.$block[ elementName ];
 
-				if ( range.checkReadOnly() )
+				if (range.checkReadOnly() )
 					return false;
 
 				// Remove the original contents, merge split nodes.

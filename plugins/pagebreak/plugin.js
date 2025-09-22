@@ -470,6 +470,9 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
             // 相邻两页的中间不来一层吗
             var splitter = document.createElement('div');
             splitter.className = 'hm-page-splitter';
+            splitter.setAttribute('tabindex', '-1'); // 不能通过Tab键获焦
+            splitter.setAttribute('contenteditable', 'false'); // 不可编辑
+            splitter.style.pointerEvents = 'none'; // 不响应鼠标事件
             logicPage.appendChild(splitter);
             return logicPage;
         },
@@ -1145,10 +1148,10 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
 
             // 恢复 body 的形状
             var paperMarginPx = CKEDITOR.plugins.paperCmd.paperMarginPx;
-            splittersRemoved.style.paddingTop = 0;
+            splittersRemoved.style.paddingTop = editor.HMConfig.editShowPaddingTopBottom ? paperMarginPx.top + 'px' : 0;
+            splittersRemoved.style.paddingBottom = editor.HMConfig.editShowPaddingTopBottom ? paperMarginPx.bottom + 'px' : 0;
             splittersRemoved.style.paddingLeft = paperMarginPx.left + 'px';
-            splittersRemoved.style.paddingRight = paperMarginPx.right + 'px';
-            splittersRemoved.style.paddingBottom = 0;
+            splittersRemoved.style.paddingRight = paperMarginPx.right + 'px';           
             splittersRemoved.style.width = CKEDITOR.plugins.paperCmd.logicPaperSize.width + 'px';
 
             splittersRemoved.style.background = 'white';
@@ -1665,6 +1668,7 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
 
                             nextPageContent = nextPage && nextPage.getElementsByClassName(PAGE_CONTENT_CLASS)[0];
 
+                            updateHeaderByMultiPartHeader(editor, prevPage);
                             timeLogger('预处理', 0);
                             // 预处理1: 重新计算前一页的表格冗余量
                             // 在 chrome 中, 表格渲染时是精确渲染; 然而在打印时是向上取整. 故要对每个表格行的误差进行统计. (什么? 两个表并排的情况? 啊哈哈哈哈哈哈)
@@ -5194,5 +5198,79 @@ function combine$Nodes(editor, $node) {
             node.parentNode.insertBefore(otherNode, node.nextSibling);
         }
         CKEDITOR.plugins.pagebreakCmd.combineFormat(editor, otherNode, !boundedNode[i].nodeIsPrev);
+    }
+}
+
+/**
+ * 根据记录时间判断转科时间显示转科后科室床位位号
+ * @param {Object} editor - CKEditor实例
+ * @param {Object} prevPage - 上一页元素
+ */
+function updateHeaderByMultiPartHeader(editor, prevPage) {
+    var widgets = $(prevPage).find('[data-hm-widgetid]');
+    var multiPartHeader = editor.HMConfig.multiPartHeader || {};
+    var headerList = multiPartHeader.headerList || [];
+    var controlElementName = multiPartHeader.controlElementName || "";
+    
+    if (widgets.length > 0 && headerList.length > 0) {
+        // 获取当前页面首个病历
+        var widget = widgets[0];
+        var widgetId = widget.getAttribute('data-hm-widgetid');
+        console.log("当前页面首个病历ID: " + widgetId);
+        
+        // 当前页面首个病历的记录时间
+        var recordTime = $(widget).find('[data-hm-name="'+controlElementName+'"]:not([data-hm-node="labelbox"])').text();
+        var recordTimePage = new Date(recordTime).getTime();
+        // 获取当前页面页眉信息
+        var pagehead = $(prevPage).find('table[_paperheader="true"]')[0];
+        
+        // 替换转科换床记录
+        for (var d = 0; d < headerList.length; d++) {
+            var moveRecord = headerList[d];
+            // 检查是否满足时间条件，处理空值情况
+            var startTime = null;
+            var endTime = null;
+            
+            if(moveRecord['startTime']) {
+                startTime = new Date(moveRecord['startTime']).getTime();
+            }
+            
+            if(moveRecord['endTime']) {
+                endTime = new Date(moveRecord['endTime']).getTime();
+            }
+            // 处理headerData的通用函数
+            function handleHeaderData(headerData, pagehead) {
+                if(!headerData) return;
+                
+                for(var key in headerData) {
+                    var headerName = $(pagehead).find('[data-hm-name="'+key+'"]:not([data-hm-node="labelbox"])');
+                    if(headerName.length > 0) {
+                        var headercontent = $(headerName).find("span.new-textbox-content");
+                        headercontent.html(headerData[key]);
+                    }
+                }
+            }
+
+            // 检查时间条件
+            var shouldApplyHeader = false;
+            if(startTime && endTime) {
+                // 检查时间范围
+                shouldApplyHeader = startTime <= endTime && 
+                                  recordTimePage > startTime && 
+                                  recordTimePage <= endTime;
+            } else if(!startTime) {
+                // 只检查endTime
+                shouldApplyHeader = recordTimePage <= endTime;
+            } else if(!endTime) {
+                // 只检查startTime
+                shouldApplyHeader = recordTimePage > startTime;
+            }
+
+            // 应用headerData
+            if(shouldApplyHeader) {
+                handleHeaderData(moveRecord['headerData'], pagehead);
+                break; // 找到匹配的记录后跳出循环，避免被后面的记录覆盖
+            }
+        }
     }
 }

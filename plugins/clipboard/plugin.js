@@ -528,24 +528,15 @@ function removeBodyZeroWidthSpace(editor) {
 						}
 
 					}
-					// var emrId = selectedAggEmr || getQueryString('病历ID');
-					// var selTxt = editor.getUserSelectContent(selection);
-					// if(((editor.commands["revise"] && editor.reviseModelOpened) || secondSignReviseModel[emrId]) && selection && selection.getRanges() && selection.getRanges().length > 0){
-					// 	var ranges = selection.getRanges();
-					// 	var range0 = ranges[0];
-					// 	var currentUserInfo = wrapperUtils.currentUserInfo;
-					// 	var insNode = range0.endPath().contains("ins");
-					// 	var dateStr = wrapperUtils.formatDateToStr('yyyy-MM-dd hh:mm:ss', new Date());
-					// 	if(insNode && insNode.getAttribute("_userid") != currentUserInfo.userId && editor.checkedIsCreator(selection)) {
-					// 		var insValue = '<ins contenteditable="true" class="hm_self_ins" _userid="'+ currentUserInfo.userId +'">' + data.dataValue + '</ins>'
-					// 		data.dataValue = insValue;
-					// 	}else if((!editor.checkedIsCreator(selection)) || (insNode && insNode.getAttribute("_userid") != currentUserInfo.userId)){
-					// 		var dateStr = wrapperUtils.formatDateToStr('yyyy-MM-dd hh:mm:ss', new Date());
-					// 		var reviseId = 'trace_' + wrapperUtils.getGUID();
-					// 		var insValue = '<ins contenteditable="true" class="hm_revise_ins" trace_id="'+ reviseId +'" title="'+ currentUserInfo.userName + "  " + dateStr +'" _userid="'+ currentUserInfo.userId +'" modifier="'+ currentUserInfo.userName +'" modifyTime="'+ dateStr +'" modifyType="新增">' + data.dataValue + '</ins>'
-					// 		data.dataValue = insValue;
-					// 	}
-					// }
+					if((editor.commands["revise"] && editor.reviseModelOpened) && selection && selection.getRanges() && selection.getRanges().length > 0){
+						var ranges = selection.getRanges();
+						var range0 = ranges[0];
+						var dateStr = wrapperUtils.formatDateToStr('yyyy-MM-dd hh:mm:ss', new Date());
+						var reviseId = 'trace_' + wrapperUtils.getGUID();
+						var currentUserInfo = editor.HMConfig.currentUserInfo || {};
+						var insValue = '<ins contenteditable="true" class="hm_revise_ins" trace_id="'+ reviseId +'" hm-modify-userId="'+ currentUserInfo.userId+'" hm-modify-userName="'+ currentUserInfo.userName+'" hm-modify-time="'+ dateStr +'" hm-modify-type="新增">' + data.dataValue + '</ins>'
+						data.dataValue = insValue;
+					}
 					// var hospitalConfig = JSON.parse(sessionStorage.getItem('emr_currentHospitalConfig') || '{}');
 					// if(hospitalConfig['病历书写粘贴数据格式'] == '带格式粘贴' && data.type=='html'){
 					// 	var _html= data.dataValue;

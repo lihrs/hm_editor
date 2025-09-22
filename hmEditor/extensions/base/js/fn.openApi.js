@@ -18,6 +18,8 @@ HMEditor.fn({
             contentlist = [contentlist];
         }
         this.documentModel.setContent(contentlist);
+        // 加载完文档，清空一下editorTool 对象
+        // this.hmAi.editorTool = null;
     },
 
     /**
@@ -41,6 +43,11 @@ HMEditor.fn({
      * @param {String} dataList[].data[].keyCode 数据元编码(必传)
      * @param {String} dataList[].data[].keyName 数据元名称
      * @param {String|String[]} dataList[].data[].keyValue 数据元内容，可以是字符串或字符串数组(必传)
+     * @param {Array} dataList[].nursingData 护理表单数据(可选，二维数组，每一行代表一条护理记录)
+     * @param {String} dataList[].nursingData[][].keyCode 护理数据数据元编码
+     * @param {String} dataList[].nursingData[][].keyId 护理数据数据元ID
+     * @param {String} dataList[].nursingData[][].keyName 护理数据数据元名称
+     * @param {String} dataList[].nursingData[][].keyValue 护理数据数据元值
      */
     setDocData: function (dataList) {
         // 如果传入的是对象，则包装成数组
@@ -301,6 +308,18 @@ HMEditor.fn({
         _t.documentModel.setDocWatermark();
     },
     /**
+     * 设置文档分段页眉
+     * @param {Object} settings 分段页眉设置
+     * @param {String} settings.controlElementName 控制元素名称，数据元名称，比如 记录时间
+     * @param {Array} settings.headerList 页眉列表
+     * @param {String} settings.headerList[].startTime 开始时间
+     * @param {String} settings.headerList[].endTime 结束时间
+     * @param {Object} settings.headerList[].headerData 页眉数据对象，包含页眉显示的信息
+     */
+    setDocMultiPartHeader: function (settings) {
+        this.editor.HMConfig.multiPartHeader = settings || {};
+    },
+    /**
      * 下载pdf
      *
      */
@@ -338,5 +357,126 @@ HMEditor.fn({
      */
     generateSection: function (targetNode) {
         this.hmAi.generator.generateMessage(targetNode,2);
+    },
+    /**
+     * 插入数据元
+     * @param {*} datasource 数据元对象
+     * @param {String} code 数据元code
+     * @param {String} format 格式化
+     * @param {String} length 长度
+     * @param {String} name 名称
+     * @param {String} nodeName 节点类型 时间，纯文本，数字，下拉，搜索，单元
+     * @param {String} type
+     * @param {Boolean} autoLable 是否自动加标题
+     */
+    insertDataSource: function (datasource) {
+        this.editor._datasourceDialogApp.insertDataSource(datasource);
+    },
+    /**
+     * AI辅助修正
+     * @param {*} ruleId
+     */
+    aiAssistCorrect: function (ruleId) {
+        this.hmAi.composer.ruleComposer(ruleId);
+    },
+    /**
+     * 设置自定义属性
+     * @param {*} params
+     * @param {String} params.code 病历唯一编码
+     * @param {String} params.section 节点标识（病历ID、表格ID或数据元CODE）
+     * @param {Array} params.customProperty 自定义属性数组
+     */
+    setCustomProperties:function(params){
+        this.documentModel.setCustomProperties(params.code,params.section,params.customProperty);
+    },
+    /**
+     * 删除自定义属性
+     * @param {*} params
+     * @param {String} params.code 病历唯一编码
+     * @param {String} params.section 节点标识（病历ID、表格ID或数据元CODE）
+     * @param {String} params.propertyName 属性名
+     */
+    deleteCustomProperties:function(params){
+        this.documentModel.deleteCustomProperties(params.code,params.section,params.propertyNames);
+    },
+    /**
+     * 获取自定义属性
+     * @param {*} params
+     * @param {String} params.code 病历唯一编码
+     * @param {String} params.section 节点标识（病历ID、表格ID或数据元CODE）
+     * @param {Array} params.propertyNames 属性名数组
+     * @returns {Object} 属性名值对对象，格式：{属性名: 属性值}
+     */
+    getCustomProperties:function(params){
+       return this.documentModel.getCustomProperties(params.code,params.section,params.propertyNames);
+    },
+
+    /**
+     * 获取文档修订记录
+     * @param {String} code 病历唯一编码
+     * @returns {Array} 修订记录
+     * @returns {Array} data[].traceId 修订记录ID
+     * @returns {Array} data[].modifier 修订记录修改者
+     * @returns {Array} data[].modifyTime 修订记录修改时间
+     * @returns {Array} data[].modifyType 修订记录修改类型
+     * @returns {Array} data[].content 修订记录内容
+     */
+    getDocRevisionHistory:function(code){
+        return this.documentModel.getRevisionHistory(code);
+    },
+    /**
+     * 设置文档修改用户
+     * @param {Object} userInfo 用户信息对象
+     * @param {String} userInfo.userId 用户ID
+     * @param {String} userInfo.userName 用户名称
+     */
+    setDocModifyUser: function (userInfo) {
+        if (!userInfo || typeof userInfo !== "object") {
+            console.error("用户信息必须是对象格式");
+            return false;
+        }
+
+        if (!userInfo.userId || !userInfo.userName) {
+            console.error("用户信息必须包含 userId 和 userName 属性");
+            return false;
+        }
+
+        // 将用户信息存储到编辑器配置中
+        if (!this.editor.HMConfig) {
+            this.editor.HMConfig = {};
+        }
+        this.editor.HMConfig.currentUserInfo = userInfo;
+        return true;
+    },
+    /**
+     * 设置文档创建用户
+     * @param {Object} userInfo 用户信息对象
+     * @param {String} userInfo.userId 用户ID
+     * @param {String} userInfo.userName 用户名称
+     */
+    setDocCreateUser: function (userInfo) {
+        this.setDocModifyUser(userInfo);
+        var _t = this;
+        //_t.documentModel.setDocCreateUser(userInfo);
+    },
+    /**
+     * 设置文档创建用户
+     * @returns {Object} userInfo 用户信息对象
+     * @returns {String} userInfo.userId 用户ID
+     * @returns {String} userInfo.userName 用户名称
+     */
+    getDocCreateUser: function () {
+        var _t = this;
+        //return _t.documentModel.getDocCreateUser();
+    },
+     /**
+     * 根据表格编码、列列表、行索引获取表格数据
+     * @param {*} params
+     * @param {*} params.tableCode 表格编码
+     * @param {*} params.colKeyList 获取列列表
+     * @param {*} params.rowIndex 获取行索引
+     */
+    getTableData:function(params){
+        return this.documentModel.getTableListData(params.tableCode,params.colKeyList,params.rowIndex);
     }
 });

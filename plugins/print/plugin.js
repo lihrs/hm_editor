@@ -30,7 +30,12 @@ function deletepdf(filePath) {
 editorIns.filePath = '';
 function getHost() {
     var editorConfig = getConfig();
-    return editorConfig.sdkHost||'';
+    var host = editorConfig.sdkHost || '';
+    // 如果末尾是斜杠，则去掉
+    if (host.endsWith('/')) {
+        host = host.slice(0, -1);
+    }
+    return host;
 }
 function getConfig(editor){
     var editorConfig = editor?editor.HMConfig:window.HMConfig||{};
@@ -804,6 +809,9 @@ function removeDocReminder(body){
     $(body.$).find('.r-model-gen-remark').remove();
     $(body.$).find('.sk-popup').remove();
     $(body.$).find('.r-model-gen-text').remove(); // ai 生成，但未保留
+    
+    // 移除日期导航相关元素
+    $(body.$).find('.date-navigation').remove();
 }
 function dealPrintGroupTable($body){
 

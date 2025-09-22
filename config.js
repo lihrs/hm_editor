@@ -44,7 +44,7 @@ CKEDITOR.editorConfig = function( config ) {
 	// %REMOVE_END%
 
 	// config.extraPlugins = 'tableresize,paper,pagebreak,datasource,sync,print,favor,document,save,trace,album,clear,revise,signature,switchmodel,pagebreakByHand,find';
-	config.extraPlugins = 'tableresize,paper,pagebreak,datasource,document,print,save,album,clear,revise,switchmodel,pagebreakByHand,find';
+	config.extraPlugins = 'tableresize,paper,pagebreak,datasource,document,print,save,album,clear,revise,switchmodel,pagebreakByHand,find,documenttree';
 
 
 	config.toolbar = [
@@ -60,7 +60,8 @@ CKEDITOR.editorConfig = function( config ) {
 		{ name: 'clear', items: ['Clear'] },
 		{ name: 'pagebreak', items: ['PageBreak'] },
 		{ name: 'switchmodel', items: ['SwitchModel'] },
-		{name:'find',items: ['Find','Replace']}
+		{name:'find',items: ['Find','Replace']},
+		{name:'documenttree',items: ['DocumentTree']}
 
 	];
 
@@ -72,7 +73,7 @@ CKEDITOR.editorConfig = function( config ) {
 
 
 	// config.contentsCss = ['vendor/font-awesome.min.css','http://172.16.3.51:3052/hmsdk/hm-sdk.min.css','contents.css'];
-    config.contentsCss = ['vendor/font-awesome.min.css','vendor/hm-sdk.min.css','css/docAi.min.css','css/document.min.css','contents.css'];
+    config.contentsCss = [CKEDITOR.getUrl('vendor/font-awesome.min.css'),CKEDITOR.getUrl('vendor/hm-sdk.min.css'),CKEDITOR.getUrl('css/docAi.min.css'),CKEDITOR.getUrl('css/document.min.css'),CKEDITOR.getUrl('contents.css')];
 
 	config.keystrokes = [
 		[CKEDITOR.CTRL + 83, 'save'],

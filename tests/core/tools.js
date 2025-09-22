@@ -235,7 +235,6 @@
 			func = CKEDITOR.tools.addFunction( function( argA ) {
 				assert.areSame( argA, argARef );
 			} );
-
 			CKEDITOR.tools.callFunction( func, argARef );
 		},
 

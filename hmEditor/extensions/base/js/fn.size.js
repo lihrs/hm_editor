@@ -36,7 +36,7 @@ HMEditor.fnSub("editorSize", {
         } else {
             _t.size = 1;
         }
-        _t.set();
+        _t.set(); 
     },
     // 以 1/32 为最小单位改变缩放比例 (不能被2整除(二进制)的缩放比例, 页面元素的大小都会被近似)
     set:function(){
@@ -67,5 +67,14 @@ HMEditor.fnSub("editorSize", {
             $(chartDiv1).find('img').css('width','100%');
         }
         editor.document.getBody().setStyle('zoom',_t.size);
+        if(document.getElementById('hm_MaysonEditorTool')){
+            $('#hm_MaysonEditorTool').css('zoom',_t.size);
+        }
+        // $(editor.document.$.documentElement).css('zoom',_t.size);
+         // 判断如果病历质控或者大模型弹窗存在，则重置位置
+        if(_t.parent.hmAi.composer.popupComposer){
+            _t.parent.hmAi.composer.resetPopupPosition();
+        }
+        _t.parent.hmAi.generator.setPosition();
     }
 })

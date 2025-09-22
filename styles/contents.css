@@ -78,6 +78,22 @@ table.solid-border td, table.solid-border th {
     border: 1px solid black;
 }
 
+/* 表格对齐样式 - 避免浮动坍塌问题 */
+table.hm-table-align-left {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+table.hm-table-align-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+table.hm-table-align-right {
+    margin-left: auto;
+    margin-right: 0;
+}
+
 /*体温单 start*/
 table[data-hm-table=temperature] {
     width: 98%;

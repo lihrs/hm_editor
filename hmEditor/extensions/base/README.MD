@@ -125,6 +125,15 @@ HMEditor.insertDocContent(1, [
 /**
  * 设置文档数据元数据
  * @param {Array|Object} dataList 内容列表或单个内容对象
+ * @param {String} dataList[].code 文档唯一编号(必传)
+ * @param {Array} dataList[].data 初始化数据(必传)
+ * @param {String} dataList[].data[].keyCode 数据元编码(必传)
+ * @param {String} dataList[].data[].keyName 数据元名称
+ * @param {String|String[]} dataList[].data[].keyValue 数据元内容，可以是字符串或字符串数组(必传)
+ * @param {Array} dataList[].nursingData 护理表单数据(可选，二维数组，每一行代表一条护理记录)
+ * @param {String} dataList[].nursingData[][].keyCode 护理数据数据元编码
+ * @param {String} dataList[].nursingData[][].keyName 护理数据数据元名称
+ * @param {String} dataList[].nursingData[][].keyValue 护理数据数据元值
  */
 ```
 
@@ -134,12 +143,21 @@ HMEditor.insertDocContent(1, [
   ```javascript
   {
     code: '文档唯一编号',  // 必传
-    data: [  // 必传
+    data: [  // 必传，基础数据元数据
       {
         keyCode: '数据元编码',  // 必传
         keyName: '数据元名称',  // 可选
         keyValue: '数据元内容或数据元内容数组'  // 必传，可以是字符串或字符串数组
       }
+    ],
+    nursingData: [  // 可选，护理表单数据（二维数组，每一行代表一条护理记录）
+      [
+        {
+          keyCode: '数据元编码',  // 必传
+          keyName: '数据元名称', // 可选
+          keyValue: '数据元值'  // 必传
+        }
+      ]
     ]
   }
   ```
@@ -182,7 +200,93 @@ HMEditor.setDocData([
     ]
   }
 ]);
+```
 
+#### 护理表单数据处理
+
+`setDocData` 方法还支持护理表单数据的特殊处理，通过 `nursingData` 字段传入护理记录数据：
+
+```javascript
+// 护理表单数据示例
+HMEditor.setDocData([
+  {
+    code: 'NURSING_DOC_001',
+    data: [
+      // 基础患者信息
+      {
+        keyCode: 'DE08.10.013.00.012',
+        keyName: '医疗机构名称',
+        keyValue: 'XX医院'
+      },
+      {
+        keyCode: 'DE02.01.039.00',
+        keyName: '姓名',
+        keyValue: '张三'
+      },
+      {
+        keyCode: 'DE02.01.040.00',
+        keyName: '性别',
+        keyValue: '男'
+      }
+    ],
+    nursingData: [
+      // 第一条护理记录
+      [
+        {
+          keyCode: 'DE09.00.053.00',
+          keyId: 'datetime_001',
+          keyName: '记录日期时间',
+          keyValue: '2025-08-21 17:51'
+        },
+        {
+          keyCode: 'DE04.10.186.00',
+          keyId: 'temperature_001',
+          keyName: '体温',
+          keyValue: '36.5'
+        },
+        {
+          keyCode: 'DE02.01.039.00.178',
+          keyId: 'doctor_001',
+          keyName: '医师签名',
+          keyValue: '李医生'
+        }
+      ],
+      // 第二条护理记录
+      [
+        {
+          keyCode: 'DE09.00.053.00',
+          keyId: 'datetime_002',
+          keyName: '记录日期时间',
+          keyValue: '2025-08-22 09:30'
+        },
+        {
+          keyCode: 'DE04.10.186.00',
+          keyId: 'temperature_002',
+          keyName: '体温',
+          keyValue: '37.0'
+        },
+        {
+          keyCode: 'DE02.01.039.00.178',
+          keyId: 'doctor_002',
+          keyName: '医师签名',
+          keyValue: '王医生'
+        }
+      ]
+    ]
+  }
+]);
+```
+
+**护理表单数据特殊功能：**
+
+1. **动态行管理**：系统会自动检测护理表格现有行数，根据数据量动态添加表格行
+2. **精确绑定**：每行护理数据会精确绑定到对应的表格行位置
+3. **顺序渲染**：护理数据按照传入的数组顺序进行渲染
+
+**注意事项：**
+- 护理表单必须包含 `is_nursing_form="true"` 属性的表格才会启用护理数据处理
+- 如果表格行数不足，系统会自动复制最后一行来扩展表格
+- 护理数据将按照传入数组的顺序进行渲染，请确保数据顺序符合业务需求
 
 ```
 
@@ -735,3 +839,106 @@ HMEditor.setDocReviseMode(false);
 ```
 
 该方法用于控制文档的修订模式。开启修订模式时，所有的编辑操作（如插入、删除、修改等）都会被标记为修订，并显示修订标记;关闭修订模式时，系统将弹出对话框，提示用户选择"全部接受修订"或"全部拒绝修订"，关闭修订后历史操作会被去除。
+
+### 16. setDocMultiPartHeader 方法
+
+该方法用于设置文档分段页眉配置：
+
+```javascript
+/**
+ * 设置文档分段页眉
+ * @param {Object} settings 分段页眉设置
+ * @param {String} settings.controlElementName 控制元素名称，数据元名称，比如 记录时间
+ * @param {Array} settings.headerList 页眉列表
+ * @param {String} settings.headerList[].startTime 开始时间
+ * @param {String} settings.headerList[].endTime 结束时间
+ * @param {Object} settings.headerList[].headerData 页眉数据对象，包含页眉显示的信息
+ */
+```
+
+#### 参数详细说明
+
+- `settings`: 分段页眉设置对象，结构如下：
+  ```javascript
+  {
+    controlElementName: "记录时间",  // 控制时间的数据元名称（页面中对应元素的data-hm-name属性值）
+    headerList: [
+      {
+        startTime: "2025-08-24",     // 时间段开始时间，格式：yyyy-MM-dd
+        endTime: "2025-08-25",       // 时间段结束时间，格式：yyyy-MM-dd
+        headerData: {                // 页眉数据对象，键为页面元素的data-hm-name属性值，值为显示内容
+          "科室名称": "内科",
+          "病区名称": "内科病区",
+          "床位号": "001"
+        }
+      },
+      {
+        startTime: "2025-08-25",
+        endTime: "2025-08-26",
+        headerData: {
+          "科室名称": "外科",
+          "病区名称": "外科病区",
+          "床位号": "002"
+        }
+      }
+      // 更多分段页眉配置...
+    ]
+  }
+  ```
+
+#### 使用示例
+
+```javascript
+// 设置分段页眉
+var multiPartHeaderSettings = {
+  controlElementName: "记录时间",
+  headerList: [
+    {
+      startTime: "2025-08-24",
+      endTime: "2025-08-25",
+      headerData: {
+        "科室名称": "内科",
+        "病区名称": "内科病区",
+        "床位号": "001"
+      }
+    },
+    {
+      startTime: "2025-08-25",
+      endTime: "2025-08-26",
+      headerData: {
+        "科室名称": "外科",
+        "病区名称": "外科病区",
+        "床位号": "002"
+      }
+    }
+  ]
+};
+
+HMEditor.setDocMultiPartHeader(multiPartHeaderSettings);
+```
+
+#### 功能说明
+
+该方法用于配置聚合病程实时分页时的页眉信息，主要应用于以下场景：
+
+1. **转科换床场景**：患者在住院期间从一个科室转到另一个科室，或者更换床位时，页眉信息需要根据时间段显示不同的科室、病区、床位信息。
+
+2. **时间段匹配**：系统会根据文档中控制元素（如"记录时间"）的值，自动匹配对应的时间段，并在页眉中显示该时间段配置的信息。
+
+3. **动态页眉显示**：在实时分页模式下，不同时间段的内容会显示不同的页眉信息，确保页眉信息与文档内容的时间一致性。
+
+#### 时间匹配逻辑
+
+- 如果同时设置 `startTime` 和 `endTime`：recordTime > startTime 且 recordTime <= endTime
+- 如果只设置 `endTime`：recordTime <= endTime  
+- 如果只设置 `startTime`：recordTime > startTime
+
+#### 注意事项
+
+1. **时间格式**：确保 `startTime` 和 `endTime` 使用 yyyy-MM-dd 格式（如：2025-08-25）
+2. **控制元素匹配**：确保 `controlElementName` 与页面元素的 data-hm-name 属性值完全一致
+3. **页眉数据键值匹配**：`headerData` 中的键必须与页眉模板中元素的 data-hm-name 属性值一致
+4. **时间范围**：避免多个时间段重叠，系统会使用第一个匹配的记录
+5. **页眉模板**：确保页眉模板中存在对应 data-hm-name 属性的元素节点
+
+该方法特别适用于需要根据时间段动态显示不同页眉信息的病历文档场景。

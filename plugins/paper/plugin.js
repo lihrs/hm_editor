@@ -117,6 +117,11 @@ CKEDITOR.plugins.add( 'paper', {
 					};
 					body.setStyle('padding-right', paperCmd.paperMarginPx.right+ 'px');
 					body.setStyle('padding-left', paperCmd.paperMarginPx.left + 'px');
+					// 编辑时纸张设置里面的上下边距是否有效
+					if (window.HMConfig && window.HMConfig.editShowPaddingTopBottom) {
+						body.setStyle('padding-top', paperCmd.paperMarginPx.top + 'px');
+						body.setStyle('padding-bottom', paperCmd.paperMarginPx.bottom + 'px');
+					}
 
 					// 设置高度
 					paperCmd.logicPaperSize.width = paperOptPx[paperSize].width - paperCmd.paperMarginPx.left - paperCmd.paperMarginPx.right;
@@ -307,7 +312,7 @@ CKEDITOR.plugins.add( 'paper', {
 				var contextItems = {};
 				var path = editor.elementPath(),
 					table = path.contains( 'table', 1 );
-				if( table && !checkCurDomReadOnly(editor)){
+				if( table && !checkCurDomReadOnly(editor) && $(table.$).attr('data-hm-table-type') !== 'list'){
 
 					if( editor.HMConfig.designMode ){
 						contextItems['paperHF'] = CKEDITOR.TRISTATE_OFF;

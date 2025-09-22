@@ -21,13 +21,14 @@ commonHM.component['hmAi'].fnSub("composer", {
         var _t = this,
             editor = this.parent.editor;
         _t.opts = opts;
-        if (_t.popupComposer || _t.parent.hasTask) {
+        var $body = _t.$body = $(editor.document.getBody().$);
+        if ((_t.popupComposer || _t.parent.hasTask)&& $body.find('.sk-popup').length) {
             return;
         } else {
             _t.uucode = $(el).attr('uucode');
         }
 
-        var $body = _t.$body = $(editor.document.getBody().$);
+        
         _t.removePopup();
         _t.process = 1; // 1: 生成中 2: 生成完成
         _t.parent.hasTask = true;
@@ -41,10 +42,14 @@ commonHM.component['hmAi'].fnSub("composer", {
             inline: true
         });
         _t.popupComposer.container.attr('contenteditable', false).find('.sk-popup-container').renderTpl($docAi_tpl['docAi/tpl/compose'], opts);
-        _t.popupComposer.setPostion(2, null, offset);
-        _t.manageLableShow(opts.type == 3 ? 1 : 2);
 
+        // _t.popupComposer.setPostion(2, null, offset);
+        _t.resetPopupPosition();
+        _t.manageLableShow(opts.type == 3 ? 1 : 2);
         _t.composerAction();
+        $(window).resize(function () {
+            _t.resetPopupPosition();
+        });
     },
 
 
@@ -194,7 +199,7 @@ commonHM.component['hmAi'].fnSub("composer", {
         if (model == 1) { //大模型自动生成
             container.find('.btn-stop').addClass('popu-active');
             container.find('.doc-composer-chat').show();
-            container.find('.doc-composer-qc').hide();
+            container.find('.doc-composer-qc .doc-composer-qc-foot').hide();
             if (_t.opts.type == 1) {
                 // container.find('.doc-composer-result-detail').show();
                 container.find('.doc-r-rec-od').text(_t.opts.data.surroundingText);
@@ -231,7 +236,7 @@ commonHM.component['hmAi'].fnSub("composer", {
             }
         } else if (model == 2) { //机器质控
             container.find('.doc-composer-chat').hide();
-            container.find('.doc-composer-qc').show();
+            container.find('.doc-composer-qc .doc-composer-qc-foot').show();
         }
     },
     /**
@@ -279,8 +284,8 @@ commonHM.component['hmAi'].fnSub("composer", {
             if (currText.length % 5 == 0) {
                 var offset = _t.$body.offset();
                 // _t.popupComposer.setPostion(2,null,{left:offset.left});
-                _t.popupComposer.setPostion(2, null);
-
+                // _t.popupComposer.setPostion(2, null);
+                _t.resetPopupPosition();
             }
             _t.documentScroll();
         }
@@ -288,6 +293,7 @@ commonHM.component['hmAi'].fnSub("composer", {
     },
     documentScroll: function () {
         var _t = this;
+        _t.winHeight = $('body').height();
         var $body = this.parent.editor.document.$.documentElement;
         var $container = _t.popupComposer.container;
         var pos = $container.offset(),
@@ -398,7 +404,7 @@ commonHM.component['hmAi'].fnSub("composer", {
         var _pWindow = parent.window;
         var aiServer = _pWindow.HMEditorLoader && _pWindow.HMEditorLoader.autherEntity && _pWindow.HMEditorLoader.autherEntity.aiServer;
         utils.request({
-            url: aiServer+'/cdss/api/outer/mc/reminder/completed',
+            url: aiServer + '/cdss/api/outer/mc/reminder/completed',
             data: {
                 "customerId": qcPatient.customerId,
                 "recordId": qcPatient.recordId,
@@ -472,5 +478,144 @@ commonHM.component['hmAi'].fnSub("composer", {
     removeAiCorrectActive: function () {
         var _t = this;
         _t.$body.find('.doc-ai-correct-active').removeClass('doc-ai-correct-active');
-    }
+    },
+    /**
+     * 重置弹窗位置
+     */
+    resetPopupPosition: function () {
+        var _t = this;
+        if (!_t.popupComposer) {
+            return;
+        }
+        var editor = _t.parent.editor;
+        // 获取当前缩放比例
+        var currentZoom = parseFloat(getComputedStyle(editor.document.getBody().$).zoom) || 1;
+        var container = _t.popupComposer.container;
+        var relEl = _t.popupComposer.relEl;
+        var pos = relEl.offset();
+
+        var w = Math.round(parseFloat(relEl.outerWidth() / currentZoom) * 100) / 100,
+            h = Math.round(parseFloat(relEl.outerHeight() / currentZoom) * 100) / 100,
+            cw = Math.round(parseFloat(container.outerWidth() / currentZoom) * 100) / 100,
+            ch = Math.round(parseFloat(container.outerHeight() / currentZoom) * 100) / 100;
+
+        var icon = container.find('.sk-popup-icon').addClass('sk-popup-icon-' + _t.popupComposer.type);
+        var icw = icon.outerWidth(),
+            ich = icon.outerHeight();
+        var basWMar = cw / 2,
+            basHMar = ch / 2;
+
+        var itemPos, iconPos; 
+        var _left = Math.round(parseFloat(pos.left / currentZoom) * 100 / 100) + w / 2 - basWMar;
+
+        itemPos = {
+            left: _left < 0 ? 10 : _left,
+            top: Math.round(parseFloat(pos.top / currentZoom) * 100 / 100) + h + 6
+        };
+        iconPos = {
+            left: basWMar - icw / 2,
+            top: -9
+        };
+        container.css(itemPos);
+
+        icon.css(iconPos);
+    },
+
+    /**
+     * 根据规则Id显示质控信息
+     * @param {*} ruleId 规则问题Id
+     */
+    ruleComposer: function (ruleId) {
+        var _t = this;
+
+        if (!ruleId) {
+            console.warn('AI质控规则ID为空');
+            return;
+        }
+        var editor = _t.parent.editor;
+        var $body = _t.$body = $(editor.document.getBody().$);
+        var $composer = $body.find('.doc-composer');
+        // 检查是否存质控弹框
+        if ($composer.length > 0) {
+            _t.handleComposerState($composer, editor);
+            return;
+        }
+        // 查找对应的质控规则元素
+        _t.handleRuleElement(ruleId);
+    },
+
+    /**
+     * 如果存在质控弹框，则滚动到质控弹框位置，并给出对应提示
+     * @param {jQuery} $composer - 质控弹框元素 
+     */
+    handleComposerState: function ($composer) {
+        var _t = this;
+        var editor = _t.parent.editor;
+        // 滚动到质控弹框位置
+        $composer[0].scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+
+        var $chat = $composer.find('.doc-composer-chat');
+        if ($chat.is(':visible')) {
+            var title = $composer.find('.doc-composer-title').text();
+            var processingStates = ['思考中', '生成中'];
+            var finishedStates = ['思考完成', '生成完成'];
+
+            if (processingStates.some(function (state) {
+                    return title.includes(state);
+                })) {
+                editor.showNotification('大模型正在录入中，请稍后再试。');
+            } else if (finishedStates.some(function (state) {
+                    return title.includes(state);
+                })) {
+                editor.showNotification('请完成上一步操作，是否接受AI推荐。');
+            }
+        } else {
+            editor.showNotification('请完成上一步操作。');
+        }
+    },
+
+    /**
+     * 处理质控规则元素的交互
+     * @param {String} ruleId - 规则Id  
+     */
+    handleRuleElement: function (ruleId) {
+        var _t = this;
+        // 查找对应的质控规则元素
+        var ele = _t.$body.find('span[rule-code="' + ruleId + '"]:not(.doc-warn-lack-ignore)');
+        if (ele.length > 0) {
+            // 滚动到规则元素位置
+            ele[0].scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            var isLackTitle = ele.hasClass('doc-warn-lack-title');
+            var isWarnText = ele.hasClass('doc-warn-txt');
+
+            var warnData = _t.parent.cachWarn[ele.attr('uucode')];
+            var patientInfo = _t.parent.cachWarn['patientInfo'];
+
+            _t.showComposer(ele[0], {
+                type: isWarnText ? 1 : 2,
+                data: warnData,
+                qcPatient: patientInfo
+            });
+            var hasAiButton = _t.$body.find('.d-btt-ai').length > 0; 
+            // 命中问题，需要高亮展示
+            if ((isLackTitle || isWarnText) && hasAiButton) {
+                if (isLackTitle) {
+                    ele.parent().addClass('doc-ai-correct-active');
+                }
+                if (isWarnText) {
+                    ele.addClass('doc-ai-correct-active');
+                }
+                _t.manageLableShow(1);
+            }
+        } else {
+            console.warn('未找到对应的AI推荐规则span:', ruleId);
+        }
+    },
 });

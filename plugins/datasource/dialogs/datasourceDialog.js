@@ -138,7 +138,7 @@ $(function () {
                 if(type.indexOf('D') == 0){
                     nodeType = '时间';
                 }else if(type.replace(/\d+/g,'') == 'N'){
-                    nodeType = '数字';
+                    nodeType = '数字文本';
                 }else if(ds['name'].indexOf('手术') > -1 || ds['name'].indexOf('诊断') > -1){
                     nodeType = '搜索';
                 }
@@ -275,10 +275,12 @@ $(function () {
             });
         },
         insertDataSource: function (datasource) { //插入数据元
+            console.log('insertDataSource', datasource);
             var _this = this;
             var data = {};
             data['data-hm-name'] = datasource['name'];
             data['data-hm-code'] = datasource['code'];
+            data['autoLable'] = datasource['autoLable']; // 是否自动添加数据元标题
 
             if(!datasource['nodeType']){
                 this.dsType(datasource);
@@ -287,9 +289,9 @@ $(function () {
                 if(nodeType == '时间'){
                     data['data-hm-node'] = 'timebox';
                     data['_timeoption'] = 'date';
-                }else if(nodeType == '数字'){
+                }else if(nodeType == '数字文本'){
                     data['data-hm-node'] = 'newtextbox';
-                    data['_texttype'] = '数字';
+                    data['_texttype'] = '数字文本';
                 }else if(nodeType == '下拉'){
                     function c(ds){
                         var itemsStr = "";
@@ -312,7 +314,7 @@ $(function () {
                     data['_selecttype'] = '单选';
                 }else if(nodeType == '搜索'){
                     data['data-hm-node'] = 'searchbox';
-                    var n = datasource['data-hm-name'];
+                    var n = data['data-hm-name'];
 
                     var so = '';
                     if(n.indexOf('手术') > -1){

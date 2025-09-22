@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档树</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            background: #fff;
+            padding: 0;
+            margin: 0;
+            line-height: 1.4;
+            font-size: 12px;
+        }
+
+        .document-tree-container {
+            height: 100%;
+            min-height: 100%;
+            overflow-y: auto;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+
+        .document-tree-section {
+            margin-bottom: 8px;
+        }
+
+        .document-tree-section-title {
+            font-size: 13px;
+            font-weight: bold;
+            padding: 4px 0;
+            margin: 0;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .document-tree-section-title:hover {
+            background-color: #f8f9fa;
+            color: #000;
+        }
+
+        .document-tree-section-title::before {
+            content: "▼";
+            margin-right: 4px;
+            font-size: 10px;
+            color: #666;
+            transition: transform 0.2s ease;
+            display: inline-block;
+        }
+
+        .document-tree-section.collapsed .document-tree-section-title::before {
+            transform: rotate(-90deg);
+        }
+
+        .document-tree-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            padding-left: 12px;
+            transition: all 0.3s ease;
+            /* max-height: 1000px; */
+            overflow: hidden;
+        }
+
+        .document-tree-section.collapsed .document-tree-list {
+            max-height: 0;
+            opacity: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .document-tree-item {
+            padding: 2px 0;
+            margin: 0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            position: relative;
+            display: flex;
+            align-items: center;
+            color: #555;
+            font-size: 12px;
+            min-height: 18px;
+        }
+
+        .document-tree-item::before {
+            content: "├─";
+            color: #ccc;
+            margin-right: 2px;
+            font-family: monospace;
+            width: 12px;
+            flex-shrink: 0;
+            display: inline-block;
+        }
+
+        .document-tree-item:last-child::before {
+            content: "└─";
+        }
+
+        /* 有嵌套子元素的数据元不显示树形符号 */
+        .document-tree-item:has(.document-tree-toggle:not(.document-tree-toggle-placeholder))::before {
+            content: "";
+            margin-right: 0;
+            width: 0;
+        }
+
+        /* 兼容性备选方案 */
+        .document-tree-item.has-children::before {
+            content: "";
+            margin-right: 0;
+            width: 0;
+        }
+
+        .document-tree-item:hover {
+            background-color: #f0f0f0;
+            color: #000;
+        }
+
+        .document-tree-item:hover::before {
+            color: #999;
+        }
+
+        /* 嵌套数据元样式 */
+        .document-tree-toggle {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 2px;
+            font-size: 8px;
+            color: #666;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            user-select: none;
+            text-align: center;
+            line-height: 12px;
+            flex-shrink: 0;
+        }
+
+        .document-tree-toggle:hover {
+            color: #333;
+        }
+
+        .document-tree-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .document-tree-toggle-placeholder {
+            display: inline-block;
+            width: 12px;
+            margin-right: 2px;
+            flex-shrink: 0;
+        }
+
+        /* 数据元内容区域 */
+        .document-tree-content {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        /* 嵌套数据元隐藏样式 */
+        .document-tree-item.nested-hidden {
+            display: none;
+        }
+
+
+        /* 文本样式 */
+        .document-tree-type {
+            color: #666;
+            font-weight: normal;
+            font-size: 12px;
+            margin-right: 2px;
+            flex-shrink: 0;
+        }
+
+        .document-tree-name {
+            color: #333;
+            font-size: 12px;
+            font-weight: normal;
+            flex: 1;
+            word-break: break-all;
+            line-height: 1.2;
+        }
+
+        /* 空状态 */
+        .document-tree-empty {
+            text-align: center;
+            color: #999;
+            padding: 30px 20px;
+            font-size: 12px;
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <div id="documentTreeContent" class="document-tree-container">
+        <div class="document-tree-empty">
+            正在加载文档结构...
+        </div>
+    </div>
+
+    <script>
+        // 接收父窗口传递的数据
+        window.renderDocumentTree = function(structure, lang) {
+            var container = document.getElementById('documentTreeContent');
+            
+            var totalCount = (structure.header ? structure.header.length : 0) + 
+                           (structure.main ? structure.main.length : 0) + 
+                           (structure.footer ? structure.footer.length : 0);
+            
+            if (totalCount === 0) {
+                container.innerHTML = '<div class="document-tree-empty">' + (lang.noContent || '当前文档没有可显示的数据元内容') + '</div>';
+                return;
+            }
+            
+            var html = '';
+            
+            // 页眉部分
+            if (structure.header && structure.header.length > 0) {
+                html += '<div class="document-tree-section" id="section-header">';
+                html += '<h4 class="document-tree-section-title" data-section="header">页眉 (' + structure.header.length + ')</h4>';
+                html += '<ul class="document-tree-list">';
+                for (var i = 0; i < structure.header.length; i++) {
+                    html += generateDataElementHTML(structure.header[i], 'header');
+                }
+                html += '</ul>';
+                html += '</div>';
+            }
+            
+            // 主体部分
+            if (structure.main && structure.main.length > 0) {
+                html += '<div class="document-tree-section" id="section-main">';
+                html += '<h4 class="document-tree-section-title" data-section="main">主体 (' + structure.main.length + ')</h4>';
+                html += '<ul class="document-tree-list">';
+                for (var i = 0; i < structure.main.length; i++) {
+                    html += generateDataElementHTML(structure.main[i], 'main');
+                }
+                html += '</ul>';
+                html += '</div>';
+            }
+            
+            // 页脚部分
+            if (structure.footer && structure.footer.length > 0) {
+                html += '<div class="document-tree-section" id="section-footer">';
+                html += '<h4 class="document-tree-section-title" data-section="footer">页脚 (' + structure.footer.length + ')</h4>';
+                html += '<ul class="document-tree-list">';
+                for (var i = 0; i < structure.footer.length; i++) {
+                    html += generateDataElementHTML(structure.footer[i], 'footer');
+                }
+                html += '</ul>';
+                html += '</div>';
+            }
+            
+            container.innerHTML = html;
+            
+            // 绑定数据元双击跳转事件
+            bindDataElementEvents(structure);
+            
+            // 绑定标题展开/收起事件
+            bindSectionToggleEvents();
+        };
+        
+        // 生成单个数据元HTML（支持嵌套结构）
+        function generateDataElementHTML(dataInfo, section) {
+            var level = dataInfo.level || 0;
+            var indent = level * 16; // 每层缩进16px，紧凑布局
+            var hasChildren = dataInfo.children && dataInfo.children.length > 0;
+            
+            var html = '<li class="document-tree-item' + (hasChildren ? ' has-children' : '') + '" data-section="' + section + '" data-index="' + dataInfo.index + '" title="双击跳转到数据元" style="padding-left: ' + indent + 'px;">';
+            
+            // 如果有子元素，添加展开/折叠图标（只有主体部分支持嵌套）
+            if (hasChildren && section === 'main') {
+                html += '<span class="document-tree-toggle" onclick="toggleDataElement(this)">▼</span>';
+            } else {
+                html += '<span class="document-tree-toggle-placeholder"></span>';
+            }
+            
+            // 包装内容区域
+            html += '<div class="document-tree-content">';
+            html += '<span class="document-tree-type">' + escapeHtml(dataInfo.type) + '：</span>';
+            html += '<span class="document-tree-name">' + escapeHtml(dataInfo.name) + '</span>';
+            html += '</div>';
+            html += '</li>';
+            
+            // 递归生成子数据元（只有主体部分支持嵌套）
+            if (hasChildren && section === 'main') {
+                for (var i = 0; i < dataInfo.children.length; i++) {
+                    html += generateDataElementHTML(dataInfo.children[i], section);
+                }
+            }
+            
+            return html;
+        }
+        
+        // 绑定数据元双击跳转事件
+        function bindDataElementEvents(structure) {
+            var items = document.querySelectorAll('.document-tree-item');
+            for (var i = 0; i < items.length; i++) {
+                // 双击跳转到数据元
+                items[i].ondblclick = function() {
+                    var section = this.getAttribute('data-section');
+                    var elementIndex = parseInt(this.getAttribute('data-index'));
+                    
+                    // 通知父窗口跳转
+                    try {
+                        if (window.parent && window.parent.jumpToElement) {
+                            window.parent.jumpToElement(section, elementIndex, structure);
+                        }
+                    } catch (e) {
+                        console.error('跳转错误:', e);
+                    }
+                };
+            }
+        }
+        
+        // HTML转义
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 绑定分组标题的展开/收起事件
+        function bindSectionToggleEvents() {
+            var titles = document.querySelectorAll('.document-tree-section-title');
+            for (var i = 0; i < titles.length; i++) {
+                titles[i].onclick = function(event) {
+                    // 阻止事件冒泡
+                    event.stopPropagation();
+                    
+                    var section = this.getAttribute('data-section');
+                    toggleSection(section);
+                };
+            }
+        }
+
+        // 切换分组的展开/收起状态
+        function toggleSection(sectionName) {
+            var sectionElement = document.getElementById('section-' + sectionName);
+            if (sectionElement) {
+                var isCollapsed = sectionElement.classList.contains('collapsed');
+                
+                if (isCollapsed) {
+                    // 展开
+                    sectionElement.classList.remove('collapsed');
+                    // 可以在这里添加展开动画
+                } else {
+                    // 收起
+                    sectionElement.classList.add('collapsed');
+                    // 可以在这里添加收起动画
+                }
+            }
+        }
+
+        // 展开所有分组
+        function expandAllSections() {
+            var sections = document.querySelectorAll('.document-tree-section');
+            for (var i = 0; i < sections.length; i++) {
+                sections[i].classList.remove('collapsed');
+            }
+        }
+
+        // 收起所有分组
+        function collapseAllSections() {
+            var sections = document.querySelectorAll('.document-tree-section');
+            for (var i = 0; i < sections.length; i++) {
+                sections[i].classList.add('collapsed');
+            }
+        }
+
+        // 切换嵌套数据元的展开/折叠状态
+        function toggleDataElement(toggleElement) {
+            var parentItem = toggleElement.closest('.document-tree-item');
+            if (!parentItem) return;
+            
+            var isCollapsed = toggleElement.classList.contains('collapsed');
+            var parentIndex = Array.from(parentItem.parentNode.children).indexOf(parentItem);
+            var parentLevel = parseInt(parentItem.style.paddingLeft) || 0;
+            
+            // 切换图标状态
+            if (isCollapsed) {
+                toggleElement.classList.remove('collapsed');
+            } else {
+                toggleElement.classList.add('collapsed');
+            }
+            
+            // 找到所有子数据元并切换其显示状态
+            var siblings = Array.from(parentItem.parentNode.children);
+            for (var i = parentIndex + 1; i < siblings.length; i++) {
+                var sibling = siblings[i];
+                var siblingLevel = parseInt(sibling.style.paddingLeft) || 0;
+                
+                // 如果是子数据元（层级更深）
+                if (siblingLevel > parentLevel) {
+                    if (isCollapsed) {
+                        // 展开：显示直接子元素
+                        if (siblingLevel === parentLevel + 16) {
+                            sibling.classList.remove('nested-hidden');
+                        }
+                    } else {
+                        // 折叠：隐藏所有子元素
+                        sibling.classList.add('nested-hidden');
+                        // 同时折叠子元素的图标
+                        var childToggle = sibling.querySelector('.document-tree-toggle');
+                        if (childToggle) {
+                            childToggle.classList.add('collapsed');
+                        }
+                    }
+                } else {
+                    // 遇到同级或更高级的数据元，停止处理
+                    break;
+                }
+            }
+            
+            // 阻止事件冒泡，防止触发双击跳转
+            if (event && event.stopPropagation) {
+                event.stopPropagation();
+            }
+        }
+    </script>
+</body>
+</html>

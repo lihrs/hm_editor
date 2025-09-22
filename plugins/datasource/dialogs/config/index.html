@@ -89,6 +89,9 @@
                                     <option value="数字文本">数字</option>
                                     <option value="时间文本">时间</option>
                                     <option value="下拉">下拉</option>
+                                    <option value="条形码">条形码</option>
+                                    <option value="二维码">二维码</option>
+                                    
                                 </select>
                                 <span class="label">输入提示：</span>
                                 <input _type="_placeholder" type="text" class="form-control col-auto" id="msg"
@@ -104,6 +107,49 @@
                                 <span class="label">拼接符号：</span>
                                 <input _type="_jointsymbol" type="text" class="form-control col-auto" id="joinChar"
                                     placeholder="多选拼接符，默认(,)" value=",">
+                            </div>
+                            <div class="row barcode">
+                                <span class="label">宽&#12288;&#12288;度：</span>
+                                <input _type="_barcode_width" type="text" class="form-control col-auto" 
+                                    placeholder="宽度(px)">
+                                <span class="label">高&#12288;&#12288;度：</span>
+                                <input _type="_barcode_height" type="text" class="form-control col-auto" 
+                                    placeholder="高度(px)">
+                                <div class="breakline" style="padding: 3px 0;"></div>
+                                <span class="label">条&#12288;&#12288;宽：</span>
+                                <input _type="_barcode_bar_width" type="text" class="form-control col-auto" 
+                                    placeholder="条宽(px)">
+                                <span class="label">文本位置：</span>
+                                <select _type="_barcode_text_position" class="form-select form-select-sm"
+                                    aria-label=".form-select-sm example">
+                                    <option value="bottom">底部</option>
+                                    <option value="top">顶部</option>
+                                    <option value="none">不显示</option>
+                                </select>
+                            </div>
+                            <div class="row qrcode">
+                                <span class="label">宽&#12288;&#12288;度：</span>
+                                <input _type="_qrcode_width" type="text" class="form-control col-auto" 
+                                    placeholder="宽度(px)">
+                                <span class="label">高&#12288;&#12288;度：</span>
+                                <input _type="_qrcode_height" type="text" class="form-control col-auto" 
+                                    placeholder="高度(px)">
+                                <div class="breakline" style="padding: 3px 0;"></div>
+                                <span class="label">纠错等级：</span>
+                                <select _type="_qrcode_error_level" class="form-select form-select-sm"
+                                    aria-label=".form-select-sm example">
+                                    <option value="L">低</option>
+                                    <option value="M">中</option>
+                                    <option value="Q">高</option>
+                                    <option value="H">最高</option>
+                                </select>
+                                <span class="label">文本位置：</span>
+                                <select _type="_qrcode_text_position" class="form-select form-select-sm"
+                                    aria-label=".form-select-sm example">
+                                    <option value="bottom">底部</option>
+                                    <option value="top">顶部</option>
+                                    <option value="none">不显示</option>
+                                </select>
                             </div>
                             <div class="row option">
                                 <span class="label radio">按钮样式：</span>

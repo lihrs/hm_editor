@@ -114,7 +114,7 @@ function setMarkContent(editor, newData) {
     }
     for (var i = 0; i < markEleList.count(); i++) {
         var tmpEle = markEleList.getItem(i);
-        tmpEle.setAttribute('hm-modifier', modifier);
+        tmpEle.setAttribute('hm-modify-userName', modifier);
         tmpEle.setAttribute('hm-modify-time', modifiedTime);
     }
     markEle = markEleList.getItem(0);
@@ -135,7 +135,7 @@ function setMarkContent(editor, newData) {
             if (_$datasource && _$datasource.count() > 0) {
                 var _datasource = _$datasource.getItem(0);
                 _datasource.setAttribute('_expressionvalue', markEle.getText());
-                _datasource.setAttribute('hm-modifier', modifier);
+                _datasource.setAttribute('hm-modify-userName', modifier);
                 _datasource.setAttribute('hm-modify-time', modifiedTime);
                 _datasource.setAttribute('class', markEle.getAttribute('class'));
                 _datasource.setAttribute('hm-modify-type', modifiedType);
@@ -149,7 +149,7 @@ function setMarkContent(editor, newData) {
             var _$datasource = datasource.find('[data-hm-itemname="' + checkedVal + '"][data-hm-node="labelbox"]');
             if (_$datasource && _$datasource.count() > 0) {
                 var _datasource = _$datasource.getItem(0);
-                var markHtmlEle = CKEDITOR.dom.element.createFromHtml('<mark class="hm-mark hm-modify-mark" hm-modify-time="' + modifiedTime + '" hm-modify-type="修改" hm-modifier="' + modifier + '">' + checkedVal + '</mark>');
+                var markHtmlEle = CKEDITOR.dom.element.createFromHtml('<mark class="hm-mark hm-modify-mark" hm-modify-time="' + modifiedTime + '" hm-modify-type="修改" hm-modify-userName="' + modifier + '">' + checkedVal + '</mark>');
                 markHtmlEle.insertAfter(_datasource);
                 _datasource.remove();
             }
@@ -170,7 +170,7 @@ function setMarkContent(editor, newData) {
                 var _$datasource = datasource.find('[data-hm-itemname="' + checkValList[i] + '"][data-hm-node="labelbox"]');
                 if (_$datasource && _$datasource.count() > 0) {
                     var _datasource = _$datasource.getItem(0);
-                    var markHtmlEle = CKEDITOR.dom.element.createFromHtml('<mark class="hm-mark hm-modify-mark" hm-modify-time="' + modifiedTime + '" hm-modify-type="修改" hm-modifier="' + modifier + '">' + checkValList[i] + '</mark>');
+                    var markHtmlEle = CKEDITOR.dom.element.createFromHtml('<mark class="hm-mark hm-modify-mark" hm-modify-time="' + modifiedTime + '" hm-modify-type="修改" hm-modify-userName="' + modifier + '">' + checkValList[i] + '</mark>');
                     markHtmlEle.insertAfter(_datasource);
                     _datasource.remove();
                 }
@@ -431,7 +431,6 @@ CKEDITOR.plugins.add('document', {
     icons: 'document',
     init: function (editor) {
 
-        var currentUserInfo={}; // 暂时处理报错
         var command = editor.addCommand('documentinfo', new CKEDITOR.dialogCommand('document', { readOnly: 0 }));
         command.modes = { wysiwyg: 1, source: 1 };
         command.canUndo = false;
@@ -844,10 +843,10 @@ CKEDITOR.plugins.add('document', {
                 editor.commands["datasource"].disable();
                 // editor.commands["table"].frozen = true;
                 // editor.commands["table"].disable();
-                
+
                 editor.commands["documentinfo"].frozen = true;
                 editor.commands["documentinfo"].disable();
-                
+
                 if (editor.HMConfig.reviseMode) {
                     editor.commands["revise"].frozen = false;
                     editor.commands["revise"].enable();
@@ -928,12 +927,23 @@ CKEDITOR.plugins.add('document', {
             }
         };
 
+        editor.getDocModifyUser = function () {
+            if(!editor.HMConfig.currentUserInfo){
+                return {
+                    userId: "anonymous",
+                    userName: "anonymous"
+                };
+            }
+            return editor.HMConfig.currentUserInfo;
+        };
+
         editor.setAddMark = function (selection, text, className) { //新增文本适用于自定义插入文本例如：检验检查、特殊字符、诊断
             var ranges = selection.getRanges();
             var range0 = ranges[0];
             var insNode = range0.endPath().contains("ins");
             var selectedDom = editor.getSelectedHtml();
             var disabledNode = $(selectedDom.$).find('[contenteditable="false"]');
+            var currentUserInfo = editor.getDocModifyUser();
             if (disabledNode.length > 0) {
                 return;
             }
@@ -952,25 +962,25 @@ CKEDITOR.plugins.add('document', {
                 insMark.setAttributes({
                     "contenteditable": "true",
                     "class": className ? className : "hm_revise_ins",
-                    // "title": className == 'hm_self_ins' ? '' : (currentUserInfo.userName + "(" + currentUserInfo.登录IP + ")  " + dateStr),
-                    // "_userid": currentUserInfo.userId,
+                    // "hm-modify-title": className == 'hm_self_ins' ? '' : (currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr),
+                    "hm-modify-userId": currentUserInfo.userId,
+                    "hm-modify-userName": currentUserInfo.userName,
                     "trace_id": 'trace_' + wrapperUtils.getGUID(),
-                    // "modifier": currentUserInfo.userName,
-                    "modifyTime": dateStr,
-                    "modifyType": "新增"
+                    "hm-modify-time": dateStr,
+                    "hm-modify-type": "新增"
                 });
                 insMark.setHtml(text);
                 if (selectedContent) {
                     var delMark = new CKEDITOR.dom.element('del');
                     delMark.setAttributes({
                         "contenteditable": "false",
-                        // "title": currentUserInfo.userName + "  " + dateStr,
+                        // "hm-modify-title": currentUserInfo.userName + "  " + dateStr,
                         "class": "hm_revise_del",
-                        // "_userid": currentUserInfo.userId,
+                        "hm-modify-userId": currentUserInfo.userId,
+                        "hm-modify-userName": currentUserInfo.userName,
                         "trace_id": 'trace_' + wrapperUtils.getGUID(),
-                        // "modifier": currentUserInfo.userName,
-                        "modifyTime": dateStr,
-                        "modifyType": "删除"
+                        "hm-modify-time": dateStr,
+                        "hm-modify-type": "删除"
                     });
                     delMark.setText(selectedContent);
                     editor.fire('paste', {
@@ -1434,7 +1444,7 @@ CKEDITOR.plugins.add('document', {
             });
             editable.attachListener(editable, 'beforeinput', function 键盘输入前的业务逻辑(evt) {
                 if (editor.readOnly) {
-                    return; 
+                    return;
                 }
                 var $emrWidget = $(evt.data.getTarget().$).closest("[data-hm-widgetid]");
                 if (checkSubEmrLock(editor, $emrWidget)) {
@@ -1534,7 +1544,8 @@ CKEDITOR.plugins.add('document', {
                 var ranges = selection.getRanges();
                 var range0 = ranges[0];
                 var insNode = range0.endPath().contains("ins");
-                if (('hm_self_ins' == className && !insNode)) {
+                var currentUserInfo = editor.getDocModifyUser();
+                if (('hm_self_ins' == className && !insNode) || (!!insNode && currentUserInfo && currentUserInfo.userId == insNode.getAttribute("hm-modify-userId"))) {
                     return;
                 }
                 if (text && text.trim()) {
@@ -1544,12 +1555,12 @@ CKEDITOR.plugins.add('document', {
                     insMark.setAttributes({
                         "contenteditable": "true",
                         "class": className ? className : "hm_revise_ins",
-                        // "title": className == 'hm_self_ins' ? '' : (currentUserInfo.userName + "(" + currentUserInfo.登录IP + ")  " + dateStr),
-                        // "_userid": currentUserInfo.userId,
+                        // "hm-modify-title": className == 'hm_self_ins' ? '' : (currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr),
+                        "hm-modify-userId": currentUserInfo.userId,
+                        "hm-modify-userName": currentUserInfo.userName,
                         "trace_id": 'trace_' + wrapperUtils.getGUID(),
-                        // "modifier": currentUserInfo.userName,
-                        "modifyTime": dateStr,
-                        "modifyType": "新增"
+                        "hm-modify-time": dateStr,
+                        "hm-modify-type": "新增"
                     });
                     var startContainer = range0.startContainer;
                     insMark.append(newText);
@@ -1558,13 +1569,12 @@ CKEDITOR.plugins.add('document', {
                         var delMark = new CKEDITOR.dom.element('del');
                         delMark.setAttributes({
                             "contenteditable": "false",
-                            // "title": currentUserInfo.userName + "(" + currentUserInfo.登录IP + ")  " + dateStr,
+                            // "hm-modify-title": currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr,
                             "class": "hm_revise_del",
-                            // "_userid": currentUserInfo.userId,
+                            "hm-modify-userId": currentUserInfo.userId, "hm-modify-userName": currentUserInfo.userName,
                             "trace_id": 'trace_' + wrapperUtils.getGUID(),
-                            // "modifier": currentUserInfo.userName,
-                            "modifyTime": dateStr,
-                            "modifyType": "删除"
+                            "hm-modify-time": dateStr,
+                            "hm-modify-type": "删除"
                         });
                         delMark.setText(selectedText);
                         // range0.insertNode(delMark);
@@ -1596,6 +1606,7 @@ CKEDITOR.plugins.add('document', {
                 if (disabledParent) {
                     return;
                 }
+                var currentUserInfo = editor.getDocModifyUser();
                 var delNode = range0.startPath().contains("del");
                 if (delNode) {
                     range0.moveToElementEditEnd(delNode);
@@ -1603,8 +1614,13 @@ CKEDITOR.plugins.add('document', {
                 }
                 var startInsNode = range0.startPath().contains("ins");
                 var endInsNode = range0.endPath().contains("ins");
-                if (startInsNode && endInsNode) { // 修改自己编辑不留痕
-                    return;
+                var currentUserInfo = editor.getDocModifyUser();
+                if (!!startInsNode && !!endInsNode) {
+                    var startUserId = startInsNode.getAttribute("hm-modify-userId");
+                    var endUserId = endInsNode.getAttribute("hm-modify-userId");
+                    if (currentUserInfo && startUserId == currentUserInfo.userId && endUserId == currentUserInfo.userId) {
+                        return;
+                    }
                 }
 
                 var curStartNode = range0.startContainer;//获取或焦点的起始节点
@@ -1653,19 +1669,18 @@ CKEDITOR.plugins.add('document', {
                     var prevNode = curStartNode.getPrevious();
                     if (!prevText && prevNode && prevNode.type == CKEDITOR.NODE_ELEMENT && prevNode.getName() == 'del') {
                         prevNode.setHtml(prevNode.getText() + delText);
-                        // prevNode.setAttribute("title", currentUserInfo.userName + "(" + currentUserInfo.登录IP + ")  " + dateStr);
+                        // prevNode.setAttribute("title", currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr);
                     } else {
                         var newText = new CKEDITOR.dom.text(delText);
                         var delMark = new CKEDITOR.dom.element('del');
                         delMark.setAttributes({
                             "contenteditable": "false",
-                            // "title": currentUserInfo.userName + "(" + currentUserInfo.登录IP + ")  " + dateStr,
+                            // "hm-modify-title": currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr,
                             "class": "hm_revise_del",
-                            // "_userid": currentUserInfo.userId,
+                            "hm-modify-userId": currentUserInfo.userId, "hm-modify-userName": currentUserInfo.userName,
                             "trace_id": 'trace_' + wrapperUtils.getGUID(),
-                            // "modifier": currentUserInfo.userName,
-                            "modifyTime": dateStr,
-                            "modifyType": "删除"
+                            "hm-modify-time": dateStr,
+                            "hm-modify-type": "删除"
                         });
                         delMark.append(newText);
                         range0.insertNode(delMark);
@@ -1720,23 +1735,25 @@ CKEDITOR.plugins.add('document', {
                     }
                     var nextText = focusText.substr(startOffset).replace(/\u200B/g, "");
                     var nextNode = curEndNode.getNext();
-                    if (!nextText && nextNode && nextNode.type == CKEDITOR.NODE_ELEMENT && nextNode.getName() == 'del') {
-                        var spaceText = new CKEDITOR.dom.text('\u200B');
-                        nextNode.setHtml(delText + nextNode.getText());
-                        spaceText.insertBefore(curStartNode);
-                        // nextNode.setAttribute("title", currentUserInfo.userName + "(" + currentUserInfo.登录IP + ")  " + dateStr);
+                    if (!nextText && nextNode && nextNode.type == CKEDITOR.NODE_ELEMENT && nextNode.getName() == "del") {
+                        var nextUserId = nextNode.getAttribute("hm-modify-userId");
+                        if (currentUserInfo && nextUserId == currentUserInfo.userId) {
+                            var spaceText = new CKEDITOR.dom.text("\u200B");
+                            nextNode.setHtml(delText + nextNode.getText());
+                            spaceText.insertBefore(curStartNode);
+                        }
                     } else {
                         var newText = new CKEDITOR.dom.text(delText);
                         var delMark = new CKEDITOR.dom.element('del');
                         delMark.setAttributes({
                             "contenteditable": "false",
-                            // "title": currentUserInfo.userName + "(" + currentUserInfo.登录IP + ")  " + dateStr,
+                            // "title": currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr,
                             "class": "hm_revise_del",
-                            // "_userid": currentUserInfo.userId,
+                            "hm-modify-userId": currentUserInfo.userId, "hm-modify-userName": currentUserInfo.userName,
                             "trace_id": 'trace_' + wrapperUtils.getGUID(),
                             // "modifier": currentUserInfo.userName,
-                            "modifyTime": dateStr,
-                            "modifyType": "删除"
+                            "hm-modify-time": dateStr,
+                            "hm-modify-type": "删除"
                         });
                         delMark.append(newText);
                         if (text) {

@@ -8,7 +8,7 @@ class ApiLogger {
         this.logElement = null;
         this.logContainer = null;
         this.originalFunctions = {};
-        this.monitoredModules = ['fn.baseInit.js', 'fn.opeanApi.js'];
+        this.monitoredModules = ['fn.baseInit.js', 'fn.openApi.js'];
         this.autoScroll = true; // 默认自动滚动
     }
 
@@ -560,14 +560,15 @@ class ApiLogger {
         // 标记该实例已被监控
         editorInstance.__hm_logged = true;
 
-        // 基于fn.baseInit.js和fn.opeanApi.js中的方法
+        // 基于fn.baseInit.js和fn.openApi.js中的方法
         const methodsToHook = [
-            // 从fn.opeanApi.js
+            // 从fn.openApi.js
             'setDocContent', 'setDocData', 'getDocContent',
             'getDocHtml', 'getDocText', 'getDocData',
             'showWarnInfo', 'execEditorMethod', 'execCommand',
             'addCustomMenu', 'setDocReadOnly', 'setDocReviseMode',
             'setTemplateDatasource','setDocWatermark',
+	    'downloadPdf','downloadOfd',
 
             // 从fn.baseInit.js
             'init', 'initComponent', 'initEditorPanel',
