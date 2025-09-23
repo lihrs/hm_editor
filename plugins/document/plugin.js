@@ -1404,7 +1404,6 @@ CKEDITOR.plugins.add('document', {
 
             });
             editable.attachListener(editable, 'compositionend', function (evt) {
-                console.log('compositionend:', evt);
                 if (editor.readOnly) {
                     return;
                 }
@@ -1418,11 +1417,11 @@ CKEDITOR.plugins.add('document', {
                     evt.data.preventDefault();
                     return false;
                 }
-                console.log('isChrome', wrapperUtils.isChrome());
                 beforeCHInputText = '';
                 if (evt.data.$.inputType && evt.data.$.inputType.indexOf('insert') > -1) {
                     selTextBeforeInsert = '';
                 }
+
                 if (!isCompositioning && wrapperUtils.isChrome()) {
                     if ((!editor.commands["revise"] || !editor.reviseModelOpened)) {
                         if (evt.data.$.inputType && evt.data.$.inputType.indexOf('insert') > -1) { //创建者不留痕
@@ -1434,12 +1433,7 @@ CKEDITOR.plugins.add('document', {
                         editor.setInsMark(selection, evt.data.$.data, 'hm_revise_ins');
                     }
                 }
-                //由于中文输入法按enter键输入字母时不会触发分页，故需在中文输入完成时主动调用分页
-                // var pageBreak = CKEDITOR.plugins.pagebreakCmd;
-                // if (pageBreak) {
-                //     pageBreak.performAutoPaging(editor, evt);
-                // }
-                //文本输入及联设置
+
                 _handleRelevance($(evt.data.getTarget().$).parent());
             });
             editable.attachListener(editable, 'beforeinput', function 键盘输入前的业务逻辑(evt) {
@@ -1539,63 +1533,91 @@ CKEDITOR.plugins.add('document', {
             }, null, null, -10);
 
             editor.setInsMark = function (selection, text, className) { //新增文本
-
                 clearInputEventIndex();
                 var ranges = selection.getRanges();
                 var range0 = ranges[0];
                 var insNode = range0.endPath().contains("ins");
                 var currentUserInfo = editor.getDocModifyUser();
+
                 if (('hm_self_ins' == className && !insNode) || (!!insNode && currentUserInfo && currentUserInfo.userId == insNode.getAttribute("hm-modify-userId"))) {
                     return;
                 }
                 if (text && text.trim()) {
+                    // 先移除用户刚输入的文本
+                    var startContainer = range0.startContainer;
+                    var endContainer = range0.endContainer;
+                    var startOffset = range0.startOffset;
+                    var endOffset = range0.endOffset;
+
+                    // 如果选择范围为空，说明用户刚输入了文本，需要先移除
+                    if (startOffset === endOffset) {
+                        var containerText = startContainer.getText();
+                        var textLength = text.length;
+
+                        // 检查光标位置前面是否有刚输入的文本
+                        if (startOffset >= textLength) {
+                            var beforeText = containerText.substring(startOffset - textLength, startOffset);
+                            if (beforeText === text) {
+                                // 移除光标前面的文本
+                                var newText = containerText.substring(0, startOffset - textLength) + containerText.substring(startOffset);
+                                startContainer.setText(newText);
+                                // 更新光标位置
+                                range0.setStart(startContainer, startOffset - textLength);
+                                range0.setEnd(startContainer, startOffset - textLength);
+                            }
+                        }
+
+                        // 检查光标位置后面是否有刚输入的文本
+                        if (startOffset + textLength <= containerText.length) {
+                            var afterText = containerText.substring(startOffset, startOffset + textLength);
+                            if (afterText === text) {
+                                // 移除光标后面的文本
+                                var newText = containerText.substring(0, startOffset) + containerText.substring(startOffset + textLength);
+                                startContainer.setText(newText);
+                            }
+                        }
+                    }
+
+                    // 现在在光标位置插入修订标记
                     var dateStr = wrapperUtils.formatDateToStr('yyyy-MM-dd hh:mm:ss', new Date());
                     var newText = new CKEDITOR.dom.text(text);
                     var insMark = new CKEDITOR.dom.element('ins');
                     insMark.setAttributes({
                         "contenteditable": "true",
                         "class": className ? className : "hm_revise_ins",
-                        // "hm-modify-title": className == 'hm_self_ins' ? '' : (currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr),
                         "hm-modify-userId": currentUserInfo.userId,
                         "hm-modify-userName": currentUserInfo.userName,
                         "trace_id": 'trace_' + wrapperUtils.getGUID(),
                         "hm-modify-time": dateStr,
                         "hm-modify-type": "新增"
                     });
-                    var startContainer = range0.startContainer;
                     insMark.append(newText);
-                    // range0.insertNode(insMark);
+
                     if (selectedText) {
                         var delMark = new CKEDITOR.dom.element('del');
                         delMark.setAttributes({
                             "contenteditable": "false",
-                            // "hm-modify-title": currentUserInfo.userName + "(" + currentUserInfo.localIp + ")  " + dateStr,
                             "class": "hm_revise_del",
-                            "hm-modify-userId": currentUserInfo.userId, "hm-modify-userName": currentUserInfo.userName,
+                            "hm-modify-userId": currentUserInfo.userId,
+                            "hm-modify-userName": currentUserInfo.userName,
                             "trace_id": 'trace_' + wrapperUtils.getGUID(),
                             "hm-modify-time": dateStr,
                             "hm-modify-type": "删除"
                         });
                         delMark.setText(selectedText);
-                        // range0.insertNode(delMark);
-                        // parent.copyInfo['复制内容']  = delMark.getOuterHtml() + insMark.getOuterHtml();
-                        editor.fire('paste', {
-                            dataValue: delMark.getOuterHtml() + insMark.getOuterHtml(),
-                            pasteType: 'pasteWithFormat',
-                            dontFilter: true
-                        });
-                        selectedText = '';
+
+                        // 先插入删除标记，再插入新增标记
+                        range0.insertNode(delMark);
+                        range0.collapse(false); // 移动到删除标记后面
+                        range0.insertNode(insMark);
+                        range0.collapse(false); // 移动到新增标记后面
+                        range0.select();
                     } else {
-                        // parent.copyInfo['复制内容']  = insMark.getOuterHtml();
-                        editor.fire('paste', {
-                            dataValue: insMark.getOuterHtml(),
-                            pasteType: 'pasteWithFormat',
-                            dontFilter: true
-                        });
+                        // 直接插入新增标记
+                        range0.insertNode(insMark);
+                        range0.collapse(false); // 移动到标记后面
+                        range0.select();
                     }
-                    // range0.moveToPosition(newText, CKEDITOR.POSITION_BEFORE_END);
-                    // range0.select();
-                    startContainer.setText(startContainer.getText().replace(text, ''));
                 }
             };
 

@@ -41,7 +41,7 @@ tr {
     page-break-after: auto
 }
 
-table[data-hm-datatable] tr{
+table[pageBreakInside-tr-avoid] tr{
     page-break-inside: avoid;
 }
 
