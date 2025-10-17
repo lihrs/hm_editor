@@ -21,6 +21,15 @@ app.use(function(req, res, next) {
 	next();
 });
 
+// 允许跨域请求
+app.all('*', function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", '*');
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Headers", "*");
+    res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
+    next();
+});
+
 // dot
 var dot = require('dot');
 var dotPath;
@@ -36,17 +45,7 @@ app.use(express.static(__dirname + '/'));
 app.use(express.static(__dirname + '/editorDist'));
 app.use(express.static(__dirname + '/hmEditor'));
 app.use('/emr-editor/public', express.static(__dirname + '/public'));
-// app.use('/emr-print/pdf', express.static(__dirname + '/pdf'));
 
-// app.all('*', function (req, res, next) {
-//     res.header("Access-Control-Allow-Origin", '*');
-//     res.header("Access-Control-Allow-Credentials", "true");
-//     res.header("Access-Control-Allow-Headers", "*");
-//     res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
-//     ////res.header("X-Powered-By",' 3.2.1');
-//     next();
-
-// });
 app.use('/emr-editor/album',
 	serveIndex(__dirname + '/album',{
 		template:"./album_public/directory.html"

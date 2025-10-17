@@ -44,7 +44,7 @@ CKEDITOR.editorConfig = function( config ) {
 	// %REMOVE_END%
 
 	// config.extraPlugins = 'tableresize,paper,pagebreak,datasource,sync,print,favor,document,save,trace,album,clear,revise,signature,switchmodel,pagebreakByHand,find';
-	config.extraPlugins = 'tableresize,paper,pagebreak,datasource,document,print,save,album,clear,revise,switchmodel,pagebreakByHand,find,documenttree';
+	config.extraPlugins = 'tableresize,paper,pagebreak,datasource,document,print,save,album,clear,revise,switchmodel,pagebreakByHand,find,documenttree,containerstyle';
 
 
 	config.toolbar = [

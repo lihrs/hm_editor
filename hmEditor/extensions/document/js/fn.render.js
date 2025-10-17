@@ -417,14 +417,15 @@ commonHM.component['documentModel'].fn({
                         // 处理普通数据元
                         if (item.data) {
                             item.data.forEach(function (dataItem) {
-                                _t._bindDataItem($node, dataItem, '普通');
+                                // 检查是否是表格类型数据
+                                if (dataItem.keyCode && dataItem.keyCode.indexOf('TABLE_') === 0) {
+                                    // 如果是表格数据，使用_renderTableData处理
+                                     _t._renderTableData($node, dataItem.keyValue);
+                                    return;
+                                }else{
+                                    _t._bindDataItem($node, dataItem);
+                                }
                             });
-                        }
-                        
-                        // 检查是否有护理表单数据需要特殊处理
-                        if (item.nursingData && Array.isArray(item.nursingData) && item.nursingData.length > 0) {
-                            console.log('检测到护理表单数据，开始处理护理数据渲染');
-                            _t._renderNursingData($node, item.nursingData);
                         }
                     });
                 }
@@ -456,32 +457,32 @@ commonHM.component['documentModel'].fn({
     },
 
     /**
-     * 渲染护理表单数据
-     * @param {jQuery} $node 包含护理表格的节点
-     * @param {Array} nursingData 护理数据二维数组
+     * 渲染列表类表格
+     * @param {jQuery} $node 包列表类表格的节点
+     * @param {Array} tableData 表格数据二维数组
      */
-    _renderNursingData: function ($node, nursingData) {
+    _renderTableData: function ($node, tableData) {
         var _t = this;
-        console.log('开始处理护理表单数据，数据行数:', nursingData.length);
+        console.log('开始处理表格数据，数据行数:', tableData.length);
         
         try {
-            // 查找护理表格
-            var $nursingTable = $node.find('table[data-hm-datatable][data-hm-table-type="list"]');
-            if ($nursingTable.length === 0) {
-                console.warn('未找到护理表单表格');
+            // 查找列表类表格
+            var $table = $node.find('table[data-hm-datatable][data-hm-table-type="list"]');
+            if ($table.length === 0) {
+                console.warn('未找到列表类表格');
                 return;
             }
             
-            var $tbody = $nursingTable.find('tbody');
+            var $tbody = $table.find('tbody');
             if ($tbody.length === 0) {
-                console.warn('护理表格中未找到tbody');
+                console.warn('列表类表格中未找到tbody');
                 return;
             }
             
             // 获取现有行数和需要的行数
             var $existingRows = $tbody.find('tr');
             var existingRowCount = $existingRows.length;
-            var requiredRowCount = nursingData.length;
+            var requiredRowCount = tableData.length;
             
             console.log('现有行数:', existingRowCount, '需要行数:', requiredRowCount);
             
@@ -499,22 +500,22 @@ commonHM.component['documentModel'].fn({
             var $allRows = $tbody.find('tr');
             
             // 按行渲染护理数据
-            nursingData.forEach(function (rowData, rowIndex) {
+            tableData.forEach(function (rowData, rowIndex) {
                 if (rowIndex < $allRows.length) {
                     var $currentRow = $allRows.eq(rowIndex);
-                    console.log('渲染第' + rowIndex + '行护理数据，数据项数量:', rowData.length);
+                    console.log('渲染第' + rowIndex + '行表格数据，数据项数量:', rowData.length);
                     
                     // 渲染当前行的所有数据项
                     rowData.forEach(function (dataItem) {
-                        _t._bindNursingDataToRow($currentRow, dataItem);
+                        _t._bindTableDataToRow($currentRow, dataItem);
                     });
                 }
             });
             
-            console.log('护理表单数据渲染完成');
+            console.log('列表类表格数据渲染完成');
             
         } catch (error) {
-            console.error('渲染护理表单数据时发生错误:', error);
+            console.error('渲染列表类表格数据时发生错误:', error);
         }
     },
 
@@ -522,9 +523,8 @@ commonHM.component['documentModel'].fn({
      * 通用数据元绑定方法
      * @param {jQuery} $container 搜索容器（可以是$node或$row）
      * @param {Object} dataItem 数据项
-     * @param {String} logPrefix 日志前缀（用于区分普通数据/护理数据）
      */
-    _bindDataItem: function ($container, dataItem, logPrefix) {
+    _bindDataItem: function ($container, dataItem) {
         var _t = this;
         
         if (!dataItem.keyCode && !dataItem.keyName) return;
@@ -583,28 +583,23 @@ commonHM.component['documentModel'].fn({
                 
                 // 绑定数据到数据源节点
                 _t.bindDatasource(datasourceNode, nodeType, bindVal, imgFlag);
-                
-                // 记录绑定日志
-                if (logPrefix) {
-                    console.log(logPrefix + '数据绑定完成:', dataItem.keyName + '(' + dataItem.keyCode + ') = ' + dataItem.keyValue);
-                }
             } else {
-                console.warn('未找到匹配的数据元:', dataItem.keyCode, dataItem.keyName, logPrefix ? '(' + logPrefix + ')' : '');
+                console.warn('未找到匹配的数据元:', dataItem.keyCode, dataItem.keyName);
             }
             
         } catch (error) {
-            console.error('绑定数据时发生错误:', error, logPrefix ? '(' + logPrefix + ')' : '');
+            console.error('绑定数据时发生错误:', error);
         }
     },
 
     /**
-     * 将护理数据绑定到指定行
+     * 将表格数据绑定到指定行
      * @param {jQuery} $row 表格行元素
      * @param {Object} dataItem 数据项
      */
-    _bindNursingDataToRow: function ($row, dataItem) {
+    _bindTableDataToRow: function ($row, dataItem) {
         var _t = this;
-        _t._bindDataItem($row, dataItem, '护理');
+        _t._bindDataItem($row, dataItem);
     },
     // 设置数据元的值
     bindDatasource: function (datasourceNode, nodeType, bindVal, imgFlag) {
@@ -624,35 +619,9 @@ commonHM.component['documentModel'].fn({
                     }
                     var _texttype = newtextboxcontent.attr('_texttype');
 
-                    if (_texttype == '下拉' && bindVal) {
-                        var selectType = newtextboxcontent.attr('_selectType');
-                        var jointsymbol = newtextboxcontent.attr('_jointSymbol') || ',';
-                        var items = newtextboxcontent.attr('data-hm-items').split('#');
-                        var nodeText = bindVal.split(jointsymbol || ',');
-                        // 判断是否是带编码选项
-                        var items0 = items[0].match(/(.+)\((.*?)\)\s*$/);
-                        var codeArr = [];
-                        if (items0 && items0.length == 3) {
-                            for (var x = 0; x < items.length; x++) {
-                                var itemsArr = items[x].match(/(.+)\((.*?)\)\s*$/);
-                                if (selectType == '单选') {
-                                    if (bindVal == itemsArr[1]) {
-                                        codeArr.push(itemsArr[2]);
-                                        break;
-                                    }
-                                } else {
-                                    if (nodeText.includes(itemsArr[1])) {
-                                        codeArr.push(itemsArr[2]);
-                                    }
-                                }
-                            }
-                            if (codeArr.length > 0) {
-                                newtextboxcontent.attr('code', codeArr.join(jointsymbol));
-                            }
-                        }
-                    }
+                    
                     // 处理二维码生成
-                    else if (_texttype == '二维码' && bindVal && !imgFlag) {
+                    if (_texttype == '二维码' && bindVal && !imgFlag) {
                         var qrcodeWidth = newtextboxcontent.attr('_qrcode_width') || '100';
                         var qrcodeHeight = newtextboxcontent.attr('_qrcode_height') || '100';
                         var errorLevel = newtextboxcontent.attr('_qrcode_error_level') || 'M';
@@ -702,6 +671,33 @@ commonHM.component['documentModel'].fn({
                         }
                     }
                     else {
+                        if (_texttype == '下拉' && bindVal) {
+                            var selectType = newtextboxcontent.attr('_selectType');
+                            var jointsymbol = newtextboxcontent.attr('_jointSymbol') || ',';
+                            var items = newtextboxcontent.attr('data-hm-items').split('#');
+                            var nodeText = bindVal.split(jointsymbol || ',');
+                            // 判断是否是带编码选项
+                            var items0 = items[0].match(/(.+)\((.*?)\)\s*$/);
+                            var codeArr = [];
+                            if (items0 && items0.length == 3) {
+                                for (var x = 0; x < items.length; x++) {
+                                    var itemsArr = items[x].match(/(.+)\((.*?)\)\s*$/);
+                                    if (selectType == '单选') {
+                                        if (bindVal == itemsArr[1]) {
+                                            codeArr.push(itemsArr[2]);
+                                            break;
+                                        }
+                                    } else {
+                                        if (nodeText.includes(itemsArr[1])) {
+                                            codeArr.push(itemsArr[2]);
+                                        }
+                                    }
+                                }
+                                if (codeArr.length > 0) {
+                                    newtextboxcontent.attr('code', codeArr.join(jointsymbol));
+                                }
+                            }
+                        }
                         newtextboxcontent.html(bindVal || _placeholder);
                     }
                     _handleRelevance(datasourceNode);
@@ -1135,19 +1131,19 @@ commonHM.component['documentModel'].fn({
             }
         });
         // $body.find('table[data-hm-datatable][data-hm-table-type="list"]').on('mouseleave','tbody tr',function(){
-        $body.on('mouseleave', 'table[data-hm-datatable][data-hm-table-type="list"] tbody tr', function () {
+        $body.on('mouseleave', 'table[data-hm-datatable][data-hm-table-type="list"][evaluate-type="col"] tbody tr', function () {
             $body.find('.table-row-actions').remove();
-        }).on('mouseenter.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] tbody tr', function (event) {
+        }).on('mouseenter.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"][evaluate-type="col"] tbody tr', function (event) {
             // 使用 event.target 来获取实际触发的元素
             var $tr = $(event.target).closest('tr');
             _t._handleTrMouseEnter($tr[0], $tr.index());
-        }).off('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] .add-row-icon').
-          on('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] .add-row-icon', function (e) {
+        }).off('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"][evaluate-type="col"] .add-row-icon').
+          on('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"][evaluate-type="col"] .add-row-icon', function (e) {
             e.stopPropagation();
             e.preventDefault();
             console.log('=====增加行=====');
             _t._addTableRow($(this).closest('tr'));
-        }).on('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"] .delete-row-icon', function (e) {
+        }).on('click.tableActions', 'table[data-hm-datatable][data-hm-table-type="list"][evaluate-type="col"] .delete-row-icon', function (e) {
             e.stopPropagation();
             e.preventDefault();
             console.log('=====删除行=====');
@@ -1155,7 +1151,7 @@ commonHM.component['documentModel'].fn({
         });
         
         // 检查是否存在护理表单表格，如果存在则初始化日期导航功能
-        var nursingFormTables = $body.find('table[data-hm-datatable][data-hm-table-type="list"]');
+        var nursingFormTables = $body.find('table[data-hm-datatable][data-hm-table-type="list"][evaluate-type="col"]');
         if (nursingFormTables.length > 0) {
             console.log('检测到护理表单表格，初始化日期导航功能');
             _t._initDateNavigation($body);
@@ -1601,12 +1597,6 @@ commonHM.component['documentModel'].fn({
         
         // 创建日期导航面板
         _t._createDateNavigationPanel($body);
-        
-
-
-
-
-
     },
 
     /**
@@ -2198,7 +2188,7 @@ commonHM.component['documentModel'].fn({
             imgFlag: false
         };
 
-        if (bindVal && bindVal.indexOf('data:image/png;base64,') === 0) {
+        if (bindVal && bindVal.indexOf('data:image/') === 0) {
             result.value = this._generateImageWidgetHtml(bindVal);
             result.imgFlag = true;
         }

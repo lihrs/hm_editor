@@ -1272,6 +1272,7 @@ $(document).ready(function () {
 
     // 根据数据类型更新弹窗界面
     function updateDataDialogByType(dataType) {
+         $('.getDataDialog textarea').val('');
         if (dataType === 'metadata') {
             // 数据元模式
             var _placeholder = JSON.stringify({

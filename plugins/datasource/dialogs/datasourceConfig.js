@@ -114,10 +114,50 @@ CKEDITOR.dialog.add('datasourceConfig', function (editor) {
 function _handleEdit(editor, sourceData) {
     var element = editor.contextTargetElement;
     if (!element.hasAttribute('data-hm-node') && !element.is('button')) {
-        element = element.getParent('data-hm-node');
+        var $element = $(element.$).closest('[data-hm-node]');
+        
+        // 如果找到了带data-hm-node的元素
+        if ($element.length) {
+            element = new CKEDITOR.dom.element($element[0]);
+            
+        } 
     }
     var td = editor.elementPath().contains('td');
     if (td && td.hasAttribute('data-hm-node')) element = td;
+
+    // 更新节点类型
+    var oldType = element.getAttribute('data-hm-node');
+    var newType = sourceData['data-hm-node'];
+    
+    // 如果类型发生变化，需要重新创建节点
+    if (oldType !== newType) {
+        // 保存原节点的基本属性
+        var oldId = element.getAttribute('data-hm-id');
+        sourceData['data-hm-id'] = oldId; // 保持原有ID
+        
+        // 使用_handleCreate创建新节点，传入isEdit=true表示编辑模式
+        var newNode = _handleCreate(editor, sourceData, true);
+        
+        if (newNode) {
+            // 如果原节点是单元类型，需要特殊处理
+            if (oldType === 'cellbox') {
+                // 移除td上的数据元相关属性
+                element.removeAttribute('data-hm-node');
+                element.removeAttribute('data-hm-name');
+                element.removeAttribute('data-hm-id');
+                element.removeAttribute('data-hm-code');
+                // 清空td内容，包括br标签
+                element.setHtml('');
+                // 将新节点插入到td中
+                element.append(newNode);
+            } else {
+                // 其他类型正常替换
+                element.$.parentNode.replaceChild(newNode.$, element.$);
+                element = newNode;
+            }
+        }
+        return;
+    }
 
     if (!sourceData['data-hm-items']) {
         element.removeAttribute('data-hm-items');
@@ -367,27 +407,31 @@ function removeDefineAttr(element) {
     }
 }
 
-function _handleCreate(editor, sourceData) {
+function _handleCreate(editor, sourceData, isEdit) {
     // sourceData.autoLable = true; 
     var ranges = editor.getSelection().getRanges();
     var legalRange = true;
-    if (ranges.length == 1 && ranges[0].collapsed) {
-        var eles = ranges[0].startPath().elements;
-        for (var r = 0; r < eles.length; r++) {
-            if (eles[r].is(CKEDITOR.dtd.$inline)) {
-                legalRange = false;
-                break;
+    
+    // 如果不是编辑模式，才检查插入位置的合法性
+    if (!isEdit) {
+        if (ranges.length == 1 && ranges[0].collapsed) {
+            var eles = ranges[0].startPath().elements;
+            for (var r = 0; r < eles.length; r++) {
+                if (eles[r].is(CKEDITOR.dtd.$inline)) {
+                    legalRange = false;
+                    break;
+                }
             }
+        } else {
+            legalRange = false;
         }
-    } else {
-        legalRange = false;
+        if (editor.elementPath() && editor.elementPath().contains('span') && editor.elementPath().contains('span').hasClass('new-textbox-content')) {
+            legalRange = true;
+        }
+        var td = editor.elementPath().contains('td');
+        if (td && td.hasAttribute('data-hm-node')) legalRange = false;
     }
-    if (editor.elementPath() && editor.elementPath().contains('span') && editor.elementPath().contains('span').hasClass('new-textbox-content')) {
-        legalRange = true;
-    }
-    var td = editor.elementPath().contains('td');
-    if (td && td.hasAttribute('data-hm-node')) legalRange = false;
-    if (!legalRange) {
+    if (!legalRange && !isEdit) {
         editor.showNotification('无法插入数据元到[格式化文本]或[选中文本]或[非嵌套类型数据元内]');
     } else {
         var node = new CKEDITOR.dom.element('span');
@@ -424,11 +468,11 @@ function _handleCreate(editor, sourceData) {
             labelboxNode.setText(sourceData['data-hm-name'] + ':');
             editor.editable().insertElement(labelboxNode);
         }
-
+        var resultNode;
         switch (sourceData['data-hm-node']) {
             case 'labelbox':
                 node.setText(sourceData['data-hm-name']);
-                editor.editable().insertElement(node);
+                resultNode = node;
                 break;
             case 'newtextbox':
                 var defaultPlaceholder = '_';
@@ -522,8 +566,7 @@ function _handleCreate(editor, sourceData) {
                 }
 
                 newtextbox.append(newtextPlaceholder);
-                editor.editable().insertElement(newtextbox);
-
+                resultNode = newtextbox;
                 break;
             case 'timebox':
 
@@ -536,7 +579,7 @@ function _handleCreate(editor, sourceData) {
                 // if(sourceData.timePrintFormat){
                 //     node.setAttribute('_time_print_format', sourceData.timePrintFormat);
                 // }
-                editor.editable().insertElement(node);
+                resultNode = node;
                 break;
             case 'radiobox':
                 for (var i = 0; i < sourceData.items.length; i++) {
@@ -564,7 +607,7 @@ function _handleCreate(editor, sourceData) {
                 //node.setAttribute('data-hm-items', sourceData.datasourceItem);
                 //sourceData.radioStyle && node.setAttribute('_radioStyle', sourceData.radioStyle);
                 //sourceData.radioSelectType && node.setAttribute('_radio_select_type', sourceData.radioSelectType);
-                editor.editable().insertElement(node);
+                resultNode = node;
                 break;
             case 'checkbox':
                 for (var i = 0; i < sourceData.items.length; i++) {
@@ -589,13 +632,13 @@ function _handleCreate(editor, sourceData) {
                 }
 
                 //node.setAttribute('data-hm-items', sourceData.datasourceItem);
-                editor.editable().insertElement(node);
+                resultNode = node;
                 break;
             case 'dropbox':
                 //node.setAttribute('data-hm-items', sourceData.datasourceItem);
                 //sourceData.selectType && node.setAttribute('_selectType', sourceData.selectType);
                 //sourceData.jointSymbol && node.setAttribute('_jointSymbol', sourceData.jointSymbol);
-                editor.editable().insertElement(node);
+                resultNode = node;
                 break;
             case 'cellbox':
                 var td = editor.elementPath().contains('td');
@@ -608,7 +651,7 @@ function _handleCreate(editor, sourceData) {
                     td.setAttribute('data-hm-name', sourceData['data-hm-name']);
                     td.setAttribute('data-hm-id', node.getAttribute('data-hm-id'));
                     td.setAttribute('data-hm-code', node.getAttribute('data-hm-code'));
-                    sourceData['_association_name'] && td.setAttribute('_association_name', sourceData['_association_name']);
+                    resultNode = td;
                 } else {
                     editor.showNotification('单元类型仅限于插入表格中');
                 }
@@ -621,17 +664,15 @@ function _handleCreate(editor, sourceData) {
                 if (sourceData['data-hm-search-params']) {
                     node.setAttribute('data-hm-search-params', sourceData['data-hm-search-params']);
                 }
-                editor.editable().insertElement(node);
+                resultNode = node;
                 break;
             case 'textboxwidget':
                 node.addClass('textboxWidget-content');
                 var wrapNode = new CKEDITOR.dom.element('span');
                 wrapNode.addClass('textboxWidget');
                 wrapNode.append(node);
-
-                editor.insertElement(wrapNode);
-                var widget = editor.widgets.initOn(wrapNode, 'textboxWidget');
                 //editor.execCommand( 'textboxWidget' );
+                resultNode = wrapNode;
                 break;
                 // case 'button':
                 //     editor.editable().insertElement(node);
@@ -640,10 +681,20 @@ function _handleCreate(editor, sourceData) {
                 editor.showNotification('请选择一种数据元类型');
                 break;
         }
-
-        // 模板制作时, 在最后一行 (无 br 的 p) 末尾添加数据元时如果没有零宽字符就没法聚焦到后面
-        editor.editable().insertText('\u200B');
-        editor.fire('unlockSnapshot');
+        
+        // 如果不是编辑模式，插入节点
+        if (!isEdit && resultNode) {
+            if (sourceData['data-hm-node'] !== 'cellbox') {
+                editor.editable().insertElement(resultNode);
+            }
+            // 模板制作时, 在最后一行 (无 br 的 p) 末尾添加数据元时如果没有零宽字符就没法聚焦到后面
+            editor.editable().insertText('\u200B');
+            editor.fire('unlockSnapshot');
+        }
+         // 如果是编辑模式，返回对应类型的节点
+        if (isEdit) {
+            return resultNode;
+        }
     }
 
 }

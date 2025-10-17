@@ -73,6 +73,12 @@ commonHM.component['documentModel'].fn({
             var $del = $(this);
             $del.remove();
         });
+
+        // 移除font color为#ff0000的样式
+        $body.find('font[color="#ff0000"]').each(function() {
+            var $font = $(this);
+            $font.removeAttr('color');
+        });
     },
 
     /**

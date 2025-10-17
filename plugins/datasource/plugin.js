@@ -1779,7 +1779,6 @@
                     case 'cellbox':
                         $element.removeAttr('data-hm-node');
                         $element.removeAttr('data-hm-name');
-                        $element.removeAttr('_association_name');
                         $element.removeAttr('data-hm-id');
                         break;
                     case 'textboxwidget':
@@ -3655,7 +3654,6 @@
                 // 标记点击的当前元素，用于粘贴时区分新文本
                 editor.clickTargetElement = element;
                 if (element.is('span') && element.getAttribute('data-hm-node') == 'labelbox') {
-                    var templatename = element.getAttribute('_templatename');
 
 
                     return;//label不支持点击响应

@@ -41,12 +41,15 @@ tr {
     page-break-after: auto
 }
 
-table[pageBreakInside-tr-avoid] tr{
+table[pagebreakinside-tr-avoid] tr{
     page-break-inside: avoid;
 }
 
 thead {
-    display: table-header-group
+    display: table-row-group;
+}
+table[_hm_copy_table_header] thead{
+    display: table-header-group;
 }
 
 tfoot {

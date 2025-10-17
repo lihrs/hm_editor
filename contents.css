@@ -92,12 +92,15 @@ tr {
 }
 
 /* table[data-hm-datatable] tr, */
-table[pageBreakInside-tr-avoid] tr{
+table[pagebreakinside-tr-avoid] tr{
     page-break-inside: avoid;
 }
 
 thead {
-    display: table-header-group
+    display: table-row-group;
+}
+table[_hm_copy_table_header] thead{
+    display: table-header-group;
 }
 
 tfoot {
@@ -1186,6 +1189,41 @@ em strong{
     /* endregion */
 }
 /* endregion 打印样式 */
+
+/* 节点高亮样式 */
+.cke_node_highlight { 
+    animation: cke_highlight_pulse 0.6s ease-in-out; 
+    background-color: #fff3cd !important; 
+    border: 2px solid #ff6b35 !important; 
+    border-radius: 4px !important; 
+    box-shadow: 0 0 15px rgba(255, 107, 53, 0.4) !important; 
+    position: relative !important; 
+    z-index: 1000 !important; 
+} 
+
+.cke_node_highlight::before { 
+    content: ""; 
+    position: absolute; 
+    top: -4px; 
+    left: -4px; 
+    right: -4px; 
+    bottom: -4px; 
+    background: linear-gradient(45deg, #ff6b35, #ffa726, #ff6b35); 
+    border-radius: 6px; 
+    z-index: -1; 
+    animation: cke_highlight_glow 2s ease-in-out infinite; 
+} 
+
+@keyframes cke_highlight_pulse { 
+    0% { transform: scale(1); } 
+    50% { transform: scale(1.05); } 
+    100% { transform: scale(1); } 
+} 
+
+@keyframes cke_highlight_glow { 
+    0%, 100% { opacity: 0.3; } 
+    50% { opacity: 0.7; } 
+}
 
 .hm-readonly-bgcolor{
     /* background-color: #f0f0f0; */

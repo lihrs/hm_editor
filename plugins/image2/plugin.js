@@ -46,6 +46,9 @@
 				'line-height:0;' +
 				'cursor:se-resize;' +
 			'}' +
+			'.cke_image_resizer_hide{' +
+				'display:none !important;' +
+			'}' +
 			'.cke_image_resizer_wrapper{' +
 				'position:relative;' +
 				'display:inline-block;' +

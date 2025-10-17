@@ -31,6 +31,11 @@ commonHM.component['documentModel'].fn({
         } else {
             alert('没有找到有效的文档内容');
         }
+        if (flag) {
+            $body.find('.cke_widget_wrapper .cke_image_resizer').addClass('cke_image_resizer_hide');
+        } else {
+            $body.find('.cke_widget_wrapper .cke_image_resizer').removeClass('cke_image_resizer_hide');
+        }
     },
     // 设置背景颜色
     setReadOnlyBgColor: function ($widgetNodes, flag) {

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../../../vendor/bootstrap.min.css">
+    <link rel="stylesheet" href="../../../vendor/bootstrap-treeview.min.css">
+    <title>Title</title>
+    <style>
+        #right .form-group{
+            margin-bottom: 5px;
+        }
+        #right .form-group label{
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6 col-xs-6 col-sm-6" id="left">
+        </div>
+        <div class="col-md-6 col-xs-6 col-sm-6" id="right">
+            <div class="form-group">
+                <label>字号(px)</label>
+                <input type="text" class="form-control" id="fontSize">
+            </div>
+            <div class="form-group">
+                <label>字体</label>
+                <select class="form-control" id="fontFamily">
+                    <option value="">请选择</option>
+                    <option value="FangSong">仿宋</option>
+                    <option value="SimSun">宋体</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>行高</label>
+                <input type="text" class="form-control" id="lineHeight">
+            </div>
+            <div class="form-group">
+                <label>字间距(px)</label>
+                <input type="text" class="form-control" id="letterSpacing">
+            </div>
+            <div class="form-group">
+                <label>垂直对齐方式</label>
+                <select class="form-control" id="verticalAlign">
+                    <option value="">请选择</option>
+                    <option value="top">顶部</option>
+                    <option value="text-top">文本顶部</option>
+                    <option value="middle">居中</option>
+                    <option value="bottom">底部</option>
+                    <option value="text-bottom">文本底部</option>
+                    <option value="baseline">基线</option>
+                    <option value="inherit">继承</option>
+                    <option value="initial">初始值</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>首行缩进(em)</label>
+                <input type="text" class="form-control" id="textIndent">
+            </div>
+            <!-- <div class="form-group" id="newStyleBox">
+                <label>使用新样式</label>
+                <span style="font-size:12px;">（注：如果使用新样式，在新建模板时输入型的数据元使用‘新文本’类型，‘文本’类型的数据元新样式不生效）</span>
+                <div>
+                    <input type="radio" name="newStyle" value="true">是
+                    <input type="radio" name="newStyle" value="false" checked="checked">否
+                </div>
+            </div> -->
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript" charset="utf-8" src="../../../vendor/jquery.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="../../../vendor/bootstrap.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="../../../vendor/bootstrap-treeview.min.js"></script>
+<script>
+    $(function () {
+        var parentWindow = window.parent;
+        var NODE_NAME = {
+            'body': '聚合病历',
+            'table': '表格',
+            'tr': '行',
+            'th': '表头',
+            'td': '单元格',
+            'p': '段落',
+            'div': '节点',
+            'span': '区域'
+        };
+        parentWindow.initNodeStyle = function ($parentCurrent) {
+            var $nodes = [$parentCurrent];
+            $parentCurrent.parents().each(function () {
+                var $this = $(this);
+                var nodeName = $this.prop('nodeName').toLowerCase();
+                // 排除widget相关的元素和其他不需要的元素
+                if (!$this.hasClass('cke_widget_element') && 
+                    !$this.hasClass('cke_widget_wrapper') &&
+                    nodeName !== 'html' &&
+                    nodeName !== 'tbody' &&
+                    !(nodeName === 'body' && $parentCurrent.prop('nodeName').toLowerCase() === 'body')) {
+                    $nodes.push($this);
+                }
+            });
+            var tree = [];
+            for (var i = 0; i < $nodes.length; i++) {
+                if ($($nodes[i]).hasClass('new-textbox-content')) {
+                    continue;
+                }
+                if ($($nodes[i]).parent().closest('[data-hm-node]').attr('data-hm-node') === 'checkbox' ||
+                    $($nodes[i]).parent().closest('[data-hm-node]').attr('data-hm-node') === 'radiobox' ) {
+                    continue;
+                }
+
+                var text = NODE_NAME[$nodes[i].prop('nodeName').toLowerCase()] || $nodes[i].prop('nodeName').toLowerCase();
+                if (text === '节点'&& $($nodes[i]).hasClass('emrWidget-content')) {
+                    text = '当前病历';
+                }
+                
+                // 判断是否是数据元，如果是则获取数据元名称
+                var dataHmName = $($nodes[i]).attr('data-hm-name');
+                if (dataHmName) {
+                    text = dataHmName;
+                }
+                
+                var $tree = {
+                    index: i,
+                    text: text,
+                    state: {
+                        expanded: true
+                    }
+                };
+                if (i > 0) {
+                    $tree.nodes = [];
+                    $tree.nodes.push(tree[tree.length - 1]);
+                }
+                tree.push($tree)
+            }
+            $('#left').treeview({
+                data: [tree[tree.length - 1]],
+                onNodeSelected: function (event, node) {
+                    var $node = $nodes[node.index];
+                    var fontSize = parseFloat($node.prop('style')['font-size']);
+                    var fontFamily = $node.prop('style')['font-family'];
+                    var lineHeight = parseFloat($node.prop('style')['line-height']);
+                    var letterSpacing = parseFloat($node.prop('style')['letter-spacing']);
+                    var verticalAlign = $node.prop('style')['vertical-align'];
+                    var textIndent = parseFloat($node.prop('style')['text-indent']);
+                    $("#fontSize").val(fontSize ? fontSize : '');
+                    $("#fontFamily").val(fontFamily || '');
+                    $("#lineHeight").val(lineHeight ? lineHeight : '');
+                    $("#letterSpacing").val(letterSpacing ? letterSpacing : '');
+                    $("#verticalAlign").val(verticalAlign || '');
+                    $("#textIndent").val(textIndent ? textIndent : '');
+                    // if (node.text=='模板主体') {
+                    //     $('#newStyleBox').show();                       
+                    //     var newStyle = $node.attr('newStyle');
+                    //     $("input[name='newStyle'][value='" + newStyle + "']").prop("checked", "checked");
+                    // }else{
+                    //     $('#newStyleBox').hide();
+                    // }
+                    
+                    // 移除之前的高亮效果
+                    $('.cke_node_highlight').removeClass('cke_node_highlight');
+                    
+                    // 添加高亮效果
+                    $node.addClass('cke_node_highlight');
+                    
+                    // 3秒后自动移除高亮效果
+                    setTimeout(function() {
+                        $node.removeClass('cke_node_highlight');
+                    }, 3000);
+                },
+                onNodeUnselected: function (event, node) {
+                    unselected();
+                }
+            });
+
+            function unselected() {
+                $("#fontSize").val('');
+                $("#fontFamily").val('');
+                $("#lineHeight").val('');
+                $("#letterSpacing").val('');
+                $("#verticalAlign").val('');
+                $("#textIndent").val('');
+            }
+
+            unselected();
+
+            parentWindow.commitSelectedNodeStyle = function () {
+                var selectedNodes = $('#left').treeview('getSelected');
+                if (selectedNodes.length === 1) {
+                    var $selectedNode = $nodes[selectedNodes[0].index];
+                    if ($("#fontSize").val() && parseFloat( $("#fontSize").val() )) {
+                        $selectedNode.css('font-size', parseFloat( $("#fontSize").val() ) + 'px' );
+                    }else {
+                        $selectedNode.css('font-size','');
+                    }
+                    if ($("#fontFamily").val() !== '') {
+                        $selectedNode.css('font-family', $("#fontFamily").val());
+                    }else {
+                        $selectedNode.css('font-family', '');
+                    }
+                    if ($("#lineHeight").val() && parseFloat($("#lineHeight").val())) {
+                        $selectedNode.css('line-height', parseFloat($("#lineHeight").val()) );
+                    }else {
+                        $selectedNode.css('line-height', '' );
+                    }
+                    if ($("#letterSpacing").val() && parseFloat( $("#letterSpacing").val() )) {
+                        $selectedNode.css('letter-spacing', parseFloat( $("#letterSpacing").val() ) + 'px' );
+                    }else {
+                        $selectedNode.css('letter-spacing', '' );
+                    }
+                    if ($("#verticalAlign").val() !== '') {
+                        $selectedNode.css('vertical-align', $("#verticalAlign").val());
+                        $selectedNode.children().css('vertical-align','inherit');
+                    }else {
+                        $selectedNode.css('vertical-align', '');
+                        $selectedNode.children().css('vertical-align', '');
+                    }
+                    if ($("#textIndent").val() && parseFloat( $("#textIndent").val() )) {
+                        $selectedNode.css('text-indent', parseFloat( $("#textIndent").val() ) + 'em' );
+                    }else {
+                        $selectedNode.css('text-indent', '' );
+                    }
+                    // if ($("input[name='newStyle']:checked").val()=='true') {
+                    //     $selectedNode.attr('newStyle','true');
+                    //     $selectedNode.prev('head').append('<link id="newStyleId" type="text/css" rel="stylesheet" href="contents_new.css">');
+                    // } else {
+                    //     $selectedNode.removeAttr('newStyle','');
+                    //     $selectedNode.prev('head').children('#newStyleId').remove();
+                    // }
+                }
+            }
+        };
+    });
+</script>
+</body>
+</html>

@@ -9,7 +9,45 @@
 		// 重置全局索引计数器
 		globalIndexCounter.value = 0;
 		
+		// 获取文档信息列表
+		var documentsMap = {};
+		
+		// 从.emrWidget-content元素获取文档信息
+		var bodyElement = editor.document.getBody();
+		var emrWidgetContents = bodyElement.find('.emrWidget-content');
+		
+		if (emrWidgetContents && emrWidgetContents.count() > 0) {
+			for (var i = 0; i < emrWidgetContents.count(); i++) {
+				var content = emrWidgetContents.getItem(i);
+				var name = content.getAttribute('data-hm-widgetname') || '';
+				var id = content.getAttribute('data-hm-widgetid') || '';
+				
+				if (name || id) {
+					// 使用ID作为key进行去重，如果ID为空则使用name作为key
+					var key = id || name;
+					if (!documentsMap[key]) {
+						documentsMap[key] = {
+							name: name,
+							id: id
+						};
+					}
+				}
+			}
+		}
+		
+		// 将Map转换为数组
+		var documents = Object.values(documentsMap);
+		
+		// 如果没有找到任何文档，添加一个默认文档
+		if (documents.length === 0) {
+			documents.push({
+				name: '未命名文档',
+				id: ''
+			});
+		}
+		
 		var documentStructure = {
+			documents: documents,
 			header: [],
 			main: [],
 			footer: []
@@ -426,7 +464,7 @@
 		removeHighlightEffect();
 		
 		// 添加高亮样式类
-		element.addClass('cke_document_tree_highlight');
+		element.addClass('cke_node_highlight');
 		
 		// 记录当前高亮的元素，方便后续清除
 		addHighlightEffect.currentElement = element;
@@ -440,7 +478,7 @@
 	// 移除高亮效果
 	function removeHighlightEffect() {
 		if (addHighlightEffect.currentElement) {
-			addHighlightEffect.currentElement.removeClass('cke_document_tree_highlight');
+			addHighlightEffect.currentElement.removeClass('cke_node_highlight');
 			addHighlightEffect.currentElement = null;
 		}
 	}
@@ -514,64 +552,7 @@
 			},
 			
 			onLoad: function() {
-				// 注入高亮效果CSS样式
-				var editor = this._.editor;
-				var doc = editor.document;
-				
-				// 检查是否已经注入过样式
-				if (!doc.getById('cke_document_tree_highlight_style')) {
-					var style = doc.createElement('style');
-					style.setAttribute('id', 'cke_document_tree_highlight_style');
-					style.setAttribute('type', 'text/css');
-					
-					var css = 
-						'.cke_document_tree_highlight { ' +
-						'	animation: cke_highlight_pulse 0.6s ease-in-out; ' +
-						'	background-color: #fff3cd !important; ' +
-						'	border: 2px solid #ff6b35 !important; ' +
-						'	border-radius: 4px !important; ' +
-						'	box-shadow: 0 0 15px rgba(255, 107, 53, 0.4) !important; ' +
-						'	position: relative !important; ' +
-						'	z-index: 1000 !important; ' +
-						'} ' +
-						
-						'.cke_document_tree_highlight::before { ' +
-						'	content: ""; ' +
-						'	position: absolute; ' +
-						'	top: -4px; ' +
-						'	left: -4px; ' +
-						'	right: -4px; ' +
-						'	bottom: -4px; ' +
-						'	background: linear-gradient(45deg, #ff6b35, #ffa726, #ff6b35); ' +
-						'	border-radius: 6px; ' +
-						'	z-index: -1; ' +
-						'	animation: cke_highlight_glow 2s ease-in-out infinite; ' +
-						'} ' +
-						
-						'@keyframes cke_highlight_pulse { ' +
-						'	0% { transform: scale(1); } ' +
-						'	50% { transform: scale(1.05); } ' +
-						'	100% { transform: scale(1); } ' +
-						'} ' +
-						
-						'@keyframes cke_highlight_glow { ' +
-						'	0%, 100% { opacity: 0.3; } ' +
-						'	50% { opacity: 0.7; } ' +
-						'}';
-					
-					// 设置样式内容
-					if (style.$.styleSheet) {
-						// IE
-						style.$.styleSheet.cssText = css;
-					} else {
-						// 标准浏览器
-						style.$.appendChild(doc.$.createTextNode(css));
-					}
-					
-					// 将样式添加到文档头部
-					var head = doc.getHead();
-					head.append(style);
-				}
+				// 样式已移至全局 contents.css
 			}
 		};
 	});

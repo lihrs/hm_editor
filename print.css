@@ -175,6 +175,11 @@ button[data-hm-id]{
 }
 /* endregion */
 
+body {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
 .check-error-backcolor{
     background-color: unset;
 }

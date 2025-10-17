@@ -29,6 +29,45 @@
             box-sizing: border-box;
         }
 
+        .document-tree-header {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+
+        .document-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .document-item:not(:last-child) {
+            border-bottom: 1px dashed #e9ecef;
+        }
+
+        .document-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .document-id {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
         .document-tree-section {
             margin-bottom: 8px;
         }
@@ -222,6 +261,11 @@
 </head>
 <body>
     <div id="documentTreeContent" class="document-tree-container">
+        <div class="document-tree-header">
+            <div class="document-info">
+                <!-- 文档信息将在这里动态生成 -->
+            </div>
+        </div>
         <div class="document-tree-empty">
             正在加载文档结构...
         </div>
@@ -232,13 +276,35 @@
         window.renderDocumentTree = function(structure, lang) {
             var container = document.getElementById('documentTreeContent');
             
+            // 显示文档信息
+            var documentInfo = container.querySelector('.document-info');
+            var documentsHtml = '';
+            
+            // 生成每个文档的信息
+            structure.documents.forEach(function(doc) {
+                documentsHtml += '<div class="document-item">';
+                documentsHtml += '<span class="document-name">' + escapeHtml(doc.name || '未命名文档') + '</span>';
+                if (doc.id) {
+                    documentsHtml += '<span class="document-id">ID: ' + escapeHtml(doc.id) + '</span>';
+                }
+                documentsHtml += '</div>';
+            });
+            
+            documentInfo.innerHTML = documentsHtml;
+            
             var totalCount = (structure.header ? structure.header.length : 0) + 
                            (structure.main ? structure.main.length : 0) + 
                            (structure.footer ? structure.footer.length : 0);
             
+            var contentContainer = container.querySelector('.document-tree-empty');
             if (totalCount === 0) {
-                container.innerHTML = '<div class="document-tree-empty">' + (lang.noContent || '当前文档没有可显示的数据元内容') + '</div>';
+                if (contentContainer) {
+                    contentContainer.textContent = lang.noContent || '当前文档没有可显示的数据元内容';
+                }
                 return;
+            }
+            if (contentContainer) {
+                contentContainer.remove();
             }
             
             var html = '';
@@ -279,7 +345,14 @@
                 html += '</div>';
             }
             
-            container.innerHTML = html;
+            // 创建一个临时容器来存放新内容
+            var tempContainer = document.createElement('div');
+            tempContainer.innerHTML = html;
+            
+            // 将新内容添加到主容器中，保持文档信息不变
+            while (tempContainer.firstChild) {
+                container.appendChild(tempContainer.firstChild);
+            }
             
             // 绑定数据元双击跳转事件
             bindDataElementEvents(structure);

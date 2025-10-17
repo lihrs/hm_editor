@@ -107,6 +107,15 @@ function editDsInit(ele) {
 
     if(ele){
         editFlag = true;
+        // 使用jQuery选择器查找最近的带有data-hm-node属性的父级元素
+        var $element = $(ele).closest('[data-hm-node]');
+        
+        // 如果找到了带data-hm-node的元素
+        if ($element.length) {
+            ele = $element[0];
+        } else {
+            return; // 如果没找到带data-hm-node的元素，直接返回
+        }
     }
     var d = {};
     $(ele).each(function () {
@@ -125,7 +134,6 @@ function changeTypeInit(val,texttype) {
     initDsType(val);
     $('.row.text,.row.searchbox,.row.dropdown,.row.option,.row.barcode,.row.qrcode').hide();
     $('.row .ds-code').hide();
-    $('.row .templatename').hide();
 
 
     /**
@@ -146,7 +154,6 @@ function changeTypeInit(val,texttype) {
     }
 
     if(val == 'labelbox'){
-        $('.row .templatename').show();
     }else if(val == 'newtextbox'){
 
         if(texttype == '诊断' || texttype == '手术' || texttype == '下拉'){
@@ -363,10 +370,10 @@ var dsSelect = {
 
 function setConfig(data) {
     initDateSel(data['data-hm-node']);
-    // 类型不允许修改
+    // 设置当前类型选中状态
     $(".type input[type='radio'][value=" + data['data-hm-node'] + "]").attr('checked', true);
-    $(".type input[type='radio']").attr('disabled', true);
-    // 数据元不允许修改
+    // 允许修改数据元类型
+    $(".type input[type='radio']").attr('disabled', false);
 
 
     if(data['data-hm-node'] == 'labelbox'){
@@ -476,7 +483,6 @@ function config() {
     var _dsObj = { 'data-hm-name': '', 'data-hm-code': '' };
     if (nodeType == 'labelbox') {
         _dsObj['data-hm-name'] = $('#dsInput').val() || '';
-        _dsObj['_templatename'] = $('#templatename').val() || '';
         Object.assign(d, _dsObj);
         return d;
     }
@@ -489,7 +495,6 @@ function config() {
         d['data-hm-name'] = dsName;
         return d;
     }
-    console.log(111111111111);
     // 输入
     var inputObj = parseEles($('.row>input[type=text]'));
 

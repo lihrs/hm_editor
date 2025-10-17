@@ -129,6 +129,14 @@
                         evt.data.table.removeAttribute('_hm_copy_table_header');
                     }
                 });
+
+                // 默认隐藏表格方向和表格标题行容器
+                setTimeout(function() {
+                    var container = dialog.getContentElement('info', 'table-direction-headers-container');
+                    if (container) {
+                        container.getElement().getParent().setStyle('display', 'none');
+                    }
+                }, 0);
             },
 
             onShow: function () {
@@ -173,6 +181,14 @@
                 // they get reflected into the Advanced tab.
                 widthInput && widthInput.onChange();
                 heightInput && heightInput.onChange();
+
+                // 确保表格类型字段的onChange事件被触发，以正确控制字段显示
+                var tableTypeElement = this.getContentElement('info', 'hm-table-type');
+                if (tableTypeElement) {
+                    setTimeout(function() {
+                        tableTypeElement.onChange();
+                    }, 10);
+                }
             },
             onOk: function () {
                 var selection = editor.getSelection(),
@@ -428,27 +444,53 @@
                     {
                         type: 'hbox',
                         children: [{
+                                id: 'hm-table-type',
                                 type: 'select',
-                                id: 'dataHeaders',
-                                requiredContent: 'th',
-                                'default': '',
-                                label: '表格标题行', //数据表单_标题行
+                                label: '表格类型', // 评估单表格类型
+                                className: 'select-narrow',
+                                'default': 'row',
                                 items: [
-                                    ['无', ''],
-                                    ['第一行', '1'],
-                                    ['前两行', '2'],
-                                    ['前三行', '3'],
-                                    ['前四行', '4']
+                                    ['非列表表格', 'row'],
+                                    ['列表类表格', 'list']
                                 ],
                                 setup: function (selectedTable) {
-                                    // Fill in the headers field.
-                                    var dialog = this.getDialog();
-
-                                    var thCount = $(selectedTable.$).find('thead tr').length;
-
-                                    this.setValue(thCount == 0 ? '' : thCount);
+                                    var t = $(selectedTable).attr('data-hm-table-type') || '';
+                                    this.setValue(t);
+                                    // 延迟执行onChange，确保对话框完全加载后再控制字段显示
+                                    var self = this;
+                                    setTimeout(function() {
+                                        self.onChange();
+                                    }, 10);
                                 },
-                                commit: commitValue
+                                onChange: function() {
+                                    var dialog = this.getDialog();
+                                    var tableType = this.getValue();
+                                    var container = dialog.getContentElement('info', 'table-direction-headers-container');
+                                    
+                                    if (tableType === 'row') {
+                                        // 非列表表格：隐藏表格方向和表格标题行
+                                        if (container) {
+                                            container.getElement().getParent().setStyle('display', 'none');
+                                        }
+                                    } else if (tableType === 'list') {
+                                        // 列表类表格：显示表格方向和表格标题行
+                                        if (container) {
+                                            container.getElement().getParent().setStyle('display', '');
+                                        }
+                                    } else {
+                                        // 未选择：隐藏表格方向和表格标题行
+                                        if (container) {
+                                            container.getElement().getParent().setStyle('display', 'none');
+                                        }
+                                    }
+                                },
+                                commit: function (data, selectedTable) {
+                                    if (this.getValue()) {
+                                        $(selectedTable.$).attr('data-hm-table-type', this.getValue());
+                                    } else {
+                                        $(selectedTable.$).removeAttr('data-hm-table-type');
+                                    }
+                                }
                             },{
                                 id: 'table-dataTable',
                                 type: 'text',
@@ -463,7 +505,7 @@
                                 commit: function (data, selectedTable) {
                                     if (this.getValue()) {
                                         selectedTable.setAttribute('data-hm-dataTable', this.getValue());
-                                        selectedTable.setAttribute('data-hm-table-code', "table_" + this.getValue());
+                                        selectedTable.setAttribute('data-hm-table-code', 'TABLE' + '_' + this.getValue()); 
                                     } else {
                                         selectedTable.removeAttribute('data-hm-dataTable');
                                         selectedTable.removeAttribute('data-hm-table-code');
@@ -490,13 +532,14 @@
                     },
                     {
                         type: 'hbox',
+                        id: 'table-direction-headers-container',
                         children: [{
                                 id: 'evaluate-type',
                                 type: 'select',
                                 label: '表格方向', // 评估单表格类型
                                 className: 'select-narrow',
+                                'default': 'col',
                                 items: [
-                                    ['请选择', ''],
                                     ['竖向', 'col'],
                                     ['横向', 'row']
                                 ],
@@ -513,6 +556,33 @@
                                     }
                                 }
                             },{
+                                type: 'select',
+                                id: 'dataHeaders',
+                                requiredContent: 'th',
+                                'default': '',
+                                label: '表格标题行', //数据表单_标题行
+                                items: [
+                                    ['无', ''],
+                                    ['第一行', '1'],
+                                    ['前两行', '2'],
+                                    ['前三行', '3'],
+                                    ['前四行', '4']
+                                ],
+                                setup: function (selectedTable) {
+                                    // Fill in the headers field.
+                                    var dialog = this.getDialog();
+
+                                    var thCount = $(selectedTable.$).find('thead tr').length;
+
+                                    this.setValue(thCount == 0 ? '' : thCount);
+                                },
+                                commit: commitValue
+                            }
+                        ]
+                    },
+                    {
+                        type: 'hbox',
+                        children: [{
                                 id: 'white-space',
                                 type: 'select',
                                 requiredContent: 'table[align]',
@@ -554,33 +624,6 @@
 
                                 }
                             }
-                        ]
-                    },
-                    {
-                        type: 'hbox',
-                        children: [{
-                                id: 'hm-table-type',
-                                type: 'select',
-                                label: '表格类型', // 评估单表格类型
-                                className: 'select-narrow',
-                                items: [
-                                    ['请选择', ''],
-                                    ['非列表表格', 'row'],
-                                    // ['列表类表格', 'list']
-                                ],
-                                setup: function (selectedTable) {
-                                    var t = $(selectedTable).attr('data-hm-table-type') || '';
-                                    this.setValue(t);
-
-                                },
-                                commit: function (data, selectedTable) {
-                                    if (this.getValue()) {
-                                        $(selectedTable.$).attr('data-hm-table-type', this.getValue());
-                                    } else {
-                                        $(selectedTable.$).removeAttr('data-hm-table-type');
-                                    }
-                                }
-                            },
                             // {
                             // 	id: 'evaluate-col-num',
                             // 	type: 'text',
@@ -742,18 +785,18 @@
                         style: 'margin-left: 12px;width:596px;',
                         widths: ['54%','46%'],
                         children: [{
-                            id: 'pageBreakInside-tr-avoid',
+                            id: 'pagebreakinside-tr-avoid',
                             type: 'checkbox',
                             requiredContent: 'table[right]',
                             label: '打印时禁止单元格跨页断开',
                             setup: function (selectedTable) {
-                                this.setValue(selectedTable.getAttribute('pageBreakInside-tr-avoid'));
+                                this.setValue(selectedTable.getAttribute('pagebreakinside-tr-avoid'));
                             },
                             commit: function (data, selectedTable) {
                                 if (this.getValue()) {
-                                    selectedTable.setAttribute('pageBreakInside-tr-avoid', this.getValue());
+                                    selectedTable.setAttribute('pagebreakinside-tr-avoid', this.getValue());
                                 } else {
-                                    selectedTable.removeAttribute('pageBreakInside-tr-avoid');
+                                    selectedTable.removeAttribute('pagebreakinside-tr-avoid');
                                 }
                             }
                         },{
