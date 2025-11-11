@@ -10,6 +10,7 @@ const documentTreeData = [
        children: [{
            docCode: 'inpatient_record',
            docPath: 'file/inpatient_record.html',
+        //    docPath: 'file/testAllOptions.html',
            docName: '住院病案首页',
            recordName: '住院病案首页',
            type: 'file-edit',

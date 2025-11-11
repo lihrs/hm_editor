@@ -152,6 +152,7 @@
          * @param {Boolean} options.reviseMode 修订模式开关，true开启修订模式，默认false
          * @param {Boolean} options.readOnly 只读模式开关，true开启只读模式，默认false
          * @param {Boolean} options.editShowPaddingTopBottom 编辑时纸张设置里面的上下边距是否有效，true为有效，默认为false
+         * @param {Boolean} options.allowModifyDatasource 允许修改数据元名称和编码，true允许，默认false
          * @param {Object} options.style iframe样式
          * @param {String} options.sdkHost 加载sdk地址
          * @param {Object} options.editorConfig 编辑器配置
@@ -245,6 +246,7 @@
          * @param {Boolean} options.reviseMode 修订模式开关，true开启修订模式，默认false
          * @param {Boolean} options.readOnly 只读模式开关，true开启只读模式，默认false
          * @param {Boolean} options.editShowPaddingTopBottom 编辑时纸张设置里面的上下边距是否有效，true为有效，默认为false
+         * @param {Boolean} options.allowModifyDatasource 允许修改数据元名称和编码，true允许，默认false
          * @param {Object} options.customParams 自定义参数 动态数据源接口入参 例：{departmentCode:'0001',doctorCode:'0001'}
          * @param {Array} options.sdkHost 加载sdk地址
          * @param {Array} options.customToolbar 自定义工具栏 例：[{name:'customButton',label:'自定义按钮',icon:'/path/to/icon.png',toolbarGroup:'insert',onExec:function(editor){},onRefresh:function(editor,path){}}]

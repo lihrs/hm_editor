@@ -59,16 +59,26 @@ CKEDITOR.dialog.add('datasourceConfig', function (editor) {
                 return false;
             }
             if (d['data-hm-node'] != 'labelbox' && !d['data-hm-code']) {
-                editor.showNotification("请先选择数据元");
+                editor.showNotification("名称或者编码不正确");
                 return false;
             }
-            if (d['data-hm-node'] == 'searchbox' && !d['_searchpair']) {
-                editor.showNotification("搜索类型数据元对应名称/编码不能为空");
+            // if (d['data-hm-node'] == 'searchbox' && !d['_searchpair']) {
+            //     editor.showNotification("搜索类型数据元对应名称/编码不能为空");
+            //     return false;
+            // }
+            if(d['data-hm-node'] == 'searchbox' && !d['_searchoption']){
+                editor.showNotification("搜索类型不能为空");
                 return false;
             }
-            if (d['data-hm-items']) {
-                d['items'] = d['data-hm-items'].split('#');
+            if(d['data-hm-node'] == 'radiobox' || d['data-hm-node'] == 'checkbox' || d['_texttype'] == '下拉'){
+                if (d['data-hm-items']) {
+                    d['items'] = d['data-hm-items'].split('#');
+                } else {
+                    editor.showNotification("选项不能为空");
+                    return false;
+                }
             }
+            
 
             if (!this.insertMode) {
                 _handleEdit(editor, d);
@@ -774,8 +784,14 @@ function _handleRelevance(node) {
         return;
     }
     var relevanceArr = JSON.parse(node.attr('_relevance'));
-    var val = getVal(node).replace(zeroWidthChar, '');
-    console.log('值------------' + val)
+    var nodeVal = getVal(node);
+    var val="";
+    if(nodeVal.value){
+        val = nodeVal.value.replace(zeroWidthChar, '');
+    }else{
+        val = nodeVal.replace(zeroWidthChar, '');
+    } 
+    // console.log('值------------' + val)
     var valArr = [];
     var nodeType = node.attr('data-hm-node');
     switch (nodeType) {

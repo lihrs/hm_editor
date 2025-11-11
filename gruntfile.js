@@ -44,13 +44,6 @@ module.exports = function( grunt ) {
                         // res.end('Hello, world from port #' + options.port + '!');
                             if(/^\/emr-print\//.test(req.url)){
                                 createProxyMiddleware({ target: 'http://172.16.8.21:9091/', changeOrigin: true })(req, res, next);
-                            }else if(/^\/songshan\//.test(req.url)){
-                                console.log(req.url);
-                                createProxyMiddleware({ target: 'http://127.0.0.1:3048/', changeOrigin: true ,
-                                pathRewrite: {
-                                    '^/songshan': '', // remove base path
-                                } 
-                                })(req, res, next);
                             }else{
                                 return next();
                             }

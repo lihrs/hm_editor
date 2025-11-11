@@ -139,9 +139,10 @@ $(function () {
                     nodeType = '时间';
                 }else if(type.replace(/\d+/g,'') == 'N'){
                     nodeType = '数字文本';
-                }else if(ds['name'].indexOf('手术') > -1 || ds['name'].indexOf('诊断') > -1){
-                    nodeType = '搜索';
                 }
+                // else if(ds['name'].indexOf('手术') > -1 || ds['name'].indexOf('诊断') > -1){
+                //     nodeType = '搜索';
+                // }
             }
             ds['nodeName'] = nodeType;
         },
@@ -316,23 +317,23 @@ $(function () {
                     data['data-hm-node'] = 'searchbox';
                     var n = data['data-hm-name'];
 
-                    var so = '';
-                    if(n.indexOf('手术') > -1){
-                        if(n.indexOf('编码')){
-                            so = '手术编码';
-                        }else{
-                            so = '手术名称';
-                        }
-                    }else if(n.indexOf('诊断') > -1){
-                        if(n.indexOf('编码')){
-                            so = '诊断编码';
-                        }else{
-                            so = '诊断名称';
-                        }
-                    }
-                    if(so){
-                        data._searchoption = datasource.searchOption;
-                    }
+                    // var so = '';
+                    // if(n.indexOf('手术') > -1){
+                    //     if(n.indexOf('编码')){
+                    //         so = '手术编码';
+                    //     }else{
+                    //         so = '手术名称';
+                    //     }
+                    // }else if(n.indexOf('诊断') > -1){
+                    //     if(n.indexOf('编码')){
+                    //         so = '诊断编码';
+                    //     }else{
+                    //         so = '诊断名称';
+                    //     }
+                    // }
+                    // if(so){
+                    //     data._searchoption = datasource.searchOption;
+                    // }
 
 
                 }else if(nodeType == '单元'){

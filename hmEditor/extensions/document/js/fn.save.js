@@ -173,12 +173,12 @@ commonHM.component['documentModel'].fn({
     /**
      * 根据表格编码、列列表、行索引获取表格数据
      * @param {string} tableCode 表格编码
-     * @param {Array} colKeyList 获取列列表（数据元编码数组），为空时获取全部列
+     * @param {Array} keyList 获取列列表（数据元编码数组），为空时获取全部列
      * @param {number} rowIndex 获取行索引，为空时获取全部行
      * @returns {Object} 表格数据对象
      */
-    getTableListData:function(tableCode,colKeyList,rowIndex){
-        var _t = this;
+    getTableListData:function(tableCode,keyList,rowIndex){
+        var _t = this; 
         var $body = $(_t.editor.document.getBody().$);
         var $table = $body.find('table[data-hm-table-code="' + tableCode + '"]');
         
@@ -193,40 +193,123 @@ commonHM.component['documentModel'].fn({
             keyId: $table.attr('hm-table-id') || '',
             keyValue: []
         };
-        
+        // 增加逻辑，判断表格时横向还是竖向
+        var tableDirection = $table.attr('evaluate-type') || 'col'; // 默认为竖向
         var $rows = $table.find('tbody tr');
         
-        // 如果指定了行索引，只处理该行
-        if (typeof rowIndex === 'number' && rowIndex >= 0) {
-            if (rowIndex < $rows.length) {
-                var $targetRow = $rows.eq(rowIndex);
-                var rowData = _t.getRowData($targetRow, colKeyList);
-                if (rowData.length) {
-                    tableData.keyValue.push(rowData);
+        // 根据表格方向选择不同的数据处理方式
+            if (tableDirection === 'row') {
+                // 横向表格：除标题外，一列为一组数据
+                debugger
+                var colCount = _t.getTableColumnCount($table);
+                if (typeof rowIndex === 'number' && rowIndex >= 0) {
+                    // 处理指定列
+                    if (rowIndex < colCount) {
+                        var colData = _t.getColumnData($table, rowIndex, keyList);
+                        if (colData.length) {
+                            tableData.keyValue.push(colData);
+                        }
+                    } else {
+                        console.warn('列索引 ' + rowIndex + ' 超出表格列数范围');
+                    }
+                } else {
+                    // 处理所有列
+                    for (var i = 0; i < colCount; i++) {
+                        var colData = _t.getColumnData($table, i, keyList);
+                        if (colData.length) {
+                            tableData.keyValue.push(colData);
+                        }
+                    }
+                }
+        } else {
+            // 竖向表格：沿用现有逻辑
+            if (typeof rowIndex === 'number' && rowIndex >= 0) {
+                if (rowIndex < $rows.length) {
+                    var $targetRow = $rows.eq(rowIndex);
+                    var rowData = _t.getRowData($targetRow, keyList);
+                    if (rowData.length) {
+                        tableData.keyValue.push(rowData);
+                    }
+                } else {
+                    console.warn('行索引 ' + rowIndex + ' 超出表格行数范围');
                 }
             } else {
-                console.warn('行索引 ' + rowIndex + ' 超出表格行数范围');
+                // 处理所有行
+                $rows.each(function () {
+                    var rowData = _t.getRowData($(this), keyList);
+                    if (rowData.length) {
+                        tableData.keyValue.push(rowData);
+                    }
+                });
             }
-        } else {
-            // 处理所有行
-            $rows.each(function () {
-                var rowData = _t.getRowData($(this), colKeyList);
-                if (rowData.length) {
-                    tableData.keyValue.push(rowData);
-                }
-            });
         }
         
         return tableData;
     },
+     
     
+    /**
+     * 获取表格列数
+     * @param {jQuery} $table 表格元素
+     * @returns {number} 列数
+     */
+    getTableColumnCount: function($table) {
+        var $rows = $table.find('tbody tr');
+        if ($rows.length === 0) {
+            return 0;
+        }
+        // 获取第一行的列数
+        var $firstRow = $rows.first();
+        return $firstRow.find('td').length;
+    },
+    
+    /**
+     * 获取列数据（用于横向表格）
+     * @param {jQuery} $table 表格元素
+     * @param {number} colIndex 列索引
+     * @param {Array} keyList 列编码列表，为空时获取全部列
+     * @returns {Array} 列数据数组
+     */
+    getColumnData: function($table, colIndex, keyList) {
+        var _t = this;
+        var colData = [];
+        var $rows = $table.find('tbody tr');
+        
+        // 遍历每一行，获取对应列的数据
+        $rows.each(function() {
+            var $row = $(this);
+            var $cells = $row.find('[data-hm-node]');
+            var $targetCell = $cells.eq(colIndex);
+            
+            if ($targetCell.length > 0) {
+                // 排除标题行：检查目标单元格是否包含 hm-table-horizontal-header 类
+                if ($targetCell.hasClass('hm-table-horizontal-header')) {
+                    return; // 跳过标题行
+                } 
+                var cellObj = _t.getDataElementObject($targetCell[0]);
+                if (cellObj) {
+                    // 如果指定了列编码列表，只返回匹配的列
+                    if (keyList && keyList.length > 0) {
+                        if (keyList.indexOf(cellObj.keyCode) !== -1) {
+                            colData.push(cellObj);
+                        }
+                    } else {
+                        // 未指定列编码列表，返回所有列
+                        colData.push(cellObj);
+                    }
+                }
+            }
+        });
+        
+        return colData;
+    },
     /**
      * 获取表格行数据
      * @param {jQuery} $row 行元素
-     * @param {Array} colKeyList 列编码列表，为空时获取全部列
+     * @param {Array} keyList 列编码列表，为空时获取全部列
      * @returns {Array} 行数据数组
      */
-    getRowData: function($row, colKeyList) {
+    getRowData: function($row, keyList) {
         var _t = this;
         var rowData = [];
         var $tds = $row.find('[data-hm-node]');
@@ -235,8 +318,8 @@ commonHM.component['documentModel'].fn({
             var cellObj = _t.getDataElementObject($(this));
             if (cellObj) {
                 // 如果指定了列编码列表，只返回匹配的列
-                if (colKeyList && colKeyList.length > 0) {
-                    if (colKeyList.indexOf(cellObj.keyCode) !== -1) {
+                if (keyList && keyList.length > 0) {
+                    if (keyList.indexOf(cellObj.keyCode) !== -1) {
                         rowData.push(cellObj);
                     }
                 } else {
@@ -247,7 +330,7 @@ commonHM.component['documentModel'].fn({
         });
         
         return rowData;
-    },
+    }, 
     /**
      * 获取数据元对象
      * @param {*} ele 数据元元素
@@ -263,7 +346,10 @@ commonHM.component['documentModel'].fn({
             keyName: $ele.attr('data-hm-name') || '',
             keyValue: ''
         };
-        // console.log(type)
+        console.log(type);
+        if(spanObj.keyName == '婚姻状况代码'){
+            debugger
+        }
         switch (type) {
             case 'newtextbox':
                 spanObj = _t.handleNewTextbox(ele, spanObj);
@@ -323,14 +409,20 @@ commonHM.component['documentModel'].fn({
             }
         } else if (_type == '下拉') {
             var selectType = _con.attr('_selecttype'); // 下拉框类型
-            var code = _con.attr('code'); // 下拉框编码
+            var code = _con.attr('code')||""; // 下拉框编码 
             var text = '';
             if (!_con.attr('_placeholdertext')) {
                 text = _con.text(); // 下拉框文本
             }
-            spanObj.keyValue = text && selectType == '多选' ? text.split(',') : text;
+            spanObj.keyValue ={
+                code: code,
+                value: text
+            };
             if (selectType == '多选') {
-                spanObj.keyName = code && code.split(',');
+                spanObj.keyValue = {
+                    code: code && code.split(','),
+                    value:text && text.split(',') 
+                }
             }
         } else if (_type == '二维码') {
             // 对于二维码类型，只取原始的bindVal值，不保存生成的HTML结构
@@ -485,8 +577,11 @@ commonHM.component['documentModel'].fn({
             }
 
         }
-        spanObj.keyValue = value;
-        spanObj.keyCode = code;
+        spanObj.keyValue = {
+            code:code,
+            value:value
+        };
+        // spanObj.keyCode = code;
         return spanObj;
     },
     // 处理时间取值
@@ -498,10 +593,14 @@ commonHM.component['documentModel'].fn({
     },
     // 处理搜索下拉取值
     handleSearchbox: function (ele, spanObj) {
+        var keyCode = $(ele).attr('data-hm-code');
         var code = $(ele).attr('_code');
         var name = $(ele).attr('_name');
-        spanObj.keyCode = code;
-        spanObj.keyValue = name;
+        spanObj.keyCode = keyCode;
+        spanObj.keyValue = {
+            code: code,
+            value: name
+        };
         return spanObj;
     },
     // 处理单选框取值
@@ -524,8 +623,11 @@ commonHM.component['documentModel'].fn({
                 }
             }
         }
-        spanObj.keyValue = value;
-        spanObj.keyCode = code;
+        spanObj.keyValue = {
+            code: code,
+            value: value
+        };
+        // spanObj.keyCode = code;
         //老结构
         if (checksources.length == 0) {
             var name = spanObj.keyName;
@@ -538,8 +640,11 @@ commonHM.component['documentModel'].fn({
                     value.push(nameValue);
                 }
             }
-            spanObj.keyCode = code;
-            spanObj.keyValue = value;
+            // spanObj.keyCode = code;
+            spanObj.keyValue = {
+                code: code,
+                value: value
+            };
         }
         return spanObj;
     },
@@ -565,8 +670,12 @@ commonHM.component['documentModel'].fn({
                 }
             }
         }
-        spanObj.keyCode = codeList.length > 0 ? codeList : "";
-        spanObj.keyValue = checkList.length > 0 ? checkList : "";
+        // spanObj.keyCode = codeList.length > 0 ? codeList : "";
+        // spanObj.keyValue = checkList.length > 0 ? checkList : "";
+        spanObj.keyValue = {
+            code: codeList.length > 0 ? codeList : "",
+            value: checkList.length > 0 ? checkList : ""
+        };
         //老结构
         if (checksources.length == 0) {
             checksources = $body.find('[data-hm-node="checkbox"][data-hm-name="' + name + '"]');
@@ -578,8 +687,12 @@ commonHM.component['documentModel'].fn({
                     checkList.push(nameValue);
                 }
             }
-            spanObj.keyCode = code;
-            spanObj.keyValue = checkList;
+            // spanObj.keyCode = code;
+            // spanObj.keyValue = checkList;
+            spanObj.keyValue = {
+                code: code,
+                value: checkList
+            };
         }
         return spanObj;
     },
@@ -721,5 +834,6 @@ commonHM.component['documentModel'].fn({
             result[0].nursingData = _sourceData.nursingData;
         }
         return result;
-    }
+    },
+   
 });

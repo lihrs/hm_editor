@@ -214,6 +214,13 @@
         <div class="itembox meta_js">
             <div class="title">
                 <span>脚本配置</span>
+                <select id="documentEvent" style="margin-left: 20px; width: 150px;">
+                    <option value="">请选择文档事件</option>
+                    <option value="onDocumentLoad">onDocumentLoad</option>
+                    <option value="onElementChange">onElementChange</option>
+                    <option value="onElementClick">onElementClick</option>
+                    <option value="onElementDbclick">onElementDbclick</option>
+                </select>
             </div>
             <div class="meta_json" id="meta_js">
                 <textarea placeholder="js脚本"></textarea>
@@ -231,9 +238,46 @@
     <script type="text/javascript" src="<%=sdkHost%>/vendor/jquery-ui.min.js"></script>
     <script>
         var dsGroup = {};
+        var eventJsContent = {
+            'onDocumentLoad': '// 文档加载事件\nfunction onDocumentLoad() {\n    // 在这里添加文档加载完成时需要执行的代码\n    \n}',
+            'onElementChange': '// 元素变化事件\nfunction onElementChange(element) {\n    // 在这里添加元素变化时需要执行的代码\n    \n}',
+            'onElementClick': '// 元素点击事件\nfunction onElementClick(element) {\n    // 在这里添加元素点击时需要执行的代码\n    \n}',
+            'onElementDbclick': '// 元素双击事件\nfunction onElementDbclick(element) {\n    // 在这里添加元素双击时需要执行的代码\n    \n}'
+        };
+        var userJsCache = {}; // 缓存用户自定义的JS内容
         $(function () {
             var dsCliTag = null;
             var parentWindow = window.parent;
+
+             
+
+            // 确保事件绑定在DOM完全加载后执行
+            $(document).ready(function() {
+                // 重新绑定事件，确保在动态内容加载后也能正常工作
+                $('#documentEvent').off('change').on('change', function() {
+                    var selectedEvent = $(this).val();
+                    var textarea = $('#meta_js textarea');
+                    
+                    if (selectedEvent) { 
+                        if(userJsCache.hasOwnProperty(selectedEvent)){
+                            // 优先从userJsCache获取内容，如果没有则使用默认模板
+                            var content = userJsCache[selectedEvent];
+                            textarea.val(content);
+                        } else {
+                            textarea.val(eventJsContent[selectedEvent]);
+                        }
+                    } else {
+                        textarea.val('');
+                    }
+                });
+
+                $('#meta_js textarea').off('input').on('input', function() {
+                    var selectedEvent = $('#documentEvent').val();
+                    if (selectedEvent) {
+                        userJsCache[selectedEvent] = $(this).val();
+                    }
+                });
+            });
 
             parentWindow.initDocumentInfo = function (_body, folderName) {
                 if (folderName == '护理表单') {
@@ -386,7 +430,29 @@
                     $('.nurse_header').remove();
                     $('.nurse_data').remove();
                     $('.nurse_remark').remove();
-                    if (meta_json['meta_js']) {
+                    
+                    // 初始化userJsCache和事件选择
+                    // 优先加载eventJs中的内容（包含所有事件的详细内容）
+                    if (meta_json['eventJs']) {
+                        userJsCache = Object.assign(userJsCache, meta_json['eventJs']);
+                        // 如果有eventJs，设置默认显示第一个事件（如果有内容）
+                        var eventOptions = ['onDocumentLoad', 'onElementChange', 'onElementClick', 'onElementDbclick'];
+                        var firstEventWithContent = eventOptions.find(function(eventName) {
+                            return meta_json['eventJs'][eventName] && meta_json['eventJs'][eventName].trim();
+                        });
+                        if (firstEventWithContent) {
+                            $('#documentEvent').val(firstEventWithContent);
+                            $('#meta_js').children('textarea').val(meta_json['eventJs'][firstEventWithContent]);
+                        } else {
+                            // 如果没有内容，默认显示onDocumentLoad
+                            $('#documentEvent').val('onDocumentLoad');
+                            $('#meta_js').children('textarea').val('');
+                        }
+                    } else if (meta_json['meta_js']) {
+                        // 如果没有eventJs，使用meta_js（向后兼容）
+                        var currentEvent = $('#documentEvent').val() || 'onDocumentLoad';
+                        userJsCache[currentEvent] = meta_json['meta_js'];
+                        $('#documentEvent').val(currentEvent);
                         $('#meta_js').children('textarea').val(meta_json['meta_js']);
                     }
                 }
@@ -600,8 +666,35 @@
                     }
                     _body.setAttribute('meta_json', encodeURIComponent(JSON.stringify(_meta_json)));
                 } else {
-                    var meta_js = $('#meta_js').children('textarea').val();
-                    var meta_json = { 'meta_js': meta_js };
+                    // 在保存前，先将当前选中的事件的textarea内容保存到userJsCache
+                    var currentEvent = $('#documentEvent').val();
+                    var currentTextareaValue = $('#meta_js').children('textarea').val();
+                    if (currentEvent && currentTextareaValue) {
+                        userJsCache[currentEvent] = currentTextareaValue;
+                    }
+                    
+                    // 构建包含所有事件方法内容的eventJs对象
+                    var allEventJs = {};
+                    var eventOptions = ['onDocumentLoad', 'onElementChange', 'onElementClick', 'onElementDbclick'];
+                    eventOptions.forEach(function(eventName) {
+                        // 优先使用userJsCache中的内容，如果没有则使用默认模板
+                        allEventJs[eventName] = userJsCache[eventName];
+                    });
+                    
+                    // 将所有事件的脚本内容合并成一个字符串（用于meta_js）
+                    var meta_js_script = '';
+                    eventOptions.forEach(function(eventName) {
+                        var eventScript = allEventJs[eventName];
+                        if (eventScript && eventScript.trim()) {
+                            meta_js_script += '// ===== ' + eventName + ' 事件 =====\n';
+                            meta_js_script += eventScript + '\n\n';
+                        }
+                    });
+                    
+                    var meta_json = { 
+                        'meta_js': meta_js_script.trim(), // 合并后的所有事件脚本字符串
+                        'eventJs': allEventJs  // 将所有事件的内容保存到meta_json中（对象形式）
+                    };
                     _body.setAttribute('meta_json', encodeURIComponent(JSON.stringify(meta_json)));
                 }
                 return result;

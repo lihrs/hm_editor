@@ -1054,7 +1054,7 @@ $(document).ready(function () {
         try {
             const isReviseMode = $('#reviseFlag').is(':checked');
             const editor = await window.tabManager.getCurrentEditor();
-            editor.setDocReviseMode(isReviseMode);
+            editor.setDocReviseMode(isReviseMode,false);
 
             // 隐藏对话框
             $('.reviseDialog').hide();
@@ -1709,12 +1709,27 @@ $(document).ready(function () {
 
             // 创建新标签页，启用设计模式
             const result = await window.tabManager.createTab('新模板', {
-                designMode: true
+                designMode: true,
+                allowModifyDatasource: false
             }, content);
 
             if (datasources) {
                 console.log('获取当前编辑器实例');
                 const editor = await window.tabManager.getCurrentEditor();
+
+                // 设置 A4 纸张
+                if (editor && typeof editor.execCommand === 'function') {
+                    console.log('设置 A4 纸张');
+                    editor.execCommand('paperSize', {
+                        paperSize: 'A4_portrait',
+                        paperMargin: {
+                            top: '5mm',
+                            right: '5mm',
+                            bottom: '5mm',
+                            left: '5mm'
+                        }
+                    });
+                }
 
                 // 先确保编辑器实例已被日志记录器监控
                 if (window.apiLogger && !editor.__hm_logged) {

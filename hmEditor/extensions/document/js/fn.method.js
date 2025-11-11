@@ -149,8 +149,8 @@ commonHM.component['documentModel'].fn({
      * 设置修订模式
      * @param {Boolean} reviseMode 是否启用修订模式
      */
-    setDocReviseMode: function (reviseMode) {
+    setDocReviseMode: function (reviseMode,retainModify) {
         var _t = this;
-        _t.setReviseMode(reviseMode);
+        _t.setReviseMode(reviseMode,retainModify);
     },
 });

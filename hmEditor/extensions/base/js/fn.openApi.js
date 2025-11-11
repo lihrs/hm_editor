@@ -252,8 +252,8 @@ HMEditor.fn({
      * 设置文档修订模式
      * @param {Boolean} reviseMode 是否修订模式
      */
-    setDocReviseMode: function (reviseMode) {
-        this.documentModel.setDocReviseMode(reviseMode);
+    setDocReviseMode: function (reviseMode,retainModify) {
+        this.documentModel.setDocReviseMode(reviseMode,retainModify);
     },
     /**
      * 设置模板制作时需要的数据元
@@ -420,6 +420,9 @@ HMEditor.fn({
      * @returns {Array} data[].modifyTime 修订记录修改时间
      * @returns {Array} data[].modifyType 修订记录修改类型
      * @returns {Array} data[].content 修订记录内容
+     * @returns {Array} data[].docCode 修订病历编码
+     * @returns {Array} data[].eleCode 修订数据元编码
+     * @returns {Array} data[].eleName 修订数据元名称
      */
     getDocRevisionHistory:function(code){
         return this.documentModel.getRevisionHistory(code);
@@ -473,10 +476,10 @@ HMEditor.fn({
      * 根据表格编码、列列表、行索引获取表格数据
      * @param {*} params
      * @param {*} params.tableCode 表格编码
-     * @param {*} params.colKeyList 获取列列表
-     * @param {*} params.rowIndex 获取行索引
+     * @param {*} params.keyList 获取列列表
+     * @param {*} params.rowIndex 获取行索引或列索引
      */
     getTableData:function(params){
-        return this.documentModel.getTableListData(params.tableCode,params.colKeyList,params.rowIndex);
+        return this.documentModel.getTableListData(params.tableCode,params.keyList,params.rowIndex);
     }
 });

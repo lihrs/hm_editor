@@ -199,7 +199,7 @@ CKEDITOR.dialog.add('containerstyle', function (editor) {
                 elements: [
                     {
                         type: 'html',
-                        html: '<iframe class="containerstyleHtml" style="height:360px;width: 100%;" src="'+CKEDITOR.plugins.getPath('containerstyle')+'dialogs/nodeStyle.html"></iframe>',
+                        html: '<iframe class="containerstyleHtml" style="height:360px;width: 100%;"></iframe>',
                     }
                 ]
             },
@@ -519,24 +519,40 @@ CKEDITOR.dialog.add('containerstyle', function (editor) {
             //     this.setupContent(container);
             // }
             var _this = this;
-            var initNodeStyleFun = function(){
+            
+            // 隐藏iframe直到内容加载完成
+            $('.containerstyleHtml').hide();
+            
+            var init = function() {
+                $('.containerstyleHtml').show();
                 if (_this._.currentTabId === 'nodeStyle') {
                     var lastElement = editor.elementPath() ? editor.elementPath().lastElement : null;
                     window.initNodeStyle && window.initNodeStyle(lastElement ? $(lastElement.$) : $(editor.document.getBody().$));
                 }
             }
-            // 防止iframe未加载完成时window.initNodeStyle为undefined
+            
             var iframe = $('.containerstyleHtml')[0];
-            if (iframe.attachEvent){
-                iframe.attachEvent("onload", function(){
-                    initNodeStyleFun();
-                });
-            } else {
-                iframe.onload = function(){
-                    initNodeStyleFun();
-                };
-            }
-            initNodeStyleFun();
+            // 使用getTplHtml加载模板内容
+            var sdkHost = editor.HMConfig.sdkHost || '';
+            $.getTplHtml(sdkHost + '/plugins/containerstyle/dialogs/nodeStyle.html', {
+                sdkHost: sdkHost
+            }, function(bodyHtml) {
+                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(bodyHtml);
+                iframeDoc.close();
+                
+                // 设置onload事件
+                if (iframe.attachEvent) {
+                    iframe.attachEvent("onload", function() {
+                        init();
+                    });
+                } else {
+                    iframe.onload = function() {
+                        init();
+                    };
+                }
+            });
         },
         onOk: function () {
             var container = editor.elementPath().lastElement;

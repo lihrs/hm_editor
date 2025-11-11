@@ -6,15 +6,26 @@ commonHM.component['documentModel'].fn({
      * 设置文档修订模式
      * @param {Boolean} reviseMode 是否启用修订模式
      */
-    setReviseMode: function(reviseMode) {
+    setReviseMode: function(reviseMode,retainModify) {
         var _t = this;
         _t.editor.HMConfig.reviseMode = reviseMode;
         if (reviseMode) {
             _t.editor.commands["revise"].frozen = false;
             _t.editor.commands["revise"].enable();
             _t.editor.execCommand('revise', {reviseState: '显示修订'});
-        } else if (!reviseMode && _t.editor.reviseModelOpened) {
+        } else if (!reviseMode) {
             _t.editor.reviseModelOpened = reviseMode;
+            if (retainModify!==undefined && retainModify!==null) {
+                if(retainModify){
+                    _t.acceptAllRevisions();
+                }else{
+                    _t.rejectAllRevisions();
+                }
+                
+                _t.editor.commands["revise"].frozen = true;
+                _t.editor.commands["revise"].disable();
+                return;
+            }
 
             // 创建确认对话框
             var $dialog = $('<div class="revise-confirm-dialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; min-width: 400px;">' +
@@ -174,13 +185,18 @@ commonHM.component['documentModel'].fn({
             var $widgetContainer = $element.closest('[data-hm-widgetid]');
             var revisionCode = $widgetContainer.length > 0 ? $widgetContainer.attr('data-hm-widgetid') : '';
 
+            // 向上查找带有 data-hm-code 属性的父元素
+            var parentData = _t._findParentWithDataHmCode($element);
+
             var revision = {
                 traceId: $element.attr('trace_id') || '',
                 modifier: $element.attr('hm-modify-userName') || '',
                 modifyTime: $element.attr('hm-modify-time') || '',
                 modifyType: '新增',
                 content: directTextContent,
-                code: revisionCode // 添加病历编码字段
+                docCode: revisionCode, // 添加病历编码字段
+                eleCode: parentData.dataHmCode, // 添加父元素的 data-hm-code
+                eleName: parentData.dataHmName // 添加父元素的 data-hm-name
             };
 
             revisionHistory.push(revision);
@@ -202,13 +218,18 @@ commonHM.component['documentModel'].fn({
             var $widgetContainer = $element.closest('[data-hm-widgetid]');
             var revisionCode = $widgetContainer.length > 0 ? $widgetContainer.attr('data-hm-widgetid') : '';
 
+            // 向上查找带有 data-hm-code 属性的父元素
+            var parentData = _t._findParentWithDataHmCode($element);
+
             var revision = {
                 traceId: $element.attr('trace_id') || '',
                 modifier: $element.attr('hm-modify-userName') || '',
                 modifyTime: $element.attr('hm-modify-time') || '',
                 modifyType: '删除',
                 content: directTextContent,
-                code: revisionCode // 添加病历编码字段
+                docCode: revisionCode, // 添加病历编码字段
+                eleCode: parentData.dataHmCode, // 添加父元素 数据元的 data-hm-code
+                eleName: parentData.dataHmName // 添加父元素 数据元的 data-hm-name
             };
 
             revisionHistory.push(revision);
@@ -216,8 +237,8 @@ commonHM.component['documentModel'].fn({
 
         // 按修改开始时间倒序排列
         revisionHistory.sort(function(a, b) {
-            var timeA = a.startTime || '';
-            var timeB = b.startTime || '';
+            var timeA = a.modifyTime || '';
+            var timeB = b.modifyTime || '';
 
             // 如果时间为空，则排在后面
             if (!timeA && !timeB) return 0;
@@ -260,5 +281,30 @@ commonHM.component['documentModel'].fn({
         });
 
         return directText;
+    },
+
+    /**
+     * 向上查找带有 data-hm-code 属性的父元素
+     * @param {jQuery} $element jQuery元素对象
+     * @returns {Object} 包含 data-hm-code 和 data-hm-name 的对象
+     */
+    _findParentWithDataHmCode: function($element) {
+        var $parent = $element.parent();
+        
+        while ($parent.length > 0 && $parent[0] !== document.body) {
+            var dataHmCode = $parent.attr('data-hm-code');
+            if (dataHmCode) {
+                return {
+                    dataHmCode: dataHmCode,
+                    dataHmName: $parent.attr('data-hm-name') || ''
+                };
+            }
+            $parent = $parent.parent();
+        }
+        
+        return {
+            dataHmCode: '',
+            dataHmName: ''
+        };
     }
 });

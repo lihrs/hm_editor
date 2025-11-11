@@ -61,6 +61,10 @@
             var txt = $node.text().replace(/\u200B/g, '');
             var currentDate = new Date();
 
+            // 缓存当前选择的值到节点上，用于后续判断是否发生变化
+            var cachedValue = txt || '';
+            $node.attr('_cachedTimeboxValue', cachedValue);
+
             var $div = $('#interactDiv');
             if(timeFlag){
                 $div.css('min-width','230px');
@@ -270,15 +274,41 @@
 
             $div.find('#timeConfirm').on('click', function () {
                 var val = $interactTimebox.val();
+                var newValue = '';
+                
                 if (val == '') {
-                    $node.text('\u200B');
+                    newValue = '';
                 } else {
                     if (timeOption == 'date_han' && val.indexOf("-")>=0) {
                         val = val.replace('-', '年').replace('-', '月') + '日';
                     } else if (timeOption == 'datetime_han' && val.indexOf("-")>=0) {
                         val = val.replace('-', '年').replace('-', '月').replace(' ', '日').replace(':', '时') + '分';
                     }
-                    $node.text(val);
+                    newValue = val;
+                }
+                
+                // 在赋值之前，获取缓存的值并进行比较
+                var previousValue = $node.attr('_cachedTimeboxValue') || '';
+                
+                // 判断当前选择的值是否和缓存值不一样
+                if (previousValue !== newValue) {
+                    // 调用 onElementChange 事件
+                    if (typeof window.onElementChange === 'function') {
+                        try {
+                            window.onElementChange($node[0]);
+                        } catch (error) {
+                            console.error('onElementChange 执行失败:', error);
+                        }
+                    }
+                }
+                
+                // 更新缓存值为新值
+                $node.attr('_cachedTimeboxValue', newValue);
+                
+                if (val == '') {
+                    $node.text('\u200B');
+                } else {
+                    $node.text(newValue);
                 }
                 $div.hide();
                 var trueDate = $interactTimebox.datetimepicker('getValue');
@@ -294,6 +324,25 @@
                 $node.removeClass('bgred');
             })
             $div.find('#timeClear').on('click', function () {
+                var newValue = '';
+                
+                // 在赋值之前，获取缓存的值并进行比较
+                var previousValue = $node.attr('_cachedTimeboxValue') || '';
+                
+                // 判断当前选择的值是否和缓存值不一样
+                if (previousValue !== newValue) {
+                    // 调用 onElementChange 事件
+                    if (typeof window.onElementChange === 'function') {
+                        try {
+                            window.onElementChange($node[0]);
+                        } catch (error) {
+                            console.error('onElementChange 执行失败:', error);
+                        }
+                    }
+                }
+                
+                // 更新缓存值为新值
+                $node.attr('_cachedTimeboxValue', newValue);
 
                 $node.text('\u200B');
                 $div.hide();
@@ -464,6 +513,17 @@
             var resultInput = $resultbox.find('input');
             var tt = $node.text() || '';
             resultInput.val(tt);
+            
+            // 缓存当前选择的值到节点上，用于后续判断是否发生变化
+            var cachedValue = '';
+            if (tt.replace(/\u200B/g, '') === '') {
+                // 如果是零宽字符或空，缓存值为空字符串
+                cachedValue = '';
+            } else {
+                // 否则缓存当前的文本值（去掉零宽字符）
+                cachedValue = tt.replace(/\u200B/g, '') || '';
+            }
+            $node.attr('_cachedSearchboxValue', cachedValue);
             resultInput.attr("name", $node.attr("_name") || "");
             resultInput.attr("code", $node.attr("_code") || "");
             resultInput.attr("order", $node.attr("_order") || "");
@@ -571,6 +631,26 @@
                         }
                     }
                 }
+                
+                // 在赋值之前，获取缓存的值并进行比较
+                var previousValue = $node.attr('_cachedSearchboxValue') || '';
+                var newValue = resultInput.val().replace(/\u200B/g, '') || '';
+                
+                // 判断当前选择的值是否和缓存值不一样
+                if (previousValue !== newValue) {
+                    // 调用 onElementChange 事件
+                    if (typeof window.onElementChange === 'function') {
+                        try {
+                            window.onElementChange($node[0]);
+                        } catch (error) {
+                            console.error('onElementChange 执行失败:', error);
+                        }
+                    }
+                }
+                
+                // 更新缓存值为新值
+                $node.attr('_cachedSearchboxValue', newValue);
+                
                 if (resultInput.val().replace(/\u200B/g, '') == '') {
                     $node.text('\u200B');
                     $pairNode.text('\u200B');
@@ -1357,6 +1437,17 @@
             var jointsymbol = $node.attr('_jointSymbol') || ',';
             var singleSelFlg = selectType == '单选';
             var $div = $('#interactDiv');
+            
+            // 缓存当前选择的值到节点上，用于后续判断是否发生变化
+            var cachedValue = '';
+            if ($node.attr('_placeholdertext') === 'true') {
+                // 如果是占位符状态，缓存值为空字符串
+                cachedValue = '';
+            } else {
+                // 否则缓存当前的文本值
+                cachedValue = txt || '';
+            }
+            $node.attr('_cachedDropboxValue', cachedValue);
             //下拉多选增加确定按钮
             var multiSelectConfirmBtn = '<button style="margin:6px 5px;padding:0 5px;'+(singleSelFlg?'display:none;':'')+'" id="multiSelectConfirm" class="btn btn-primary">确定</button>';
             var $interactDropbox = $('<div><input id="searchInput" type="text" style="margin:5px;"/><button id="searchBtn" style="margin:6px 5px;padding:0 5px;" class="btn btn-primary">搜索</button>' + multiSelectConfirmBtn + '</div><div class="dropdown-menu1"><ul role="menu" style="max-width:300px;"></ul></div>');
@@ -1393,7 +1484,7 @@
 
 
             $interactDropbox.on('click', function (evt) {
-                var $target = $(evt.target);
+                var $target = $(evt.target); 
                 // 选中 a
                 if ($target.is('a')) {
                     var curCheck = $target.children('input').is(":checked");
@@ -1455,7 +1546,26 @@
                         valStr += jointsymbol + str;
                     }
                 }
-
+                
+                // 在赋值之前，获取缓存的值并进行比较
+                var previousValue = $node.attr('_cachedDropboxValue') || '';
+                var newValue = valStr || '';
+                
+                // 判断当前选择的值是否和缓存值不一样
+                if (previousValue !== newValue) {
+                    // 调用 onElementChange 事件
+                    if (typeof window.onElementChange === 'function') {
+                        try {
+                            window.onElementChange($node[0]);
+                        } catch (error) {
+                            console.error('onElementChange 执行失败:', error);
+                        }
+                    }
+                }
+                
+                // 更新缓存值为新值
+                $node.attr('_cachedDropboxValue', newValue);
+                
                 if (!valStr) {
                     var placeholder = $node.parent('.new-textbox').attr('_placeholder');
                     $node.html(placeholder);

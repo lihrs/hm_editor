@@ -272,8 +272,10 @@
     </div>
 
     <script>
+        var parentWindow = window.parent;
+        
         // 接收父窗口传递的数据
-        window.renderDocumentTree = function(structure, lang) {
+        parentWindow.renderDocumentTree = function(structure, lang) {
             var container = document.getElementById('documentTreeContent');
             
             // 显示文档信息
@@ -404,8 +406,8 @@
                     
                     // 通知父窗口跳转
                     try {
-                        if (window.parent && window.parent.jumpToElement) {
-                            window.parent.jumpToElement(section, elementIndex, structure);
+                        if (parentWindow && parentWindow.jumpToElement) {
+                            parentWindow.jumpToElement(section, elementIndex, structure);
                         }
                     } catch (e) {
                         console.error('跳转错误:', e);

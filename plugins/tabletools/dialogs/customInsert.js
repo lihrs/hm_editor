@@ -25,12 +25,20 @@
         ]
         return {
             title: type === 'customInsertRow' ? tableLangs.row.customInsert : tableLangs.column.customInsert,
-            minWidth: 350,
+            minWidth: 400,
             minHeight: 100,
             contents: [
                 {
                     id: 'customInsert',
                     elements: [{
+                        type: 'html',
+                        html: '<style>' +
+                            '.cke_dialog_ui_labeled_content .cke_dialog_ui_input_select { width: 100px !important; min-width: 100px !important;display: inline-block !important; }' +
+                            '.cke_dialog_ui_labeled_content .cke_dialog_ui_input_select select { width: 100px !important; min-width: 100px !important; box-sizing: border-box !important; }' +
+                            '.cke_dialog_ui_labeled_content .cke_dialog_ui_input_select:focus { width: 100px !important; min-width: 100px !important; }' +
+                            '.cke_dialog_ui_labeled_content .cke_dialog_ui_input_select select:focus { width: 100px !important; min-width: 100px !important; }' +
+                            '</style>',
+                    },{
                         type: 'hbox',
                         children: [
                             {
@@ -38,7 +46,8 @@
                                 type: 'select',
                                 'default': type === 'customInsertRow' ? 'before' : 'left',
                                 label: '插入位置',
-                                controlStyle: 'width:130px',
+                                // inputStyle: 'width:100px !important',
+                                controlStyle: 'width:100px !important',
                                 items: type === 'customInsertRow' ? rowInsertDirection : columnInsertDirection,
                                 commit: function (data) {
                                     var id = this.id;

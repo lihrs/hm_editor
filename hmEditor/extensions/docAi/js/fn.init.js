@@ -38,7 +38,7 @@ commonHM.component['hmAi'].fn({
         var _t = this;
         _t.$widget = _t.$body.find('div[data-hm-widgetid="' + _t.emrId + '"]');
         if (!_t.editorTool) {
-            console.warn('editorTool is not available');
+            // console.warn('editorTool is not available');
             return;
         }
         _t.editorTool.callCommand('checkDataSource', function (list) {

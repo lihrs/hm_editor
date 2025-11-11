@@ -506,7 +506,7 @@
 					type: 'html',
 					id: 'documentTreeContainer',
 					className: 'cke_document_tree_container',
-					html: '<iframe id="cke_document_tree_iframe" src="' + CKEDITOR.plugins.getPath('documenttree') + 'dialogs/tree.html" style="width: 100%; height: 400px; border: none; border-radius: 4px;"></iframe>',
+					html: '<iframe id="cke_document_tree_iframe" style="width: 100%; height: 400px; border: none; border-radius: 4px;"></iframe>',
 					onLoad: function() {
 						// 容器加载完成后的处理
 					}
@@ -519,31 +519,40 @@
 				// 解析文档结构
 				var structure = parseDocumentStructure(editor);
 				
-				// 获取iframe
-				var iframe = CKEDITOR.document.getById('cke_document_tree_iframe');
-				if (iframe) {
-					// 渲染函数
-					var renderTree = function() {
-						var iframeWindow = iframe.$.contentWindow;
-						if (iframeWindow && iframeWindow.renderDocumentTree) {
-							// 渲染文档树
-							iframeWindow.renderDocumentTree(structure, editor.lang.documenttree || {
-								noContent: '当前文档没有可显示的数据元内容'
-							});
-							
-							// 设置跳转函数
-							iframeWindow.parent.jumpToElement = function(section, elementIndex, structureData) {
-								jumpToElement(editor, section, elementIndex, structure);
-							};
-						}
+				// 隐藏iframe直到内容加载完成
+				$('#cke_document_tree_iframe').hide();
+				
+				var init = function() {
+					$('#cke_document_tree_iframe').show();				
+					// 渲染文档树
+					window.renderDocumentTree && window.renderDocumentTree(structure, editor.lang.documenttree || {
+						noContent: '当前文档没有可显示的数据元内容'
+					});
+					// 设置跳转函数
+					window.jumpToElement = function(section, elementIndex, structureData) {
+						jumpToElement(editor, section, elementIndex, structure);
 					};
-					
-					// 等待iframe加载完成
-					iframe.on('load', renderTree);
-					
-					// 延迟执行，确保iframe完全加载
-					setTimeout(renderTree, 500);
 				}
+				
+				var iframe = $('#cke_document_tree_iframe')[0];
+				// 使用getTplHtml加载模板内容
+				$.getTplHtml(CKEDITOR.plugins.getPath('documenttree') + 'dialogs/tree.html', {}, function(bodyHtml) {
+					var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+					iframeDoc.open();
+					iframeDoc.write(bodyHtml);
+					iframeDoc.close();
+					
+					// 设置onload事件
+					if (iframe.attachEvent) {
+						iframe.attachEvent("onload", function() {
+							init();
+						});
+					} else {
+						iframe.onload = function() {
+							init();
+						};
+					}
+				});
 				
 				// 设置对话框样式 - 非模态样式
 				var dialogElement = this.getElement().getFirst();

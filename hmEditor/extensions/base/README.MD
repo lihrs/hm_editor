@@ -835,10 +835,10 @@ HMEditor.setTemplateDatasource({
 HMEditor.setDocReviseMode(true);
 
 // 关闭修订模式
-HMEditor.setDocReviseMode(false);
+HMEditor.setDocReviseMode(false,retainModify);
 ```
 
-该方法用于控制文档的修订模式。开启修订模式时，所有的编辑操作（如插入、删除、修改等）都会被标记为修订，并显示修订标记;关闭修订模式时，系统将弹出对话框，提示用户选择"全部接受修订"或"全部拒绝修订"，关闭修订后历史操作会被去除。
+该方法用于控制文档的修订模式。开启修订模式时，所有的编辑操作（如插入、删除、修改等）都会被标记为修订，并显示修订标记;关闭修订模式时，retainModify传这个参数则不用弹框提示（true：保留修改内容，false：不保留修改内容），不传则系统将弹出对话框，提示用户选择"全部接受修订"或"全部拒绝修订"，关闭修订后历史操作会被去除。
 
 ### 16. setDocMultiPartHeader 方法
 

@@ -119,6 +119,7 @@ table td, table th {
     border: 1px dashed black;
     /*text-align: left;*/
 }
+table .hm-table-horizontal-header { font-weight:400;text-align:center; }
 
 table td._text-top{
     vertical-align: top;

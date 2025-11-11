@@ -33,7 +33,7 @@ commonHM.component['hmAi'].fn({
         var _t = this;
         var maysonWindow = _t.utils.getSDKWindow();
         if (!maysonWindow || !maysonWindow.mayson) {
-            console.error('无法获取SDK窗口或mayson对象不存在');
+            // console.error('无法获取SDK窗口或mayson对象不存在');
             return;
         }
         // 获取编辑器最外层的html元素

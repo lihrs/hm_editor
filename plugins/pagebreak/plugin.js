@@ -186,7 +186,7 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
             // return; // bbbbbbbbbb
             var features = '._printHide,._paragraphHide,.hide_class,' +
                 '.new-textbox,[data-hm-node],[_placeholderText],.cke_page_split_mark,.continuation-identifier';
-            features+=',del';
+            // features+=',del';
             $body.find(features).addClass('print-preview');
 
 

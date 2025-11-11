@@ -56,23 +56,55 @@ function getPdfPath(path, params, syncType, download,callback) {
         success: function (res) {
             var url = getHost() + '/' + res.path+'#toolbar=0';
             if(download){
-
-                // 创建一个临时的a标签来强制下载
-                var downloadLink = document.createElement('a');
-                downloadLink.href = url;
-                downloadLink.download = '文档_' + new Date().getTime() + '.pdf'; // 指定下载文件名
-                downloadLink.target = '_blank'; // 打开新窗口
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
-
-                // 延迟删除服务器上的PDF文件
-                setTimeout(function() {
-                    deletepdf(res.path);
-                }, 3000);
-                if (layer) {
-                    layer.remove();
-                }
+                // 在 iframe 环境中，直接使用 URL 和 download 属性可能无法触发下载，而是打开新窗口
+                // 因此先通过 AJAX 获取 blob，然后使用 blob URL 来强制下载
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    data: {},
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(blob) {
+                        // 创建Blob URL
+                        var blobUrl = URL.createObjectURL(blob);
+                        
+                        // 创建一个临时的a标签来强制下载
+                        var downloadLink = document.createElement('a');
+                        downloadLink.href = blobUrl;
+                        downloadLink.download = '文档_' + new Date().getTime() + '.pdf'; // 指定下载文件名
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        
+                        // 释放Blob URL 并删除服务器文件
+                        setTimeout(function() {
+                            URL.revokeObjectURL(blobUrl);
+                            deletepdf(res.path);
+                        }, 3000);
+                        
+                        if (layer) {
+                            layer.remove();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('下载PDF失败:', error);
+                        if (layer) {
+                            layer.remove();
+                        }
+                        // 如果获取blob失败，回退到直接下载方式
+                        var downloadLink = document.createElement('a');
+                        downloadLink.href = url;
+                        downloadLink.download = '文档_' + new Date().getTime() + '.pdf';
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        
+                        setTimeout(function() {
+                            deletepdf(res.path);
+                        }, 3000);
+                    }
+                });
                 return;
             }
             $.ajax({
@@ -271,10 +303,10 @@ function setPrintPageHFooterStyle(doc) {
 
 function doPrintChrome(editor, syncType, timeout,download, callback) {
     // 使用http打印
-
     var head = editor.document.getHead().clone(true);
     var body = editor.document.getBody();
     var config = getConfig(editor);
+    var shouldShowReviseInPrint = editor.reviseStateBeforePrint === 'show'; // 打印前修订模式状态
     var printConfig = config.printConfig||{};
     if (config.watermark && config.watermark.watermarkType) {
         if (!config.watermark.watermarkPrint ) {
@@ -431,7 +463,8 @@ function doPrintChrome(editor, syncType, timeout,download, callback) {
     dealPrintGroupTable($(body.$));
     $(body.$).find('span[diag]').css('display','none');
     $(body.$).find('span[operation]').css('display','none');
-    removeDocReminder(body);
+    removeDocReminder(body); 
+    
     // 如果不保存 pdf 的话可以直接在用户电脑上打印
     // 分页模式打印是否生成pdf
     if (!printConfig.pageBreakPrintPdf && !download) {
@@ -439,7 +472,6 @@ function doPrintChrome(editor, syncType, timeout,download, callback) {
         callback && callback();
         return;
     }
-
 
     var optionsParams = {
         "options": {
@@ -466,6 +498,11 @@ function doPrintChrome(editor, syncType, timeout,download, callback) {
     var headHtml = head.getOuterHtml();
     timeout = isNaN(timeout) ? 100 : timeout;
 
+    // 根据打印前的修订模式状态处理打印内容
+    var _class = shouldShowReviseInPrint?'hm-revise-show':'hm-revise-hide';
+    $(body.$).addClass(_class);
+    addReviseStyle(body, shouldShowReviseInPrint);
+
     // checkDaiwenFont(body, papareHeaderStr, papareFooterStr);
     var bodyContent = body.getOuterHtml();
 
@@ -489,6 +526,12 @@ function doPrintChrome(editor, syncType, timeout,download, callback) {
         }
     }
     optionsParams.recordIds = recordIds;
+    
+    // 恢复修订模式状态（如果之前修改了）
+    if (!shouldShowReviseInPrint && editor.reviseStateBeforePrint === 'hide') {
+        $body.removeClass('hm-revise-hide').addClass('hm-revise-show');
+    }
+    
     var timeIndex = setTimeout(function () {
         getPdfPath('/emr-print/getChromeHtml2PdfPath', optionsParams, syncType, download, callback);
         clearTimeout(timeIndex);
@@ -499,6 +542,7 @@ function doPrint(editor, syncType, timeout, download,callback) {
     var p;
     var config = getConfig(editor);
     var printConfig = config.printConfig||{};
+    var shouldShowReviseInPrint = editor.reviseStateBeforePrint === 'show'; // 打印前修订模式状态
     var head = editor.document.getHead().clone(true);
     var body = editor.document.getBody();
 
@@ -610,9 +654,17 @@ function doPrint(editor, syncType, timeout, download,callback) {
                 headerOpacity = 'opacity:0;';
             }
             // css 写在 print.css 里面没用?
-            papareHeaderStr = '<div style="font-family:SimSun;line-height:1.5;margin-left:' + paperMargin.left +
-                ';'+headerOpacity+'margin-right:' + paperMargin.right + '">' +
-                '<style>p{margin:0!important;}table td, table th{padding:0!important;}</style>' +
+            // 把style 位置放到最前面，确保样式优先级最高
+            var _style = '<style>p{margin:0!important;}table td, table th{padding:0!important;}'+
+            '.hm-revise-hide .hm_revise_ins {text-decoration: none !important;}'+
+            '.hm-revise-hide .hm_revise_del {display: none;}'+
+            '.hm-revise-show .hm_revise_ins {color: red;text-decoration: none !important;}'+
+            '.hm-revise-show .hm_revise_del {display: inline;color: initial;text-decoration-line: line-through !important;'+
+            'text-decoration-color: red !important;}.hm-revise-show .hm_self_ins {color: initial;}'+'</style>';
+            var _class = shouldShowReviseInPrint?'hm-revise-show':'hm-revise-hide';
+
+            papareHeaderStr = _style + '<div style="font-family:SimSun;line-height:1.5;margin-left:' + paperMargin.left +
+                ';'+headerOpacity+'margin-right:' + paperMargin.right +'" class="'+ _class +'" >' + 
                 papareHeaderStr + '</div>';
         }
 
@@ -778,18 +830,33 @@ function doPrint(editor, syncType, timeout, download,callback) {
     $(body.$).find('span[diag]').css('display','none');
     $(body.$).find('span[operation]').css('display','none');
     // 移除质控提醒 及  ai 提醒
-    removeDocReminder(body);
+    removeDocReminder(body); 
+
+    addReviseStyle(body, shouldShowReviseInPrint);
+
     var headHtml = head.getOuterHtml();
     timeout = isNaN(timeout) ? 100 : timeout;
     // var _simPageList = $(body.$).find('div[_simPage]');
-    checkDaiwenFont(body, papareHeaderStr, papareFooterStr);
+    checkDaiwenFont(body, papareHeaderStr, papareFooterStr); 
+    
     var bodyContent = body.getOuterHtml();
-    optionsParams['html'] = '<!DOCTYPE html><html style="padding-top: 0;">' + headHtml + bodyContent + '</html>';
+    optionsParams['html'] = '<!DOCTYPE html><html style="padding-top: 0;">' + headHtml + bodyContent + '</html>'; 
+    
     $(body.find('.emrWidget-content').$).css('display', 'block');
     var timeIndex = setTimeout(function () {
         getPdfPath('/emr-print/getPdfPath', optionsParams, syncType,download, callback);
         clearTimeout(timeIndex);
     }, timeout);
+}
+function addReviseStyle(body, shouldShowReviseInPrint){
+    if(shouldShowReviseInPrint){
+        $(body.$).find('.hm_revise_ins').each(function() {
+            $(this).attr('style', 'color: red !important;');
+        });
+        $(body.$).find('.hm_revise_del').each(function() {
+            $(this).attr('style', 'display: inline !important; color: initial !important; text-decoration: line-through !important; color: red !important;');
+        });
+    }
 }
 // 移除质控提醒 及  ai 提醒
 function removeDocReminder(body){
@@ -943,6 +1010,26 @@ function checkDaiwenFont(body, papareHeaderStr, papareFooterStr) {
                             left: documentElement.scrollLeft
                         };
                     }
+                    // 记录打印前的修订模式状态
+                    var $body = $(editor.document.getBody().$);
+                    if ($body.hasClass('hm-revise-hide')) {
+                        editor.reviseStateBeforePrint = 'hide';
+                        // 不在这里临时显示修订，而是在打印内容处理时根据状态决定
+                    } else if ($body.hasClass('hm-revise-show')) {
+                        editor.reviseStateBeforePrint = 'show';
+                    } else {
+                        editor.reviseStateBeforePrint = 'unknown';
+                    }
+                    // 记录打印前所有 data-hm-widgetid div 的 contenteditable 值
+                    editor.widgetContenteditableBeforePrint = {};
+                    var $widgets = $body.find('[data-hm-widgetid]');
+                    $widgets.each(function() {
+                        var widgetId = $(this).attr('data-hm-widgetid');
+                        var contenteditable = $(this).prop('contenteditable');
+                        if (widgetId) {
+                            editor.widgetContenteditableBeforePrint[widgetId] = contenteditable;
+                        }
+                    });
                     // 只读的情况下不会产生镜像. 另外如果 第二个参数中的 'forceUpdate' 设置为 true 时也不会产生镜像, 会影响后续判断. 所以不要设置为 true.
                     editor.imageBeforePrint = editor.fire('lockSnapshot', {tags: ['beforePrint']}).image;
                     if(!editor.imageBeforePrint){
@@ -972,6 +1059,17 @@ function checkDaiwenFont(body, papareHeaderStr, papareFooterStr) {
                                     editor.document.$.defaultView.scrollTo(editor.scroollBeforePrint.left, editor.scroollBeforePrint.top);
                                 }
                                 delete editor.scroollBeforePrint;
+                            }
+                            // 恢复打印前 data-hm-widgetid div 的 contenteditable 值
+                            if (editor.widgetContenteditableBeforePrint) {
+                                var $body = $(editor.document.getBody().$);
+                                for (var widgetId in editor.widgetContenteditableBeforePrint) {
+                                    var $widget = $body.find('[data-hm-widgetid="' + widgetId + '"]');
+                                    if ($widget.length > 0) {
+                                        $widget.prop('contenteditable', editor.widgetContenteditableBeforePrint[widgetId]);
+                                    }
+                                }
+                                delete editor.widgetContenteditableBeforePrint;
                             }
                         } catch (e) {
                             console.error(e)
@@ -1003,6 +1101,17 @@ function checkDaiwenFont(body, papareHeaderStr, papareFooterStr) {
                                     }
                                     delete editor.scroollBeforePrint;
                                 }
+                                // 恢复打印前 data-hm-widgetid div 的 contenteditable 值
+                                if (editor.widgetContenteditableBeforePrint) {
+                                    var $body = $(editor.document.getBody().$);
+                                    for (var widgetId in editor.widgetContenteditableBeforePrint) {
+                                        var $widget = $body.find('[data-hm-widgetid="' + widgetId + '"]');
+                                        if ($widget.length > 0) {
+                                            $widget.prop('contenteditable', editor.widgetContenteditableBeforePrint[widgetId]);
+                                        }
+                                    }
+                                    delete editor.widgetContenteditableBeforePrint;
+                                }
                             } catch (e) {
                                 console.error(e)
                                 editor.showNotification('打印后恢复编辑状态失败, 请联系运维人员.', 'error');
@@ -1013,9 +1122,14 @@ function checkDaiwenFont(body, papareHeaderStr, papareFooterStr) {
                         if (!editor.traceShow) { //  打印前隐藏留痕
                             editor.execCommand('trace');
                         }
+                        // 恢复打印前的修订模式状态
                         var $body = $(editor.document.getBody().$);
-                        if ($body.hasClass('hm-revise-hide')) {
-                            showReviseModel($(editor.document.getBody().$));
+                        if (editor.reviseStateBeforePrint === 'hide') {
+                            // 如果打印前是隐藏状态，恢复隐藏
+                            hideReviseModel($body);
+                        } else if (editor.reviseStateBeforePrint === 'show') {
+                            // 如果打印前是显示状态，恢复显示
+                            showReviseModel($body);
                         }
 
 

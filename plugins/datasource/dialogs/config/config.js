@@ -89,15 +89,26 @@ function init() {
             $('input[_type="_searchreturn"]').not(this).prop('checked', false);
         }
     });
+    var allowModify = (window.HMConfig && window.HMConfig.allowModifyDatasource) || 
+    (window.parent && window.parent.HMConfig && window.parent.HMConfig.allowModifyDatasource) || 
+        false;
+    if (allowModify) {
+        $(".row input.ds-code").prop("disabled", false);
+        $("#autoGenerateCodeBtn").show();
+    } else {
+        $(".row input.ds-code").prop("disabled", true);
+        $("#autoGenerateCodeBtn").hide();
+    }
 }
 function textTypeChange(t){
     if(t == '下拉'){
         $('input[_type="_doubleclick"]').prop('checked',false);
         $('input[_type="_click"]').prop('checked',true);
-    }else if(t == '诊断' || t == '手术'){
-        $('input[_type="_click"]').prop('checked',false);
-        $('input[_type="_doubleclick"]').prop('checked',true);
     }
+    // else if(t == '诊断' || t == '手术'){
+    //     $('input[_type="_click"]').prop('checked',false);
+    //     $('input[_type="_doubleclick"]').prop('checked',true);
+    // }
 }
 function editDsInit(ele) {
     // if(!ele && !isLoad){
@@ -156,7 +167,7 @@ function changeTypeInit(val,texttype) {
     if(val == 'labelbox'){
     }else if(val == 'newtextbox'){
 
-        if(texttype == '诊断' || texttype == '手术' || texttype == '下拉'){
+        if(texttype == '下拉'){
             $('.row .c2').show();
             $('.row .c4,.row .c8').show();
         }
@@ -347,7 +358,8 @@ var dsSelect = {
                     $("#interact-search").attr('code', code);
                     $(".row input.ds-code").val(code);
                     $(".row input[_type=_placeholder]").val(name);
-                    changeDsInit(dsObj[name]);
+                 
+                    changeDsInit(dsObj[name] || {name: name, code: code});
                 })
             }
         }
@@ -361,7 +373,10 @@ var dsSelect = {
         $("#interact-search").attr('code', this.getCode(val));
     },
     get: function () {
-        return { 'data-hm-name': $("#interact-search").val() || '', 'data-hm-code': $("#interact-search").attr('code') || '' }
+        return { 
+            'data-hm-name': $("#interact-search").val() || '', 
+            'data-hm-code': $(".row input.ds-code").val() || $("#interact-search").attr('code') || '' 
+        }
     },
     getCode: function (name) {
         return (dsObj[name] || {})['code'] || '';
@@ -381,6 +396,8 @@ function setConfig(data) {
     }else{
         dsSelect.set(data['data-hm-name']);
         $("#interact-search").attr('disabled', true);
+        $(".row input.ds-code").attr('disabled', true);
+        $("#autoGenerateCodeBtn").hide();
     }
     //$("#dsInput").attr('disabled', true);
 
@@ -489,12 +506,23 @@ function config() {
     _dsObj = dsSelect.get();
     // 校验数据元
     var dsName = _dsObj['data-hm-name'] || '';
-
-    if(!dsObj[dsName]){
-        d['data-hm-code'] = '';
+    var dsCode = _dsObj['data-hm-code'] || '';
+    var allowModify = (window.HMConfig && window.HMConfig.allowModifyDatasource) || 
+                      (window.parent && window.parent.HMConfig && window.parent.HMConfig.allowModifyDatasource) || 
+                      false;
+    if (allowModify) {
+        // 支持自由输入的数据元名称和编码
+        d['data-hm-code'] = dsCode;
         d['data-hm-name'] = dsName;
-        return d;
+    }else{
+        if(!dsObj[dsName]){
+            d['data-hm-code'] = '';
+            d['data-hm-name'] = dsName;
+            return d;
+        }
     }
+
+
     // 输入
     var inputObj = parseEles($('.row>input[type=text]'));
 
@@ -522,8 +550,17 @@ function config() {
         // var ds2 = $("#interact-search2").val() || '';
         // var ds3 = $("#interact-search3").val() || '';
 
-        if (ds1 && dsObj[ds1]) {
+        // if (ds1 && dsObj[ds1]) {
+        //     _dsObj['_searchpair'] = ds1;
+        // }
+        if (ds1) {
             _dsObj['_searchpair'] = ds1;
+        }
+        
+        // 获取搜索类型选择值
+        var searchOption = $('select[_type="_searchoption"]').val() || '';
+        if (searchOption) {
+            _dsObj['_searchoption'] = searchOption;
         }
         // if (ds2) {
         //     dsObj['_gradePair'] = ds2;
@@ -832,4 +869,60 @@ function loadSearchOptions() {
         $('input[_type="_searchreturn"]').prop('checked', false);
 
     });
+}
+
+// 自动生成编码函数
+function autoGenerateCode() {
+    var maxNumber = 0;
+    var prefix = 'AUCD.';
+    
+    try {
+        // 从父窗口的编辑器 DOM 中查找所有带有 data-hm-code 属性的元素
+        var $body = null;
+        var editor = null;
+        
+        // 尝试通过多种方式获取编辑器实例和 body
+        // 方式1: 通过 parentWin.editorIns
+        if (parentWin && parentWin.editorIns) {
+            editor = parentWin.editorIns;
+        }   
+        // 如果找到了编辑器实例，获取其 document body
+        if (editor && editor.document) {
+            try {
+                var body = editor.document.getBody();
+                if (body && body.$) {
+                    $body = $(body.$);
+                }
+            } catch (e) {
+                console.warn('通过 editor.document.getBody() 获取 body 失败:', e);
+            }
+        }
+        
+
+        // 如果找到了 body，查找所有带有 data-hm-code 属性的元素
+        if ($body && $body.length > 0) {
+            var $elements = $body.find('[data-hm-code]');
+            $elements.each(function() {
+                var code = $(this).attr('data-hm-code') || '';
+                if (code && code.indexOf(prefix) === 0) {
+                    // 提取序号部分（AUCD.后面的数字）
+                    var numberPart = code.substring(prefix.length);
+                    // 尝试转换为数字
+                    var number = parseInt(numberPart, 10);
+                    if (!isNaN(number) && number > maxNumber) {
+                        maxNumber = number;
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.error('获取编辑器 DOM 失败:', e);
+    }
+    
+    // 生成新编码：最大序号 + 1，格式化为5位数字
+    var newNumber = maxNumber + 1;
+    var newCode = prefix + ('00000' + newNumber).slice(-5);
+    
+    // 设置到编码输入框
+    $(".row input.ds-code").val(newCode);
 }

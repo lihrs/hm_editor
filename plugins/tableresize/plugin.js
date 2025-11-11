@@ -60,6 +60,7 @@
 		setPillarDimensions( table.$.tBodies[ 0 ] );
 		setPillarDimensions( table.$.tFoot );
 
+
 		{
 			// Loop thorugh all cells, building pillars after each one of them.
 			// 看看第一行的格子的x轴都在哪, 如果第一行是合并行单元格, 就往后面的行看
@@ -116,16 +117,16 @@
 				// The pillar should reflects exactly the shape of the hovered
 				// column border line.
 				pillars.push( {
-					table: table,
-					colgroup: colgroup,
-					index: pillarIndex,
-					x: pillarLeft - pillarWidth / 2,
-					y: pillarPosition.y,
-					boundedTd: td,
-					width: pillarWidth,
-					height: pillarHeight,
-					rtl: rtl
-				} );
+                    table: table,
+                    colgroup: colgroup,
+                    index: pillarIndex,
+                    x: pillarLeft - pillarWidth / 2,
+                    y: table.getDocumentPosition().y, // 使用表格的y位置
+                    boundedTd: td,
+                    width: pillarWidth,
+                    height: table.$.offsetHeight, // 使用整个表格的高度
+                    rtl: rtl
+                } );
 			}
 			for (colIndex = 0; colIndex < pillars.length - 1; colIndex++) {
 				pillars[colIndex].nextBoundedTd = pillars[colIndex + 1].boundedTd;
@@ -283,8 +284,8 @@
 						var tbody=table.$.tBodies[0];//获取表格tbody
 						var rows= !tbody? []: tbody.rows;
 						var mapTable = CKEDITOR.tools.buildTableMap(table);
-						//更改表格宽度时需考虑合并单元格的情况,将合并的几列的宽度相加
-						for (var i = 0; i < rows.length; i++) {
+						//更改表格宽度时需考虑合并单元格的情况,将合并的几列的宽度相加 
+						for (var i = 0; i < mapTable.length; i++) { // 调整i的对比长度为mapTable.length,而不是rows.length,因为会存在thead
 							if (mapTable[i][pillar.index + 1]) {
 								setTableWidth(pillar, pillar.index + 1, mapTable, i, usePercent);
 							}

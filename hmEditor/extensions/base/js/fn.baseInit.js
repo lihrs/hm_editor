@@ -144,7 +144,8 @@ HMEditor.fn({
             printConfig: _t.options.printConfig || {},
             customParams: _t.options.customParams || {}, // 自定义参数 动态数据源接口入参
             editShowPaddingTopBottom: _t.options.editShowPaddingTopBottom || false, // 编辑时纸张设置里面的上下边距是否有效，默认为false
-            multiPartHeader: _t.options.multiPartHeader || [] // 聚合病程实时分页时，页眉上转科换床信息
+            multiPartHeader: _t.options.multiPartHeader || [], // 聚合病程实时分页时，页眉上转科换床信息
+            allowModifyDatasource: _t.options.allowModifyDatasource || false // 允许修改数据元名称和编码
         }
         _t.editor.showTools = _t.options.hasOwnProperty('showTools') ? _t.options.showTools : true;
         delete _t.options.designMode;

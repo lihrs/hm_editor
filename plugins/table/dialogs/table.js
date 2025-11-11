@@ -189,6 +189,18 @@
                         tableTypeElement.onChange();
                     }, 10);
                 }
+                
+                // 在修改已有表格属性时禁用表格方向选择
+                if (command == 'tableProperties' && table) {
+                    var evaluateTypeSelect = this.getContentElement('info', 'evaluate-type');
+                    if (evaluateTypeSelect) {
+                        evaluateTypeSelect.disable();
+                    }
+                    var dataHeadersSelect = this.getContentElement('info', 'dataHeaders');
+                    if (dataHeadersSelect) {
+                        dataHeadersSelect.disable();
+                    }
+                }
             },
             onOk: function () {
                 var selection = editor.getSelection(),
@@ -207,7 +219,8 @@
                     if (!this._.selectedElement) {
                         var tbody = table.append(makeElement('tbody')),
                             rows = parseInt(info.txtRows, 10) || 0,
-                            cols = parseInt(info.txtCols, 10) || 0;
+                            cols = parseInt(info.txtCols, 10) || 0,
+                            evaluateType = info['evaluate-type'] || 'col';
 
                         for (var i = 0; i < rows; i++) {
                             row = tbody.append(makeElement('tr'));
@@ -221,13 +234,14 @@
                     // Modify the table headers. Depends on having rows and cols generated
                     // correctly so it can't be done in commit functions.
                     var headers = info.dataHeaders;
-                    if (headers == '' || (headers != '' && parseInt(headers) + 1 <= table.$.rows.length)) {
+                    var evaluateType = info['evaluate-type'] || 'col'; 
+                    // 修改表格标题行 竖向表格存在标题行
+                    if (evaluateType === 'col' && (headers == '' || (headers != '' && parseInt(headers) + 1 <= table.$.rows.length))) {
                         var $table = $(table.$);
                         var $tbody = $table.find('tbody');
                         var $thead = $table.find('thead');
                         $tbody.prepend($thead.children());
                         $thead.remove();
-
 
                         if (headers != '') {
                             var $trs = $table.find('tbody').children();
@@ -241,11 +255,19 @@
                                 $(this).replaceWith($(this).prop('outerHTML').replace(/td/g, 'th'))
                             });
                         }
+                    }else if(evaluateType === 'row' && (headers == '' || (headers != '' && parseInt(headers) + 1 <= table.$.rows[0].cells.length))) {
+                        // 横向表格存在标题行
+                        var $table = $(table.$);
+                        if(headers != ''){
+                            var $trs = $table.find('tbody').children();
+                            $trs.each(function(){
+                                for(var h = 0; h < headers; h++){
+                                    $(this).children().eq(h).addClass('hm-table-horizontal-header');
+                                }
+                            });
+                            
+                        }
                     }
-
-
-
-
                     // Should we make all first cells in a row TH?
                     if (!this.hasColumnHeaders && (headers == 'col' || headers == 'both')) {
                         for (row = 0; row < table.$.rows.length; row++) {
@@ -299,11 +321,15 @@
                     colgroup.insertBefore(table.getFirst());
 
                     // (wk 打印时) ie 不认 colgroup, 故在加 colgroup 的同时把表格宽度也加进来
-                    for (i = 0; i < tbody.$.rows.length; i++) {
-                        row = tbody.$.rows[i];
-                        for (j = 0; j < cols; j++) {
-                            row.cells[j].style.width = colWidth;
+                    if(evaluateType === 'col'){ // 竖向表格
+                        for (i = 0; i < tbody.$.rows.length; i++) {
+                            row = tbody.$.rows[i];
+                            for (j = 0; j < cols; j++) {
+                                row.cells[j].style.width = colWidth;
+                            }
                         }
+                    }else{ // 横向表格
+                        
                     }
 
                     // Override the default cursor position after insertElement to place
@@ -341,7 +367,7 @@
                             '.cke_dialog_ui_input_select select:focus { width: 200px !important;  }' +
                             '.select-narrow .cke_dialog_ui_input_select { width: 200px !important; }' +
                             '.select-wide .cke_dialog_ui_input_select { width: 200px !important; }' +
-                            '.cke_dialog_ui_checkbox { margin-left:0px; }' +
+                            '.cke_dialog_ui_checkbox { margin-left:0px; }' + 
                             '</style>'
                     },
                     {
@@ -546,14 +572,17 @@
                                 setup: function (selectedTable) {
                                     var t = $(selectedTable).attr('evaluate-type') || '';
                                     this.setValue(t);
-
                                 },
                                 commit: function (data, selectedTable) {
-                                    if (this.getValue()) {
-                                        $(selectedTable.$).attr('evaluate-type', this.getValue());
+                                    var value = this.getValue();
+                                    if (value) {
+                                        $(selectedTable.$).attr('evaluate-type', value);
                                     } else {
                                         $(selectedTable.$).removeAttr('evaluate-type');
                                     }
+                                    // 同时提交到data.info中，供表格创建时使用
+                                    if (!data.info) data.info = {};
+                                    data.info['evaluate-type'] = value;
                                 }
                             },{
                                 type: 'select',
@@ -572,7 +601,32 @@
                                     // Fill in the headers field.
                                     var dialog = this.getDialog();
 
-                                    var thCount = $(selectedTable.$).find('thead tr').length;
+                                    var $table = $(selectedTable.$);
+                                    var thCount = 0;
+                                    
+                                    // 获取表格方向
+                                    var evaluateType = $(selectedTable.$).attr('evaluate-type') || 'col';
+                                    
+                                    if (evaluateType === 'col') {
+                                        // 竖向表格：计算thead中tr的数量
+                                        thCount = $table.find('thead tr').length;
+                                    } else if (evaluateType === 'row') {
+                                        // 横向表格：计算前几列有hm-table-horizontal-header类
+                                        var $firstRow = $table.find('tbody tr').first();
+                                        if ($firstRow.length > 0) {
+                                            var cols = $firstRow.children().length;
+                                            for (var i = 0; i < cols; i++) {
+                                                var $cell = $firstRow.children().eq(i);
+                                                // 如果是th标签或有hm-table-horizontal-header类，则计入标题列
+                                                if ($cell.is('th') || $cell.hasClass('hm-table-horizontal-header')) {
+                                                    thCount++;
+                                                } else {
+                                                    // 遇到第一个非标题单元格就停止计数
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
 
                                     this.setValue(thCount == 0 ? '' : thCount);
                                 },
@@ -784,22 +838,24 @@
                         type: 'hbox',
                         style: 'margin-left: 12px;width:596px;',
                         widths: ['54%','46%'],
-                        children: [{
-                            id: 'pagebreakinside-tr-avoid',
-                            type: 'checkbox',
-                            requiredContent: 'table[right]',
-                            label: '打印时禁止单元格跨页断开',
-                            setup: function (selectedTable) {
-                                this.setValue(selectedTable.getAttribute('pagebreakinside-tr-avoid'));
-                            },
-                            commit: function (data, selectedTable) {
-                                if (this.getValue()) {
-                                    selectedTable.setAttribute('pagebreakinside-tr-avoid', this.getValue());
-                                } else {
-                                    selectedTable.removeAttribute('pagebreakinside-tr-avoid');
-                                }
-                            }
-                        },{
+                        children: [
+                        // {
+                        //     id: 'pagebreakinside-tr-avoid',
+                        //     type: 'checkbox',
+                        //     requiredContent: 'table[right]',
+                        //     label: '打印时禁止单元格跨页断开',
+                        //     setup: function (selectedTable) {
+                        //         this.setValue(selectedTable.getAttribute('pagebreakinside-tr-avoid'));
+                        //     },
+                        //     commit: function (data, selectedTable) {
+                        //         if (this.getValue()) {
+                        //             selectedTable.setAttribute('pagebreakinside-tr-avoid', this.getValue());
+                        //         } else {
+                        //             selectedTable.removeAttribute('pagebreakinside-tr-avoid');
+                        //         }
+                        //     }
+                        // },
+                        {
                             id: '_hm_copy_table_header',
                             type: 'checkbox',
                             requiredContent: 'table[right]',
@@ -816,12 +872,14 @@
                                     });
                                 }
                             }
-                        }]
-                    }, {
-                        type: 'hbox',
-                        style: 'margin-left: 12px;width:596px;',
-                        widths: ['54%','46%'],
-                        children: [{
+                        },
+                    // ]
+                    // }, {
+                    //     type: 'hbox',
+                    //     style: 'margin-left: 12px;width:596px;',
+                    //     widths: ['54%','46%'],
+                    //     children: [
+                            {
                             id: '_hm_table_disable_drag',
                             type: 'checkbox',
                             requiredContent: 'table[right]',
