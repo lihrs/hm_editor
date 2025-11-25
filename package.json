@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "author": "HM-Fe",
   "description": "The development version of CKEditor - JavaScript WYSIWYG web text editor.",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.9.0",
     "axios": "^1.6.8",

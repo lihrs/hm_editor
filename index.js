@@ -7,6 +7,7 @@ var mock = require('./src/mock');
 var bodyParser = require('body-parser');
 const mcpServer = require('./src/mcp-server.js');
 const aiChat = require('./src/mcp-client/mcp-chat.js');
+var path = require('path');
 
 app.use(bodyParser.json({ extended: true, limit: '200mb' })); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true ,limit: '200mb' } )); // for parsing application/x-www-form-urlencoded
@@ -44,6 +45,12 @@ app.engine('dot',async function (path, options, callback) {
 app.use(express.static(__dirname + '/'));
 app.use(express.static(__dirname + '/editorDist'));
 app.use(express.static(__dirname + '/hmEditor'));
+app.use('/core', express.static(path.join(__dirname, '/packages/core')));
+app.use('/skins', express.static(path.join(__dirname, '/packages/skins')));
+app.use('/lang', express.static(path.join(__dirname, '/packages/lang')));
+app.use('/styles', express.static(path.join(__dirname, '/packages/styles')));
+app.use('/plugins', express.static(path.join(__dirname, '/packages/plugins')));
+app.use('/adapters', express.static(path.join(__dirname, '/packages/adapters')));
 app.use('/emr-editor/public', express.static(__dirname + '/public'));
 
 app.use('/emr-editor/album',
@@ -58,8 +65,8 @@ app.use('/mcp-server', mcpServer.router);
 app.use('/ai-chat', aiChat);
 
 var server = app.listen(process.env.PORT||3071,'0.0.0.0',function(){
-	console.log('ready...');
-	console.log('http://127.0.0.1:'+(process.env.PORT||3071)+'/demo/index.html');
+    console.log('ready...');
+    console.log('http://127.0.0.1:'+(process.env.PORT||3071)+'/apps/hmEditor/demo/index.html');
 });
 
 // 注册MCP WebSocket服务

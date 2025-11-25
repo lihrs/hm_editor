@@ -34,7 +34,7 @@ module.exports = function( grunt ) {
                     // 这意味着如果存在相同文件，定义在前面的会优先返回
                     base: ['.'],
                     port: '8080',
-                    open: '<%= config.ip+ ":" +config.port %>/hmEditor/demo/index.html',
+                    open: '<%= config.ip+ ":" +config.port %>/apps/hmEditor/demo/index.html',
                     hostname: '*',
                     livereload: '<%= config.livereload%>',
                     middleware: function(connect, options, middlewares) {
