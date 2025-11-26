@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 
 /*
@@ -218,14 +218,4 @@ Special outer level classes used in this file:
 {
 	vertical-align: middle;
 	display: inline;
-}
-
-/* 菜单栏中的二级菜单中的快捷键样式 */
-.hm-shortcut-label, .hm-shortcut-display {
-	margin: auto 10px;
-	color: #bbb;
-	padding-top: 1px;
-}
-.hm-shortcut-display {
-	float: right;
 }

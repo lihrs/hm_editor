@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 CKEDITOR.plugins.add( 'listblock', {
@@ -11,13 +11,16 @@ CKEDITOR.plugins.add( 'listblock', {
 			listItem = CKEDITOR.addTemplate( 'panel-list-item', '<li id="{id}" class="cke_panel_listItem" role=presentation>' +
 				'<a id="{id}_option" _cke_focus=1 hidefocus=true' +
 					' title="{title}"' +
+					' draggable="false"' +
+					' ondragstart="return false;"' + // Draggable attribute is buggy on Firefox.
 					' href="javascript:void(\'{val}\')" ' +
-					' {onclick}="CKEDITOR.tools.callFunction({clickFn},\'{val}\'); return false;"' + // http://dev.ckeditor.com/ticket/188
+					' {language}' +
+					' onclick="{onclick}CKEDITOR.tools.callFunction({clickFn},\'{val}\'); return false;"' + // https://dev.ckeditor.com/ticket/188
 						' role="option">' +
 					'{text}' +
 				'</a>' +
 				'</li>' ),
-			listGroup = CKEDITOR.addTemplate( 'panel-list-group', '<h1 id="{id}" class="cke_panel_grouptitle" role="presentation" >{label}</h1>' ),
+			listGroup = CKEDITOR.addTemplate( 'panel-list-group', '<h1 id="{id}" draggable="false" ondragstart="return false;" class="cke_panel_grouptitle" role="presentation" >{label}</h1>' ),
 			reSingleQuote = /\'/g,
 			escapeSingleQuotes = function( str ) {
 				return str.replace( reSingleQuote, '\\\'' );
@@ -50,7 +53,7 @@ CKEDITOR.plugins.add( 'listblock', {
 				keys[ 38 ] = 'prev'; // ARROW-UP
 				keys[ CKEDITOR.SHIFT + 9 ] = 'prev'; // SHIFT + TAB
 				keys[ 32 ] = CKEDITOR.env.ie ? 'mouseup' : 'click'; // SPACE
-				CKEDITOR.env.ie && ( keys[ 13 ] = 'mouseup' ); // Manage ENTER, since onclick is blocked in IE (http://dev.ckeditor.com/ticket/8041).
+				CKEDITOR.env.ie && ( keys[ 13 ] = 'mouseup' ); // Manage ENTER, since onclick is blocked in IE (https://dev.ckeditor.com/ticket/8041).
 
 				this._.pendingHtml = [];
 				this._.pendingList = [];
@@ -81,7 +84,7 @@ CKEDITOR.plugins.add( 'listblock', {
 			},
 
 			proto: {
-				add: function( value, html, title ) {
+				add: function( value, html, title, language ) {
 					var id = CKEDITOR.tools.getNextId();
 
 					if ( !this._.started ) {
@@ -94,10 +97,13 @@ CKEDITOR.plugins.add( 'listblock', {
 					var data = {
 						id: id,
 						val: escapeSingleQuotes( CKEDITOR.tools.htmlEncodeAttr( value ) ),
-						onclick: CKEDITOR.env.ie ? 'onclick="return false;" onmouseup' : 'onclick',
+						// Add check for left mouse button (#2857).
+						onclick: CKEDITOR.env.ie ?
+							'return false;" onmouseup="CKEDITOR.tools.getMouseButton(event)===CKEDITOR.MOUSE_BUTTON_LEFT&&' : '',
 						clickFn: this._.getClick(),
 						title: CKEDITOR.tools.htmlEncodeAttr( title || value ),
-						text: html || value
+						text: html || value,
+						language: language ? 'lang="' + language + '"' : ''
 					};
 
 					this._.pendingList.push( listItem.output( data ) );
@@ -178,14 +184,6 @@ CKEDITOR.plugins.add( 'listblock', {
 
 					this.element.getDocument().getById( itemId + '_option' ).setAttribute( 'aria-selected', true );
 					this.onMark && this.onMark( item );
-				},
-
-				markFirstDisplayed: function() {
-					var context = this;
-					this._.markFirstDisplayed( function() {
-						if ( !context.multiSelect )
-							context.unmarkAll();
-					} );
 				},
 
 				unmark: function( value ) {

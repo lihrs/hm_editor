@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -40,7 +40,7 @@ CKEDITOR.keystrokeHandler = function( editor ) {
 ( function() {
 	var cancel;
 
-	var onKeyDown = function handleKeystroke( event ) {
+	var onKeyDown = function( event ) {
 			// The DOM event object is passed by the "data" property.
 			event = event.data;
 

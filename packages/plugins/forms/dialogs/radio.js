@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 CKEDITOR.dialog.add( 'radio', function( editor ) {
@@ -8,28 +8,31 @@ CKEDITOR.dialog.add( 'radio', function( editor ) {
 		title: editor.lang.forms.checkboxAndRadio.radioTitle,
 		minWidth: 350,
 		minHeight: 140,
-		onShow: function() {
-			delete this.radioButton;
+		getModel: function( editor ) {
+			var element = editor.getSelection().getSelectedElement();
 
-			var element = this.getParentEditor().getSelection().getSelectedElement();
 			if ( element && element.getName() == 'input' && element.getAttribute( 'type' ) == 'radio' ) {
-				this.radioButton = element;
+				return element;
+			}
+
+			return null;
+		},
+		onShow: function() {
+			var element = this.getModel( this.getParentEditor() );
+			if ( element ) {
 				this.setupContent( element );
 			}
 		},
 		onOk: function() {
-			var editor,
-				element = this.radioButton,
-				isInsertMode = !element;
+			var editor = this.getParentEditor(),
+				element = this.getModel( editor );
 
-			if ( isInsertMode ) {
-				editor = this.getParentEditor();
+			if ( !element ) {
 				element = editor.document.createElement( 'input' );
 				element.setAttribute( 'type', 'radio' );
+				editor.insertElement( element );
 			}
 
-			if ( isInsertMode )
-				editor.insertElement( element );
 			this.commitContent( { element: element } );
 		},
 		contents: [ {
@@ -89,7 +92,7 @@ CKEDITOR.dialog.add( 'radio', function( editor ) {
 
 					if ( !CKEDITOR.env.ie ) {
 						var value = this.getValue();
-						// Blink/Webkit needs to change checked property, not attribute. (http://dev.ckeditor.com/ticket/12465)
+						// Blink/Webkit needs to change checked property, not attribute. (https://dev.ckeditor.com/ticket/12465)
 						if ( CKEDITOR.env.webkit ) {
 							element.$.checked = value;
 						}
@@ -107,6 +110,12 @@ CKEDITOR.dialog.add( 'radio', function( editor ) {
 								'></input>', editor.document );
 							element.copyAttributes( replace, { type: 1, checked: 1 } );
 							replace.replace( element );
+
+							// Ugly hack which fix IE issues with radiobuttons (#834).
+							if ( isChecked ) {
+								replace.setAttribute( 'checked', 'checked' );
+							}
+
 							editor.getSelection().selectElement( replace );
 							data.element = replace;
 						}
@@ -120,9 +129,7 @@ CKEDITOR.dialog.add( 'radio', function( editor ) {
 				'default': '',
 				accessKey: 'Q',
 				value: 'required',
-				setup: function( element ) {
-					this.setValue( element.getAttribute( 'required' ) );
-				},
+				setup: CKEDITOR.plugins.forms._setupRequiredAttribute,
 				commit: function( data ) {
 					var element = data.element;
 					if ( this.getValue() )

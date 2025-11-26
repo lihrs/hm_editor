@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -67,7 +67,7 @@ CKEDITOR.htmlParser.basicWriter = CKEDITOR.tools.createClass( {
 		 * @param {String} attValue The attribute value.
 		 */
 		attribute: function( attName, attValue ) {
-			// Browsers don't always escape special character in attribute values. (http://dev.ckeditor.com/ticket/4683, http://dev.ckeditor.com/ticket/4719).
+			// Browsers don't always escape special character in attribute values. (https://dev.ckeditor.com/ticket/4683, https://dev.ckeditor.com/ticket/4719).
 			if ( typeof attValue == 'string' )
 				attValue = CKEDITOR.tools.htmlEncodeAttr( attValue );
 

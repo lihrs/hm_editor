@@ -76,7 +76,7 @@ $(function () {
             var $templateDiv = $('<div id="templateDiv" style="display:none"></div>');
             $('body').append($templateDiv).css('overflow-x', 'hidden');
             var sdkHost = _this.editor.HMConfig.sdkHost||'';
-            $templateDiv.load(sdkHost+'/plugins/datasource/dialogs/datasourceDialog.html', function () {
+            $templateDiv.load(sdkHost+'../../../../packages/plugins/datasource/dialogs/datasourceDialog.html', function () {
                 _this.containerTemplate = $("#datasource_containerTemplate").html();
                 _this.dataSourceContentTemplate = $("#dataSource_contentTemplate").html();
                 _this.pageTemplate = $("#pageTemplate").html();

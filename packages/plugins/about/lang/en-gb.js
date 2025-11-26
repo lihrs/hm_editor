@@ -1,12 +1,9 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'about', 'en-gb', {
 	copy: 'Copyright &copy; $1. All rights reserved.',
-	dlgTitle: 'About CKEditor',
-	help: 'Check $1 for help.',
-	moreInfo: 'For licensing information please visit our web site:',
-	title: 'About CKEditor',
-	userGuide: 'CKEditor User\'s Guide'
+	dlgTitle: 'About CKEditor 4', // MISSING
+	moreInfo: 'For licensing information please visit our web site:'
 } );

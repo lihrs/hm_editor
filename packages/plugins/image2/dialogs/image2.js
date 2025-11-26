@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -77,7 +77,7 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 			isValid = !!( match && parseInt( match[ 1 ], 10 ) !== 0 );
 
 		if ( !isValid )
-			alert( commonLang[ 'invalid' + CKEDITOR.tools.capitalize( this.id ) ] ); // jshint ignore:line
+			alert( commonLang.invalidLength.replace( '%1', commonLang[ this.id ] ).replace( '%2', 'px' ) ); // jshint ignore:line
 
 		return isValid;
 	}
@@ -108,7 +108,7 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 		// @param {Function} callback.
 		return function( src, callback, scope ) {
 			addListener( 'load', function() {
-				// Don't use image.$.(width|height) since it's buggy in IE9-10 (http://dev.ckeditor.com/ticket/11159)
+				// Don't use image.$.(width|height) since it's buggy in IE9-10 (https://dev.ckeditor.com/ticket/11159)
 				var dimensions = getNatural( image );
 
 				callback.call( scope, image, dimensions.width, dimensions.height );
@@ -122,8 +122,10 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 				callback( null );
 			} );
 
+			// (#3394)
+			var queryStringSeparator = src.indexOf( '?' ) !== -1 ? '&' : '?';
 			image.setAttribute( 'src',
-				( config.baseHref || '' ) + src + '?' + Math.random().toString( 16 ).substring( 2 ) );
+				( config.baseHref || '' ) + src + queryStringSeparator + Math.random().toString( 16 ).substring( 2 ) );
 		};
 	}
 
@@ -131,7 +133,9 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 	// "src" field is altered. Along with dimensions, also the
 	// dimensions lock is adjusted.
 	function onChangeSrc() {
-		var value = this.getValue();
+		var value = this.getValue(),
+			lockRatioValue = editor.config.image2_defaultLockRatio,
+			isLockRatioSet = lockRatioValue !== undefined;
 
 		toggleDimensions( false );
 
@@ -144,7 +148,7 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 
 				// There was problem loading the image. Unlock ratio.
 				if ( !image )
-					return toggleLockRatio( false );
+					return toggleLockRatio( ( isLockRatioSet ? lockRatioValue : false ) );
 
 				// Fill width field with the width of the new image.
 				widthField.setValue( editor.config.image2_prefillDimensions === false ? 0 : width );
@@ -152,14 +156,14 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 				// Fill height field with the height of the new image.
 				heightField.setValue( editor.config.image2_prefillDimensions === false ? 0 : height );
 
-				// Cache the new width.
-				preLoadedWidth = width;
+				// Cache the new width and update initial cache (#1348).
+				preLoadedWidth = domWidth = width;
 
-				// Cache the new height.
-				preLoadedHeight = height;
+				// Cache the new height and update initial cache (#1348).
+				preLoadedHeight = domHeight = height;
 
 				// Check for new lock value if image exist.
-				toggleLockRatio( helpers.checkHasNaturalRatio( image ) );
+				toggleLockRatio( ( isLockRatioSet ? lockRatioValue : helpers.checkHasNaturalRatio( image ) ) );
 			} );
 
 			srcChanged = true;
@@ -378,8 +382,8 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 
 	return {
 		title: lang.title,
-		maxWidth: 600,
-		maxHeight: 600,
+		minWidth: 250,
+		minHeight: 100,
 		onLoad: function() {
 			// Create a "global" reference to the document for this dialog instance.
 			doc = this._.element.getDocument();
@@ -389,7 +393,7 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 		},
 		onShow: function() {
 			// Create a "global" reference to edited widget.
-			widget = this.widget;
+			widget = this.getModel();
 
 			// Create a "global" reference to widget's image.
 			image = widget.parts.image;
@@ -405,165 +409,11 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 
 			// Get the natural height of the image.
 			preLoadedHeight = domHeight = natural.height;
-
-			//konva
-			if(natural.height == 0 || natural.width == 0){
-				return;
-			}
-			
-			var $image = $(image.$);
-			var $imageWrapper = $image.parent();
-
-			$('.cke_dialog_tab').removeClass('cke_dialog_tab_disabled');
-
-			var width = natural.width;
-		    var height = natural.height;
-
-		    // first we need Konva core things: stage and layer
-		    var stage = new Konva.Stage({
-		      container: 'konvaContainer',
-		      width: width,
-		      height: height
-		    });
-
-		    var bgLayer = new Konva.Layer();
-		    stage.add(bgLayer);
-
-		    var bgImage = new Konva.Image({
-		        x: 0,
-		        y: 0,
-		        image: image.$,
-		        width: width,
-		        height: height
-		    });
-		    bgLayer.add(bgImage);
-
-		    var uiLayer = new Konva.Layer();
-		    stage.add(uiLayer);
-
-		    // then we are going to draw into special canvas element
-		    var canvas = document.createElement('canvas');
-		    canvas.width = stage.width();
-		    canvas.height = stage.height();
-		    var $imageUI = $imageWrapper.find('#konvaUI');
-		    if($imageUI.length == 1){
-		    	var ctx=canvas.getContext("2d");
-    			ctx.drawImage($imageUI[0],0,0);
-		    }
-
-		    // created canvas we can add to layer as "Konva.Image" element
-		    var uiImage = new Konva.Image({
-		        image: canvas,
-		        x : 0,
-		        y : 0
-		    });
-		    uiLayer.add(uiImage);
-
-		    stage.draw();
-
-		    // Good. Now we need to get access to context element
-		    var context = canvas.getContext('2d');
-		    context.strokeStyle = "#df4b26";
-		    context.lineJoin = "round";
-		    context.lineWidth = 5;
-
-
-		    var isPaint = false;
-		    var lastPointerPosition;
-		    var mode = 'brush';
-
-
-		    // now we need to bind some events
-		    // we need to start drawing on mousedown
-		    // and stop drawing on mouseup
-		    stage.on('contentMousedown.proto', function() {
-		      isPaint = true;
-		      lastPointerPosition = stage.getPointerPosition();
-
-		    });
-
-		    stage.on('contentMouseup.proto', function() {
-		        isPaint = false;
-		    });
-
-		    // and core function - drawing
-		    stage.on('contentMousemove.proto', function() {
-
-		      if (!isPaint) {
-		        return;
-		      }
-
-		      if (mode === 'brush') {
-		        context.globalCompositeOperation = 'source-over';
-		      }
-		      if (mode === 'eraser') {
-		        context.globalCompositeOperation = 'destination-out';
-		      }
-		      context.beginPath();
-
-		      var localPos = {
-		        x: lastPointerPosition.x - uiImage.x(),
-		        y: lastPointerPosition.y - uiImage.y()
-		      };
-		      context.moveTo(localPos.x, localPos.y);
-		      var pos = stage.getPointerPosition();
-		      localPos = {
-		        x: pos.x - uiImage.x(),
-		        y: pos.y - uiImage.y()
-		      };
-		      context.lineTo(localPos.x, localPos.y);
-		      context.closePath();
-		      context.stroke();
-
-
-		      lastPointerPosition = pos;
-		      uiLayer.draw();
-		    });
-
-
-
-		    var select = document.getElementById('konvaBrush');
-		    select.addEventListener('change', function() {
-		      mode = select.value;
-		    });
-
-
 		},
 		contents: [
 			{
-				id: 'edit',
-				label: '编辑',
-				elements: [
-					{
-						id:'konva',
-						type: 'html',
-						html: '<div id=konvaController>\
-						<span>笔刷类型:</span>\
-						<select id="konvaBrush">\
-						    <option value="brush">书写</option>\
-						    <option value="eraser">擦出</option>\
-						</select>\
-						</div>\
-						<div id=konvaContainer></div>',
-						setup: function( widget ) {
-
-						},
-						commit: function( widget ) {
-							if($('canvas').length == 2){
-								var $image = $(widget.parts.image.$);
-								var $imageWrapper = $image.parent();
-								var dataURL = $('canvas')[1].toDataURL();
-								$imageWrapper.find('#konvaUI').remove();
-								$imageWrapper.append('<img id=konvaUI style="position:absolute;left:0;top:0"  src="' + dataURL + '">');
-							}
-							
-						}
-					}
-				]
-			},
-			{
 				id: 'info',
-				label: '属性',
+				label: lang.infoTab,
 				elements: [
 					{
 						type: 'vbox',
@@ -653,9 +503,9 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 								type: 'radio',
 								items: [
 									[ commonLang.alignNone, 'none' ],
-									[ commonLang.alignLeft, 'left' ],
-									[ commonLang.alignCenter, 'center' ],
-									[ commonLang.alignRight, 'right' ]
+									[ commonLang.left, 'left' ],
+									[ commonLang.center, 'center' ],
+									[ commonLang.right, 'right' ]
 								],
 								label: commonLang.align,
 								setup: function( widget ) {
@@ -678,6 +528,27 @@ CKEDITOR.dialog.add( 'image2', function( editor ) {
 						commit: function( widget ) {
 							widget.setData( 'hasCaption', this.getValue() );
 						}
+					}
+				]
+			},
+			{
+				id: 'Upload',
+				hidden: true,
+				filebrowser: 'uploadButton',
+				label: lang.uploadTab,
+				elements: [
+					{
+						type: 'file',
+						id: 'upload',
+						label: lang.btnUpload,
+						style: 'height:40px'
+					},
+					{
+						type: 'fileButton',
+						id: 'uploadButton',
+						filebrowser: 'info:src',
+						label: lang.btnUpload,
+						'for': [ 'Upload', 'upload' ]
 					}
 				]
 			}

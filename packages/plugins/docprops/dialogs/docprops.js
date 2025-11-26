@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 CKEDITOR.dialog.add( 'docProps', function( editor ) {
@@ -157,6 +157,9 @@ CKEDITOR.dialog.add( 'docProps', function( editor ) {
 		title: lang.title,
 		minHeight: 330,
 		minWidth: 500,
+		getModel: function() {
+			return editor.document;
+		},
 		onShow: function() {
 			var doc = editor.document,
 				html = doc.getElementsByTag( 'html' ).getItem( 0 ),

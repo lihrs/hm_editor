@@ -1,12 +1,12 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'image2', 'zh', {
 	alt: '替代文字',
 	btnUpload: '傳送至伺服器',
-	captioned: '已加標題之圖片',
-	captionPlaceholder: '標題',
+	captioned: '加上圖說',
+	captionPlaceholder: '圖說',
 	infoTab: '影像資訊',
 	lockRatio: '固定比例',
 	menu: '影像屬性',

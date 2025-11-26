@@ -1,92 +1,80 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 	// Simulate "this" of a dialog for non-dialog events.
 	// @type {CKEDITOR.dialog}
 	var dialog,
-		lang = editor.lang.specialchar;
+		lang = editor.lang.specialchar,
+		focusedNode,
+		onChoice,
+		onClick,
+		onBlur,
+		onFocus,
+		onKeydown;
 
-	var onChoice = function( evt ) {
-			var target, value;
-			if ( evt.data )
-				target = evt.data.getTarget();
-			else
-				target = new CKEDITOR.dom.element( evt );
 
-			if ( target.getName() == 'a' && ( value = target.getChild( 0 ).getHtml() ) ) {
-				target.removeClass( 'cke_light_background' );
-				dialog.hide();
+	onChoice = function( evt ) {
+		var target, value;
+		if ( evt.data )
+			target = evt.data.getTarget();
+		else
+			target = new CKEDITOR.dom.element( evt );
 
-				// We must use "insertText" here to keep text styled.
-				var span = editor.document.createElement( 'span' );
-				span.setHtml( value );
-				editor.insertCusContent(span.getText());
-				// editor.insertText( span.getText() );
-			}
-		};
+		if ( target.getName() == 'a' && ( value = target.getChild( 0 ).getHtml() ) ) {
+			target.removeClass( 'cke_light_background' );
+			dialog.hide();
 
-	var onClick = CKEDITOR.tools.addFunction( onChoice );
+			// We must use "insertText" here to keep text styled.
+			var span = editor.document.createElement( 'span' );
+			span.setHtml( value );
+			editor.insertText( span.getText() );
+		}
+	};
 
-	var focusedNode;
+	onClick = CKEDITOR.tools.addFunction( onChoice );
 
-	var onFocus = function( evt, target ) {
-			var value;
-			target = target || evt.data.getTarget();
+	onFocus = function( evt, target ) {
+		var value;
+		target = target || evt.data.getTarget();
 
-			if ( target.getName() == 'span' )
-				target = target.getParent();
+		if ( target.getName() == 'span' )
+			target = target.getParent();
 
-			if ( target.getName() == 'a' && ( value = target.getChild( 0 ).getHtml() ) ) {
-				// Trigger blur manually if there is focused node.
-				if ( focusedNode )
-					onBlur( null, focusedNode );
+		if ( target.getName() == 'a' && ( value = target.getChild( 0 ).getHtml() ) ) {
+			// Trigger blur manually if there is focused node.
+			if ( focusedNode )
+				onBlur( null, focusedNode );
 
-				// 查找新位置的预览元素
-				var container = dialog.getContentElement( 'info', 'charContainer' ).getElement();
-				var charPreview = container.findOne('[id^="charPreview_"]');
-				var htmlPreview = container.findOne('[id^="htmlPreview_"]');
+			var htmlPreview = dialog.getContentElement( 'info', 'htmlPreview' ).getElement();
 
-				if ( charPreview ) {
-					charPreview.setHtml( value );
-				}
-				if ( htmlPreview ) {
-					htmlPreview.setHtml( CKEDITOR.tools.htmlEncode( value ) );
-				}
-				target.getParent().addClass( 'cke_light_background' );
+			dialog.getContentElement( 'info', 'charPreview' ).getElement().setHtml( value );
+			htmlPreview.setHtml( CKEDITOR.tools.htmlEncode( value ) );
+			target.getParent().addClass( 'cke_light_background' );
 
-				// Memorize focused node.
-				focusedNode = target;
-			}
-		};
+			// Memorize focused node.
+			focusedNode = target;
+		}
+	};
 
-	var onBlur = function( evt, target ) {
-			target = target || evt.data.getTarget();
+	onBlur = function( evt, target ) {
+		target = target || evt.data.getTarget();
 
-			if ( target.getName() == 'span' )
-				target = target.getParent();
+		if ( target.getName() == 'span' )
+			target = target.getParent();
 
-			if ( target.getName() == 'a' ) {
-				// 查找新位置的预览元素
-				var container = dialog.getContentElement( 'info', 'charContainer' ).getElement();
-				var charPreview = container.findOne('[id^="charPreview_"]');
-				var htmlPreview = container.findOne('[id^="htmlPreview_"]');
+		if ( target.getName() == 'a' ) {
+			dialog.getContentElement( 'info', 'charPreview' ).getElement().setHtml( '&nbsp;' );
+			dialog.getContentElement( 'info', 'htmlPreview' ).getElement().setHtml( '&nbsp;' );
+			target.getParent().removeClass( 'cke_light_background' );
 
-				if ( charPreview ) {
-					charPreview.setHtml( '&nbsp;' );
-				}
-				if ( htmlPreview ) {
-					htmlPreview.setHtml( '&nbsp;' );
-				}
-				target.getParent().removeClass( 'cke_light_background' );
+			focusedNode = undefined;
+		}
+	};
 
-				focusedNode = undefined;
-			}
-		};
-
-	var onKeydown = CKEDITOR.tools.addFunction( function( ev ) {
+	onKeydown = CKEDITOR.tools.addFunction( function( ev ) {
 		ev = new CKEDITOR.dom.event( ev );
 
 		// Get an Anchor element.
@@ -94,6 +82,7 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 		var relative, nodeToMove;
 		var keystroke = ev.getKeystroke(),
 			rtl = editor.lang.dir == 'rtl';
+
 		switch ( keystroke ) {
 			// UP-ARROW
 			case 38:
@@ -183,19 +172,17 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 
 	return {
 		title: lang.title,
-		minWidth: 500,
+		minWidth: 430,
 		minHeight: 280,
 		buttons: [ CKEDITOR.dialog.cancelButton ],
-		charColumns: 12,
+		charColumns: 17,
 		onLoad: function() {
 			var columns = this.definition.charColumns,
 				chars = editor.config.specialChars;
-				chars1 = editor.config.allSupSpecialChar;
-				chars2 = editor.config.allSubSpecialChar;
 
 			var charsTableLabel = CKEDITOR.tools.getNextId() + '_specialchar_table_label';
-			var html = ['<div style="width:100%;height:400px;position:relative;"><div style="height:auto;"><table role="listbox" aria-labelledby="' + charsTableLabel + '"' +
-				' style="width: 320px; height: 100%;margin-left:0px; border-collapse: separate;"' +
+			var html = [ '<table role="listbox" aria-labelledby="' + charsTableLabel + '"' +
+				' style="width: 320px; height: 100%; border-collapse: separate;"' +
 				' align="center" cellspacing="2" cellpadding="2" border="0">' ];
 
 			var i = 0,
@@ -232,108 +219,15 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 							'</span>' +
 							'<span class="cke_voice_label" id="' + charLabelId + '">' +
 							charDesc +
-							'</span></a>' );
-					} else {
-						html.push( '<td class="cke_dark_background">&nbsp;' );
+							'</span></a></td>'
+						);
 					}
 
-					html.push( '</td>' );
 				}
 				html.push( '</tr>' );
 			}
 
 			html.push( '</tbody></table>', '<span id="' + charsTableLabel + '" class="cke_voice_label">' + lang.options + '</span>' );
-            // 上标符号
-			html.push('<p style="border-top: 1px solid;">上标符号</p><table role="listbox" aria-labelledby="' + charsTableLabel + '"' +
-			' style="width: 320px; height: 100%; border-collapse: separate;"' +
-			' align="center" cellspacing="2" cellpadding="2" border="0">');
-			i = 0,
-			size = chars1.length;
-
-			while ( i < size ) {
-				html.push( '<tr role="presentation">' );
-				for ( var j = 0; j < 30; j++, i++ ) {
-					if ( ( character = chars1[ i ] ) ) {
-						charDesc = '';
-						if ( character instanceof Array ) {
-							charDesc = character[ 1 ];
-							character = character[ 0 ];
-						} else {
-							var _tmpName = character.replace( '&', '' ).replace( ';', '' ).replace( '#', '' );
-							charDesc = lang[ _tmpName ] || character;
-						}
-						var charLabelId = 'cke_specialchar_label_' + i + '_' + CKEDITOR.tools.getNextNumber();
-						html.push( '<td class="cke_dark_background" style="cursor: default" role="presentation">' +
-							'<a href="javascript: void(0);" role="option"' +
-							' aria-posinset="' + ( i + 1 ) + '"', ' aria-setsize="' + size + '"', ' aria-labelledby="' + charLabelId + '"', ' class="cke_specialchar" title="', CKEDITOR.tools.htmlEncode( charDesc ), '"' +
-							' onkeydown="CKEDITOR.tools.callFunction( ' + onKeydown + ', event, this )"' +
-							' onclick="CKEDITOR.tools.callFunction(' + onClick + ', this); return false;"' +
-							' tabindex="-1">' +
-							'<span style="margin: 0 auto;cursor: inherit;font-size:20px">' +
-							character +
-							'</span>' +
-							'<span class="cke_voice_label" id="' + charLabelId + '">' +
-							charDesc +
-							'</span></a>' );
-					} else {
-						html.push( '<td class="cke_dark_background">&nbsp;' );
-					}
-					html.push( '</td>' );
-				}
-				html.push( '</tr>' );
-			}
-			html.push( '</tbody></table>', '<span id="' + charsTableLabel + '" class="cke_voice_label">' + lang.options + '</span>' );
-			// 下标符号
-			html.push('<p style="border-top: 1px solid;">下标符号</p><table role="listbox" aria-labelledby="' + charsTableLabel + '"' +
-			' style="width: 320px; height: 100%; border-collapse: separate;"' +
-			' align="center" cellspacing="2" cellpadding="2" border="0">');
-			i = 0,
-			size = chars2.length;
-			while ( i < size ) {
-				html.push( '<tr role="presentation">' );
-				for ( var j = 0; j < 40; j++, i++ ) {
-					if ( ( character = chars2[ i ] ) ) {
-						charDesc = '';
-						if ( character instanceof Array ) {
-							charDesc = character[ 1 ];
-							character = character[ 0 ];
-						} else {
-							var _tmpName = character.replace( '&', '' ).replace( ';', '' ).replace( '#', '' );
-							charDesc = lang[ _tmpName ] || character;
-						}
-						var charLabelId = 'cke_specialchar_label_' + i + '_' + CKEDITOR.tools.getNextNumber();
-						html.push( '<td class="cke_dark_background" style="cursor: default" role="presentation">' +
-							'<a href="javascript: void(0);" role="option"' +
-							' aria-posinset="' + ( i + 1 ) + '"', ' aria-setsize="' + size + '"', ' aria-labelledby="' + charLabelId + '"', ' class="cke_specialchar" title="', CKEDITOR.tools.htmlEncode( charDesc ), '"' +
-							' onkeydown="CKEDITOR.tools.callFunction( ' + onKeydown + ', event, this )"' +
-							' onclick="CKEDITOR.tools.callFunction(' + onClick + ', this); return false;"' +
-							' tabindex="-1">' +
-							'<span style="margin: 0 auto;cursor: inherit;font-size:20px">' +
-							character +
-							'</span>' +
-							'<span class="cke_voice_label" id="' + charLabelId + '">' +
-							charDesc +
-							'</span></a>' );
-					} else {
-						html.push( '<td class="cke_dark_background">&nbsp;' );
-					}
-					html.push( '</td>' );
-				}
-				html.push( '</tr>' );
-			}
-			html.push( '</tbody></table>', '<span id="' + charsTableLabel + '" class="cke_voice_label">' + lang.options + '</span>' );
-			
-			// 添加预览区域到符号表格右侧
-			html.push('<div style="position:absolute;top:10px;right:10px;width:120px;">');
-			html.push('<div style="margin-bottom:10px;">');
-			html.push('<div id="charPreview_' + CKEDITOR.tools.getNextNumber() + '" class="cke_dark_background" style="border:1px solid #eeeeee;font-size:28px;height:50px;width:110px;padding-top:9px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;">&nbsp;</div>');
-			html.push('</div>');
-			html.push('<div>');
-			html.push('<div id="htmlPreview_' + CKEDITOR.tools.getNextNumber() + '" class="cke_dark_background" style="border:1px solid #eeeeee;font-size:14px;height:20px;width:70px;padding-top:2px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;">&nbsp;</div>');
-			html.push('</div>');
-			html.push('</div>');
-			
-			html.push('</div></div>' );
 
 			this.getContentElement( 'info', 'charContainer' ).getElement().setHtml( html.join( '' ) );
 		},
@@ -344,28 +238,62 @@ CKEDITOR.dialog.add( 'specialchar', function( editor ) {
 			padding: 0,
 			align: 'top',
 			elements: [ {
-				type: 'html',
-				id: 'charContainer',
-				html: '',
-				onMouseover: onFocus,
-				onMouseout: onBlur,
-				focus: function() {
-					var firstChar = this.getElement().getElementsByTag( 'a' ).getItem( 0 );
-					setTimeout( function() {
-						firstChar.focus();
-						onFocus( null, firstChar );
-					}, 0 );
+				type: 'hbox',
+				align: 'top',
+				widths: [ '320px', '90px' ],
+				children: [ {
+					type: 'html',
+					id: 'charContainer',
+					html: '',
+					onMouseover: onFocus,
+					onMouseout: onBlur,
+					focus: function() {
+						var firstChar = this.getElement().getElementsByTag( 'a' ).getItem( 0 );
+						setTimeout( function() {
+							firstChar.focus();
+							onFocus( null, firstChar );
+						}, 0 );
+					},
+					onShow: function() {
+						var firstChar = this.getElement().getChild( [ 0, 0, 0, 0, 0 ] );
+						setTimeout( function() {
+							firstChar.focus();
+							onFocus( null, firstChar );
+						}, 0 );
+					},
+					onLoad: function( event ) {
+						dialog = event.sender;
+					}
 				},
-				onShow: function() {
-					var firstChar = this.getElement().getChild( [ 0, 0, 0, 0, 0 ] );
-					setTimeout( function() {
-						firstChar.focus();
-						onFocus( null, firstChar );
-					}, 0 );
-				},
-				onLoad: function( event ) {
-					dialog = event.sender;
-				}
+				{
+					type: 'hbox',
+					align: 'top',
+					widths: [ '100%' ],
+					children: [ {
+						type: 'vbox',
+						align: 'top',
+						children: [
+							{
+								type: 'html',
+								html: '<div></div>'
+							},
+							{
+								type: 'html',
+								id: 'charPreview',
+								className: 'cke_dark_background',
+								style: 'border:1px solid #eeeeee;font-size:28px;height:40px;width:70px;padding-top:9px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;',
+								html: '<div>&nbsp;</div>'
+							},
+							{
+								type: 'html',
+								id: 'htmlPreview',
+								className: 'cke_dark_background',
+								style: 'border:1px solid #eeeeee;font-size:14px;height:20px;width:70px;padding-top:2px;font-family:\'Microsoft Sans Serif\',Arial,Helvetica,Verdana;text-align:center;',
+								html: '<div>&nbsp;</div>'
+							}
+						]
+					} ]
+				} ]
 			} ]
 		} ]
 	};

@@ -1,10 +1,10 @@
 ﻿/**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
- * @fileOverview Paste as plain text plugin.
+ * @fileOverview The Paste as plain text plugin.
  */
 
 ( function() {
@@ -49,7 +49,7 @@
 	CKEDITOR.plugins.add( 'pastetext', {
 		requires: 'clipboard',
 		// jscs:disable maximumLineLength
-		lang: 'en,en-au,en-ca,en-gb,zh,zh-cn', // %REMOVE_LINE_CORE%
+		lang: 'af,ar,az,bg,bn,bs,ca,cs,cy,da,de,de-ch,el,en,en-au,en-ca,en-gb,eo,es,es-mx,et,eu,fa,fi,fo,fr,fr-ca,gl,gu,he,hi,hr,hu,id,is,it,ja,ka,km,ko,ku,lt,lv,mk,mn,ms,nb,nl,no,oc,pl,pt,pt-br,ro,ru,si,sk,sl,sq,sr,sr-latn,sv,th,tr,tt,ug,uk,vi,zh,zh-cn', // %REMOVE_LINE_CORE%
 		// jscs:enable maximumLineLength
 		icons: 'pastetext,pastetext-rtl', // %REMOVE_LINE_CORE%
 		hidpi: true, // %REMOVE_LINE_CORE%
@@ -62,7 +62,7 @@
 
 			editor.setKeystroke( pasteKeystroke, commandName );
 
-			editor.ui.addButton && editor.ui.addButton( 'PasteText', {
+			CKEDITOR.plugins.clipboard.addPasteButton( editor, 'PasteText', {
 				label: editor.lang.pastetext.button,
 				command: commandName,
 				toolbar: 'clipboard,40'
@@ -72,8 +72,9 @@
 				editor.on( 'beforePaste', function( evt ) {
 					// Do NOT overwrite if HTML format is explicitly requested.
 					// This allows pastefromword dominates over pastetext.
-					if ( evt.data.type != 'html' )
+					if ( evt.data.type != 'html' ) {
 						evt.data.type = 'text';
+					}
 				} );
 			}
 
@@ -86,14 +87,24 @@
 
 
 /**
- * Whether to force all pasting operations to insert on plain text into the
- * editor, loosing any formatting information possibly available in the source
- * text.
+ * Whether to force all pasting operations to insert plain text into the
+ * editor, losing any formatting information possibly available in the source text.
  *
- * **Note:** paste from word (dialog) is not affected by this configuration.
+ * This option accepts the following settings:
  *
+ * *  `true` &ndash; Pastes all content as plain text.
+ * *  `false` &ndash; Preserves content formatting.
+ * *  `allow-word` &ndash; Content pasted from Microsoft Word will keep its formatting
+ *     while any other content will be pasted as plain text.
+ *
+ * Example:
+ *
+ *		// All content will be pasted as plain text.
  *		config.forcePasteAsPlainText = true;
  *
- * @cfg {Boolean} [forcePasteAsPlainText=false]
+ *		// Only Microsoft Word content formatting will be preserved.
+ * 		config.forcePasteAsPlainText = 'allow-word';
+ *
+ * @cfg {Boolean/String} [forcePasteAsPlainText=false]
  * @member CKEDITOR.config
  */

@@ -1,46 +1,76 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 CKEDITOR.editorConfig = function( config ) {
 	// Define changes to default configuration here. For example:
-	config.language = 'zh-cn';
+	// config.language = 'fr';
 	// config.uiColor = '#AADC6E';
 	// %REMOVE_START%
 	config.plugins =
+		'about,' +
+		'a11yhelp,' +
 		'basicstyles,' +
-		// 'clipboard,' +
+		'bidi,' +
+		'blockquote,' +
+		'clipboard,' +
 		'colorbutton,' +
 		'colordialog,' +
+		'copyformatting,' +
 		'contextmenu,' +
+		'dialogadvtab,' +
+		'div,' +
+		'elementspath,' +
 		'enterkey,' +
 		'entities,' +
+		'filebrowser,' +
+		'find,' +
 		'floatingspace,' +
 		'font,' +
+		'format,' +
+		'forms,' +
 		'horizontalrule,' +
 		'htmlwriter,' +
+		'image,' +
+		'iframe,' +
+		'indentlist,' +
+		'indentblock,' +
 		'justify,' +
+		'language,' +
+		'link,' +
+		'list,' +
+		'liststyle,' +
+		'magicline,' +
+		'maximize,' +
+		'newpage,' +
+		'pagebreak,' +
+		'pastefromgdocs,' +
+		'pastefromlibreoffice,' +
 		'pastefromword,' +
 		'pastetext,' +
+		'editorplaceholder,' +
+		'preview,' +
+		'print,' +
 		'removeformat,' +
+		'resize,' +
+		'save,' +
+		'selectall,' +
+		'showblocks,' +
+		'showborders,' +
+		'smiley,' +
+		'sourcearea,' +
 		'specialchar,' +
+		'stylescombo,' +
+		'tab,' +
 		'table,' +
 		'tableselection,' +
 		'tabletools,' +
+		'templates,' +
 		'toolbar,' +
 		'undo,' +
-		'image,' +
-		'image2,' +
-		'widget,' +
-		'wysiwygarea,'+
-		'list,'+
-		'liststyle,'+
-		'indent,'+
-		'indentblock,'+
-		'indentlist,'+
-		'sourcearea';
-
+		'uploadimage,' +
+		'wysiwygarea';
 	// %REMOVE_END%
 
 	// config.extraPlugins = 'tableresize,paper,pagebreak,datasource,sync,print,favor,document,save,trace,album,clear,revise,signature,switchmodel,pagebreakByHand,find';

@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -147,7 +147,7 @@
 /**
  * Whether the command should be enabled in the {@link CKEDITOR.editor#setReadOnly read-only mode}.
  *
- * @since 4.0
+ * @since 4.0.0
  * @property {Boolean} [readOnly=false]
  */
 

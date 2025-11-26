@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'table', 'en', {
 	border: 'Border size',
@@ -27,6 +27,8 @@ CKEDITOR.plugins.setLang( 'table', 'en', {
 		borderColor: 'Border Color',
 		data: 'Data',
 		header: 'Header',
+		columnHeader: 'Column Header',
+		rowHeader: 'Row Header',
 		yes: 'Yes',
 		no: 'No',
 		invalidWidth: 'Cell width must be a number.',
@@ -50,6 +52,7 @@ CKEDITOR.plugins.setLang( 'table', 'en', {
 	headersColumn: 'First column',
 	headersNone: 'None',
 	headersRow: 'First Row',
+	heightUnit: 'height unit',
 	invalidBorder: 'Border size must be a number.',
 	invalidCellPadding: 'Cell padding must be a positive number.',
 	invalidCellSpacing: 'Cell spacing must be a positive number.',

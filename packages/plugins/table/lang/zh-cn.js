@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'table', 'zh-cn', {
 	border: '边框',
@@ -27,15 +27,15 @@ CKEDITOR.plugins.setLang( 'table', 'zh-cn', {
 		borderColor: '边框颜色',
 		data: '数据',
 		header: '表头',
+		columnHeader: 'Column Header', // MISSING
+		rowHeader: 'Row Header', // MISSING
 		yes: '是',
 		no: '否',
 		invalidWidth: '单元格宽度必须为数字格式',
 		invalidHeight: '单元格高度必须为数字格式',
 		invalidRowSpan: '行跨度必须为整数格式',
 		invalidColSpan: '列跨度必须为整数格式',
-		chooseColor: '选择',
-		bottomLine:'打印下边线',
-		removeBottomLine:'移除打印下边线'
+		chooseColor: '选择'
 	},
 	cellPad: '边距',
 	cellSpace: '间距',
@@ -43,9 +43,7 @@ CKEDITOR.plugins.setLang( 'table', 'zh-cn', {
 		menu: '列',
 		insertBefore: '在左侧插入列',
 		insertAfter: '在右侧插入列',
-		customInsert: '自定义插入列',
-		deleteColumn: '删除列',
-		insertValidate:'插入的列数必须为整数且大于零',
+		deleteColumn: '删除列'
 	},
 	columns: '列数',
 	deleteTable: '删除表格',
@@ -54,6 +52,7 @@ CKEDITOR.plugins.setLang( 'table', 'zh-cn', {
 	headersColumn: '第一列',
 	headersNone: '无',
 	headersRow: '第一行',
+	heightUnit: '高度单位',
 	invalidBorder: '边框粗细必须为数字格式',
 	invalidCellPadding: '单元格填充必须为数字格式',
 	invalidCellSpacing: '单元格间距必须为数字格式',
@@ -61,18 +60,12 @@ CKEDITOR.plugins.setLang( 'table', 'zh-cn', {
 	invalidHeight: '表格高度必须为数字格式',
 	invalidRows: '指定的列数必须大于零',
 	invalidWidth: '表格宽度必须为数字格式',
-	invalidRowMoveUp: '已经是第一行了，不能向上移动',
-	invalidRowMoveDown: '已经是最后一行了，不能向下移动',
 	menu: '表格属性',
 	row: {
 		menu: '行',
 		insertBefore: '在上方插入行',
 		insertAfter: '在下方插入行',
-		customInsert: '自定义插入行',
-		moveUp: '向上移动一行',
-		moveDown: '向下移动一行',
-		deleteRow: '删除行',
-		insertValidate:'插入的行数必须为整数且大于零',
+		deleteRow: '删除行'
 	},
 	rows: '行数',
 	summary: '摘要',
@@ -80,8 +73,5 @@ CKEDITOR.plugins.setLang( 'table', 'zh-cn', {
 	toolbar: '表格',
 	widthPc: '百分比',
 	widthPx: '像素',
-	widthUnit: '宽度单位',
-	drawLine:'单元格斜线',
-	removeLine:'移除单元格斜线',
-	customTable:'单元格斜线'
+	widthUnit: '宽度单位'
 } );

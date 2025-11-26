@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -47,8 +47,8 @@ CKEDITOR.command = function( editor, commandDefinition ) {
 		if ( this.state == CKEDITOR.TRISTATE_DISABLED || !this.checkAllowed() )
 			return false;
 
-		// if ( !data.doNotFocus && this.editorFocus ) // Give editor focus if necessary (http://dev.ckeditor.com/ticket/4355).
-		// 	editor.focus();
+		if ( this.editorFocus ) // Give editor focus if necessary (https://dev.ckeditor.com/ticket/4355).
+			editor.focus();
 
 		if ( this.fire( 'exec' ) === false )
 			return true;
@@ -105,8 +105,8 @@ CKEDITOR.command = function( editor, commandDefinition ) {
 	 * that if command implements {@link CKEDITOR.feature} interface it will be tested
 	 * by the {@link CKEDITOR.filter#checkFeature} method.
 	 *
-	 * @since 4.1
-	 * @param {Boolean} [noCache] Skip cache for example due to active filter change. Since CKEditor 4.2.
+	 * @since 4.1.0
+	 * @param {Boolean} [noCache] Skip cache for example due to active filter change. Since CKEditor 4.2.0.
 	 * @returns {Boolean} Whether this command is allowed.
 	 */
 	this.checkAllowed = function( noCache ) {
@@ -269,7 +269,7 @@ CKEDITOR.event.implementOn( CKEDITOR.command.prototype );
  * @event state
  */
 
- /**
+/**
  * @event refresh
  * @todo
  */

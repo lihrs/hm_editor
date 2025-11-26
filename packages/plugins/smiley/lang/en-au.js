@@ -1,9 +1,9 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'smiley', 'en-au', {
-	options: 'Smiley Options', // MISSING
+	options: 'Smiley Options',
 	title: 'Insert a Smiley',
 	toolbar: 'Smiley'
 } );

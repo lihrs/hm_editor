@@ -1,6 +1,6 @@
-﻿/**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+/**
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 ( function() {
@@ -9,7 +9,7 @@
 	CKEDITOR.plugins.add( 'stylescombo', {
 		requires: 'richcombo',
 		// jscs:disable maximumLineLength
-		lang: 'en,en-au,en-ca,en-gb,zh,zh-cn', // %REMOVE_LINE_CORE%
+		lang: 'af,ar,az,bg,bn,bs,ca,cs,cy,da,de,de-ch,el,en,en-au,en-ca,en-gb,eo,es,es-mx,et,eu,fa,fi,fo,fr,fr-ca,gl,gu,he,hi,hr,hu,id,is,it,ja,ka,km,ko,ku,lt,lv,mk,mn,ms,nb,nl,no,oc,pl,pt,pt-br,ro,ru,si,sk,sl,sq,sr,sr-latn,sv,th,tr,tt,ug,uk,vi,zh,zh-cn', // %REMOVE_LINE_CORE%
 		// jscs:enable maximumLineLength
 
 		init: function( editor ) {
@@ -26,7 +26,7 @@
 				if ( !stylesDefinitions )
 					return;
 
-				var style, styleName, styleType;
+				var style, styleName, styleType, styleLanguage;
 
 				// Put all styles into an Array.
 				for ( var i = 0, count = stylesDefinitions.length; i < count; i++ ) {
@@ -39,6 +39,8 @@
 					}
 
 					styleName = styleDefinition.name;
+					// In case when the style definition language is not defined, add the editor lang code (#5410).
+					styleLanguage = styleDefinition.language || editor.langCode;
 					style = new CKEDITOR.style( styleDefinition );
 
 					if ( !editor.filter.customConfig || editor.filter.check( style ) ) {
@@ -47,19 +49,33 @@
 						// Get the type (which will be used to assign style to one of 3 groups) from assignedTo if it's defined.
 						style._.type = styleType = style.assignedTo || style.type;
 
-						// Weight is used to sort styles (http://dev.ckeditor.com/ticket/9029).
+						// Weight is used to sort styles (https://dev.ckeditor.com/ticket/9029).
 						style._.weight = i + ( styleType == CKEDITOR.STYLE_OBJECT ? 1 : styleType == CKEDITOR.STYLE_BLOCK ? 2 : 3 ) * 1000;
-
+						style._.language = styleLanguage;
 						styles[ styleName ] = style;
 						stylesList.push( style );
 						allowedContent.push( style );
 					}
 				}
 
-				// Sorts the Array, so the styles get grouped by type in proper order (http://dev.ckeditor.com/ticket/9029).
+				// Sorts the Array, so the styles get grouped by type in proper order (https://dev.ckeditor.com/ticket/9029).
 				stylesList.sort( function( styleA, styleB ) {
 					return styleA._.weight - styleB._.weight;
 				} );
+			} );
+
+			// (#3649)
+			editor.on( 'stylesRemove', function( evt ) {
+				var type = evt.data && evt.data.type,
+					allowAll = type === undefined;
+
+				for ( var styleName in styles ) {
+					var style = styles[ styleName ];
+
+					if ( allowAll || style.type === type ) {
+						editor.removeStyle( style );
+					}
+				}
 			} );
 
 			editor.ui.addRichCombo( 'Styles', {
@@ -75,7 +91,7 @@
 				},
 
 				init: function() {
-					var style, styleName, lastType, type, i, count;
+					var style, styleName, lastType, type, language, i, count;
 
 					// Loop over the Array, adding all items to the
 					// combo.
@@ -83,13 +99,19 @@
 						style = stylesList[ i ];
 						styleName = style._name;
 						type = style._.type;
+						language = style._.definition.language;
 
 						if ( type != lastType ) {
 							this.startGroup( lang[ 'panelTitle' + String( type ) ] );
 							lastType = type;
 						}
 
-						this.add( styleName, style.type == CKEDITOR.STYLE_OBJECT ? styleName : style.buildPreview(), styleName );
+						this.add(
+							styleName,
+							style.type == CKEDITOR.STYLE_OBJECT ? styleName : style.buildPreview(),
+							styleName,
+							language
+						);
 					}
 
 					this.commit();
@@ -114,7 +136,7 @@
 				},
 
 				onRender: function() {
-					editor.on( 'selectionChange', function removeUnnecessaryInlineFontStyles2( ev ) {
+					editor.on( 'selectionChange', function( ev ) {
 						var currentValue = this.getValue(),
 							elementPath = ev.data.path,
 							elements = elementPath.elements;
@@ -141,7 +163,9 @@
 
 				onOpen: function() {
 					var selection = editor.getSelection(),
-						element = selection.getSelectedElement(),
+						// When editor is focused but is returned `null` as selected element, then return editable (#646).
+						// In case when selection dosen't cover whole element, we try to return element where selection starts (#862).
+						element = selection.getSelectedElement() || selection.getStartElement() || editor.editable(),
 						elementPath = editor.elementPath( element ),
 						counter = [ 0, 0, 0, 0 ];
 
@@ -201,3 +225,20 @@
 		}
 	} );
 } )();
+
+/**
+ * Removes styles from the current editor selection.
+ *
+ * Note that you can pass the `type` option to limit removing styles to the given type.
+ *
+ * ```js
+ * editor.fire( 'stylesRemove', { type: CKEDITOR.STYLE_BLOCK } );
+ * ```
+ *
+ * @since 4.15.1
+ * @event stylesRemove
+ * @member CKEDITOR.editor
+ * @param {CKEDITOR.editor} editor This editor instance.
+ * @param data
+ * @param {Number} [data.type] Style type, see {@link CKEDITOR#STYLE_INLINE INLINE}/{@link CKEDITOR#STYLE_BLOCK BLOCK}/{@link CKEDITOR#STYLE_OBJECT OBJECT} style options.
+ */

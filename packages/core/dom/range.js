@@ -1,7 +1,9 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
+
+'use strict';
 
 /**
  * Represents a delimited piece of content in a DOM Document.
@@ -176,7 +178,6 @@ CKEDITOR.dom.range = function( root ) {
 	//   param (see range.deleteContents or range.extractContents).
 	//   See comments in mergeAndUpdate because this is lots of fun too.
 	function execContentsAction( range, action, docFrag, mergeThen, cloneId ) {
-		'use strict';
 
 		range.optimizeBookmark();
 
@@ -204,9 +205,14 @@ CKEDITOR.dom.range = function( root ) {
 		// This allows us to not think about startNode == endNode case later on.
 		// We do that only when cloning, because in other cases we can safely split this text node
 		// and hence we can easily handle this case as many others.
-		if ( isClone && endNode.type == CKEDITOR.NODE_TEXT && startNode.equals( endNode ) ) {
-			startNode = range.document.createText( startNode.substring( startOffset, endOffset ) );
-			docFrag.append( startNode );
+
+		// We need to handle situation when selection startNode is type of NODE_ELEMENT (#426).
+		if ( isClone &&
+			endNode.type == CKEDITOR.NODE_TEXT &&
+			( startNode.equals( endNode ) || ( startNode.type === CKEDITOR.NODE_ELEMENT && startNode.getFirst().equals( endNode ) ) ) ) {
+
+			// Here we should always be inside one text node.
+			docFrag.append( range.document.createText( endNode.substring( startOffset, endOffset ) ) );
 			return;
 		}
 
@@ -214,7 +220,7 @@ CKEDITOR.dom.range = function( root ) {
 		// second part. The removal will be handled by the rest of the code.
 		if ( endNode.type == CKEDITOR.NODE_TEXT ) {
 			// If Extract or Delete we can split the text node,
-			// but if Clone (2), then we cannot modify the DOM (http://dev.ckeditor.com/ticket/11586) so we mark the text node for cloning.
+			// but if Clone (2), then we cannot modify the DOM (https://dev.ckeditor.com/ticket/11586) so we mark the text node for cloning.
 			if ( !isClone ) {
 				endNode = endNode.split( endOffset );
 			} else {
@@ -243,7 +249,7 @@ CKEDITOR.dom.range = function( root ) {
 		// be handled by the rest of the code .
 		if ( startNode.type == CKEDITOR.NODE_TEXT ) {
 			// If Extract or Delete we can split the text node,
-			// but if Clone (2), then we cannot modify the DOM (http://dev.ckeditor.com/ticket/11586) so we mark
+			// but if Clone (2), then we cannot modify the DOM (https://dev.ckeditor.com/ticket/11586) so we mark
 			// the text node for cloning.
 			if ( !isClone ) {
 				startNode.split( startOffset );
@@ -373,7 +379,7 @@ CKEDITOR.dom.range = function( root ) {
 				// If we don't do that, in next iterations nodes will be appended to wrong parent.
 				//
 				// We can just take first child because the algorithm guarantees
-				// that this will be the only child on this level. (http://dev.ckeditor.com/ticket/13568)
+				// that this will be the only child on this level. (https://dev.ckeditor.com/ticket/13568)
 				levelParent = levelParent.getChild( 0 );
 			}
 		}
@@ -405,7 +411,7 @@ CKEDITOR.dom.range = function( root ) {
 
 				// When Extracting, move the removed node to the docFrag.
 				if ( isExtract ) {
-					newParent.append( node );
+					newParent.append( node, toStart );
 				}
 			}
 
@@ -574,7 +580,7 @@ CKEDITOR.dom.range = function( root ) {
 			// Tolerant bogus br when checking at the end of block.
 			// Reject any text node unless it's being bookmark
 			// OR it's spaces.
-			// Reject any element unless it's being invisible empty. (http://dev.ckeditor.com/ticket/3883)
+			// Reject any element unless it's being invisible empty. (https://dev.ckeditor.com/ticket/3883)
 			return !checkStart && isBogus( node ) ||
 				node.type == CKEDITOR.NODE_ELEMENT &&
 				node.is( CKEDITOR.dtd.$removeEmpty );
@@ -686,6 +692,20 @@ CKEDITOR.dom.range = function( root ) {
 		},
 
 		/**
+		 * Whether this range is the same as another passed range.
+		 *
+		 * @since 4.13.0
+		 * @param {CKEDITOR.dom.range} range A range to be compared with this range.
+		 * @returns {Boolean} Whether ranges are identical.
+		 */
+		equals: function( range ) {
+			return this.startOffset === range.startOffset &&
+				this.endOffset === range.endOffset &&
+				this.startContainer.equals( range.startContainer ) &&
+				this.endContainer.equals( range.endContainer );
+		},
+
+		/**
 		 * Creates a bookmark object, which can be later used to restore the
 		 * range by using the {@link #moveToBookmark} function.
 		 *
@@ -707,10 +727,14 @@ CKEDITOR.dom.range = function( root ) {
 		 * @returns {Boolean} return.collapsed
 		 */
 		createBookmark: function( serializable ) {
-			var startNode, endNode;
-			var baseId;
-			var clone;
-			var collapsed = this.collapsed;
+			var startContainer = this.startContainer,
+				endContainer = this.endContainer,
+				collapsed = this.collapsed,
+				startNode,
+				endNode,
+				baseId,
+				clone,
+				temporary;
 
 			startNode = this.document.createElement( 'span' );
 			startNode.data( 'cke-bookmark', 1 );
@@ -734,12 +758,27 @@ CKEDITOR.dom.range = function( root ) {
 					endNode.setAttribute( 'id', baseId + 'E' );
 
 				clone = this.clone();
+
+				if ( isTemporary( endContainer ) ) {
+					temporary = getTemporary( endContainer );
+
+					clone.moveToPosition( temporary, CKEDITOR.POSITION_AFTER_END );
+				}
+
 				clone.collapse();
 				clone.insertNode( endNode );
 			}
 
 			clone = this.clone();
+
+			if ( isTemporary( startContainer ) ) {
+				temporary = getTemporary( startContainer );
+
+				clone.moveToPosition( temporary, CKEDITOR.POSITION_BEFORE_START );
+			}
+
 			clone.collapse( true );
+
 			clone.insertNode( startNode );
 
 			// Update the range position.
@@ -756,6 +795,25 @@ CKEDITOR.dom.range = function( root ) {
 				serializable: serializable,
 				collapsed: collapsed
 			};
+
+			function isTemporary( node ) {
+				return !!getTemporary( node );
+			}
+
+			function getTemporary( node ) {
+				return node.getAscendant( function( node ) {
+					return node.data && node.data( 'cke-temp' ) && !isClipboardBin( node );
+				}, true );
+			}
+
+			function isClipboardBin( node ) {
+				var ids = [
+					'cke_copybin',
+					'cke_pastebin'
+				];
+
+				return CKEDITOR.tools.array.indexOf( ids, node.getAttribute( 'id' ) ) !== -1;
+			}
 		},
 
 		/**
@@ -834,7 +892,7 @@ CKEDITOR.dom.range = function( root ) {
 					var precedingLength = getLengthOfPrecedingTextNodes( container );
 
 					// Normal case - text node is not empty.
-					if ( container.getText() ) {
+					if ( !container.isEmpty() ) {
 						offset += precedingLength;
 
 					// Awful case - the text node is empty and thus will be totally lost.
@@ -1052,7 +1110,7 @@ CKEDITOR.dom.range = function( root ) {
 			}
 
 			// Sometimes the endNode will come right before startNode for collapsed
-			// ranges. Fix it. (http://dev.ckeditor.com/ticket/3780)
+			// ranges. Fix it. (https://dev.ckeditor.com/ticket/3780)
 			if ( startNode.getPosition( endNode ) & CKEDITOR.POSITION_FOLLOWING )
 				startNode = endNode;
 
@@ -1125,29 +1183,29 @@ CKEDITOR.dom.range = function( root ) {
 		},
 
 		/**
+		 * Change start/end container to its parent or to a new node created from container split.
+		 *
+		 * Works on the container if it is a {@link CKEDITOR#NODE_TEXT text node} and the range is collapsed
+		 * or start/end is not ignored.
+		 *
 		 * @param {Boolean} [ignoreStart=false]
 		 * @param {Boolean} [ignoreEnd=false]
-		 * @todo precise desc/algorithm
 		 */
 		trim: function( ignoreStart, ignoreEnd ) {
 			var startContainer = this.startContainer,
 				startOffset = this.startOffset,
 				collapsed = this.collapsed;
+
 			if ( ( !ignoreStart || collapsed ) && startContainer && startContainer.type == CKEDITOR.NODE_TEXT ) {
-				// If the offset is zero, we just insert the new node before
-				// the start.
 				if ( !startOffset ) {
 					startOffset = startContainer.getIndex();
 					startContainer = startContainer.getParent();
 				}
-				// If the offset is at the end, we'll insert it after the text
-				// node.
 				else if ( startOffset >= startContainer.getLength() ) {
 					startOffset = startContainer.getIndex() + 1;
 					startContainer = startContainer.getParent();
 				}
-				// In other case, we split the text node and insert the new
-				// node at the split point.
+				// Split the text node and point to the new node at split point.
 				else {
 					var nextText = startContainer.split( startOffset );
 
@@ -1173,20 +1231,15 @@ CKEDITOR.dom.range = function( root ) {
 			var endOffset = this.endOffset;
 
 			if ( !( ignoreEnd || collapsed ) && endContainer && endContainer.type == CKEDITOR.NODE_TEXT ) {
-				// If the offset is zero, we just insert the new node before
-				// the start.
 				if ( !endOffset ) {
 					endOffset = endContainer.getIndex();
 					endContainer = endContainer.getParent();
 				}
-				// If the offset is at the end, we'll insert it after the text
-				// node.
 				else if ( endOffset >= endContainer.getLength() ) {
 					endOffset = endContainer.getIndex() + 1;
 					endContainer = endContainer.getParent();
 				}
-				// In other case, we split the text node and insert the new
-				// node at the split point.
+				// Split the text node and point to the new node at split point.
 				else {
 					endContainer.split( endOffset );
 
@@ -1206,7 +1259,9 @@ CKEDITOR.dom.range = function( root ) {
 		 * @param {Boolean} [excludeBrs=false] Whether include line-breaks when expanding.
 		 */
 		enlarge: function( unit, excludeBrs ) {
-			var leadingWhitespaceRegex = new RegExp( /[^\s\ufeff]/ );
+			var leadingWhitespaceRegex = new RegExp( /[^\s\ufeff]/ ),
+				siblingText,
+				boundary;
 
 			switch ( unit ) {
 				case CKEDITOR.ENLARGE_INLINE:
@@ -1220,8 +1275,7 @@ CKEDITOR.dom.range = function( root ) {
 
 					// Get the common ancestor.
 					var commonAncestor = this.getCommonAncestor();
-
-					var boundary = this.root;
+					boundary = this.root;
 
 					// For each boundary
 					//		a. Depending on its position, find out the first node to be checked (a sibling) or,
@@ -1238,7 +1292,6 @@ CKEDITOR.dom.range = function( root ) {
 					// is available before it.
 					var needsWhiteSpace = false;
 					var isWhiteSpace;
-					var siblingText;
 
 					// Process the start boundary.
 
@@ -1305,7 +1358,7 @@ CKEDITOR.dom.range = function( root ) {
 							sibling = enlargeable.getPrevious();
 						}
 
-						// Check all sibling nodes preceeding the enlargeable
+						// Check all sibling nodes preceding the enlargeable
 						// node. The node wil lbe enlarged only if none of them
 						// blocks it.
 						while ( sibling ) {
@@ -1324,13 +1377,13 @@ CKEDITOR.dom.range = function( root ) {
 
 								isWhiteSpace = /[\s\ufeff]$/.test( siblingText );
 							} else {
-								// http://dev.ckeditor.com/ticket/12221 (Chrome) plus http://dev.ckeditor.com/ticket/11111 (Safari).
+								// https://dev.ckeditor.com/ticket/12221 (Chrome) plus https://dev.ckeditor.com/ticket/11111 (Safari).
 								var offsetWidth0 = CKEDITOR.env.webkit ? 1 : 0;
 
 								// If this is a visible element.
 								// We need to check for the bookmark attribute because IE insists on
-								// rendering the display:none nodes we use for bookmarks. (http://dev.ckeditor.com/ticket/3363)
-								// Line-breaks (br) are rendered with zero width, which we don't want to include. (http://dev.ckeditor.com/ticket/7041)
+								// rendering the display:none nodes we use for bookmarks. (https://dev.ckeditor.com/ticket/3363)
+								// Line-breaks (br) are rendered with zero width, which we don't want to include. (https://dev.ckeditor.com/ticket/7041)
 								if ( ( sibling.$.offsetWidth > offsetWidth0 || excludeBrs && sibling.is( 'br' ) ) && !sibling.data( 'cke-bookmark' ) ) {
 									// We'll accept it only if we need
 									// whitespace, and this is an inline
@@ -1399,7 +1452,7 @@ CKEDITOR.dom.range = function( root ) {
 
 					// Process the end boundary. This is basically the same
 					// code used for the start boundary, with small changes to
-					// make it work in the oposite side (to the right). This
+					// make it work in the opposite side (to the right). This
 					// makes it difficult to reuse the code here. So, fixes to
 					// the above code are likely to be replicated here.
 
@@ -1410,53 +1463,6 @@ CKEDITOR.dom.range = function( root ) {
 					enlargeable = sibling = null;
 					commonReached = needsWhiteSpace = false;
 
-					// Function check if there are only whitespaces from the given starting point
-					// (startContainer and startOffset) till the end on block.
-					// Examples ("[" is the start point):
-					//  - <p>foo[ </p>           - will return true,
-					//  - <p><b>foo[ </b> </p>   - will return true,
-					//  - <p>foo[ bar</p>        - will return false,
-					//  - <p><b>foo[ </b>bar</p> - will return false,
-					//  - <p>foo[ <b></b></p>    - will return false.
-					function onlyWhiteSpaces( startContainer, startOffset ) {
-						// We need to enlarge range if there is white space at the end of the block,
-						// because it is not displayed in WYSIWYG mode and user can not select it. So
-						// "<p>foo[bar] </p>" should be changed to "<p>foo[bar ]</p>". On the other hand
-						// we should do nothing if we are not at the end of the block, so this should not
-						// be changed: "<p><i>[foo] </i>bar</p>".
-						var walkerRange = new CKEDITOR.dom.range( boundary );
-						walkerRange.setStart( startContainer, startOffset );
-						// The guard will find the end of range so I put boundary here.
-						walkerRange.setEndAt( boundary, CKEDITOR.POSITION_BEFORE_END );
-
-						var walker = new CKEDITOR.dom.walker( walkerRange ),
-							node;
-
-						walker.guard = function( node ) {
-							// Stop if you exit block.
-							return !( node.type == CKEDITOR.NODE_ELEMENT && node.isBlockBoundary() );
-						};
-
-						while ( ( node = walker.next() ) ) {
-							if ( node.type != CKEDITOR.NODE_TEXT ) {
-								// Stop if you enter to any node (walker.next() will return node only
-								// it goes out, not if it is go into node).
-								return false;
-							} else {
-								// Trim the first node to startOffset.
-								if ( node != startContainer )
-									siblingText = node.getText();
-								else
-									siblingText = node.substring( startOffset );
-
-								// Check if it is white space.
-								if ( leadingWhitespaceRegex.test( siblingText ) )
-									return false;
-							}
-						}
-
-						return true;
-					}
 
 					if ( container.type == CKEDITOR.NODE_TEXT ) {
 						// Check if there is only white space after the offset.
@@ -1477,12 +1483,12 @@ CKEDITOR.dom.range = function( root ) {
 							} else {
 								// If we are in the middle on text node and there are only whitespaces
 								// till the end of block, we should enlarge element.
-								if ( onlyWhiteSpaces( container, offset ) )
+								if ( onlyWhiteSpaces( container, offset, boundary ) )
 									enlargeable = container.getParent();
 							}
 						}
 					} else {
-						// Get the node right after the boudary to be checked
+						// Get the node right after the boundary to be checked
 						// first.
 						sibling = container.getChild( offset );
 
@@ -1518,15 +1524,15 @@ CKEDITOR.dom.range = function( root ) {
 
 								// Check if there are not whitespace characters till the end of editable.
 								// If so stop expanding.
-								if ( !onlyWhiteSpaces( sibling, 0 ) )
+								if ( !onlyWhiteSpaces( sibling, 0, boundary ) )
 									sibling = null;
 
 								isWhiteSpace = /^[\s\ufeff]/.test( siblingText );
 							} else if ( sibling.type == CKEDITOR.NODE_ELEMENT ) {
 								// If this is a visible element.
 								// We need to check for the bookmark attribute because IE insists on
-								// rendering the display:none nodes we use for bookmarks. (http://dev.ckeditor.com/ticket/3363)
-								// Line-breaks (br) are rendered with zero width, which we don't want to include. (http://dev.ckeditor.com/ticket/7041)
+								// rendering the display:none nodes we use for bookmarks. (https://dev.ckeditor.com/ticket/3363)
+								// Line-breaks (br) are rendered with zero width, which we don't want to include. (https://dev.ckeditor.com/ticket/7041)
 								if ( ( sibling.$.offsetWidth > 0 || excludeBrs && sibling.is( 'br' ) ) && !sibling.data( 'cke-bookmark' ) ) {
 									// We'll accept it only if we need
 									// whitespace, and this is an inline
@@ -1617,7 +1623,7 @@ CKEDITOR.dom.range = function( root ) {
 						boundaryGuard = function( node ) {
 							// We should not check contents of non-editable elements. It may happen
 							// that inline widget has display:table child which should not block range#enlarge.
-							// When encoutered non-editable element...
+							// When encountered non-editable element...
 							if ( node.type == CKEDITOR.NODE_ELEMENT && node.getAttribute( 'contenteditable' ) == 'false' ) {
 								if ( inNonEditable ) {
 									// ... in which we already were, reset it (because we're leaving it) and return.
@@ -1639,7 +1645,7 @@ CKEDITOR.dom.range = function( root ) {
 								blockBoundary = node;
 							return retval;
 						},
-						// Record the encounted 'tailBr' for later use.
+						// Record the encountered 'tailBr' for later use.
 						tailBrGuard = function( node ) {
 							var retval = boundaryGuard( node );
 							if ( !retval && node.is && node.is( 'br' ) )
@@ -1660,7 +1666,7 @@ CKEDITOR.dom.range = function( root ) {
 					this.setStartAt( blockBoundary, !blockBoundary.is( 'br' ) && ( !enlargeable && this.checkStartOfBlock() ||
 						enlargeable && blockBoundary.contains( enlargeable ) ) ? CKEDITOR.POSITION_AFTER_START : CKEDITOR.POSITION_AFTER_END );
 
-					// Avoid enlarging the range further when end boundary spans right after the BR. (http://dev.ckeditor.com/ticket/7490)
+					// Avoid enlarging the range further when end boundary spans right after the BR. (https://dev.ckeditor.com/ticket/7490)
 					if ( unit == CKEDITOR.ENLARGE_LIST_ITEM_CONTENTS ) {
 						var theRange = this.clone();
 						walker = new CKEDITOR.dom.walker( theRange );
@@ -1712,6 +1718,54 @@ CKEDITOR.dom.range = function( root ) {
 				return enlargeable && enlargeable.type == CKEDITOR.NODE_ELEMENT && enlargeable.hasAttribute( 'contenteditable' ) ?
 					null : enlargeable;
 			}
+
+			// Function check if there are only whitespaces from the given starting point
+			// (startContainer and startOffset) till the end on block.
+			// Examples ("[" is the start point):
+			//  - <p>foo[ </p>           - will return true,
+			//  - <p><b>foo[ </b> </p>   - will return true,
+			//  - <p>foo[ bar</p>        - will return false,
+			//  - <p><b>foo[ </b>bar</p> - will return false,
+			//  - <p>foo[ <b></b></p>    - will return false.
+			function onlyWhiteSpaces( startContainer, startOffset, boundary ) {
+				// We need to enlarge range if there is white space at the end of the block,
+				// because it is not displayed in WYSIWYG mode and user can not select it. So
+				// "<p>foo[bar] </p>" should be changed to "<p>foo[bar ]</p>". On the other hand
+				// we should do nothing if we are not at the end of the block, so this should not
+				// be changed: "<p><i>[foo] </i>bar</p>".
+				var walkerRange = new CKEDITOR.dom.range( boundary );
+				walkerRange.setStart( startContainer, startOffset );
+				// The guard will find the end of range so I put boundary here.
+				walkerRange.setEndAt( boundary, CKEDITOR.POSITION_BEFORE_END );
+
+				var walker = new CKEDITOR.dom.walker( walkerRange ),
+					node;
+
+				walker.guard = function( node ) {
+					// Stop if you exit block.
+					return !( node.type == CKEDITOR.NODE_ELEMENT && node.isBlockBoundary() );
+				};
+
+				while ( ( node = walker.next() ) ) {
+					if ( node.type != CKEDITOR.NODE_TEXT ) {
+						// Stop if you enter to any node (walker.next() will return node only
+						// it goes out, not if it is go into node).
+						return false;
+					} else {
+						// Trim the first node to startOffset.
+						if ( node != startContainer )
+							siblingText = node.getText();
+						else
+							siblingText = node.substring( startOffset );
+
+						// Check if it is white space.
+						if ( leadingWhitespaceRegex.test( siblingText ) )
+							return false;
+					}
+				}
+
+				return true;
+			}
 		},
 
 		/**
@@ -1759,7 +1813,7 @@ CKEDITOR.dom.range = function( root ) {
 						walkerRange.setStartAfter( startContainer );
 					else {
 						// Enlarge the range properly to avoid walker making
-						// DOM changes caused by triming the text nodes later.
+						// DOM changes caused by trimming the text nodes later.
 						walkerRange.setStartBefore( startContainer );
 						moveStart = 0;
 					}
@@ -1786,7 +1840,7 @@ CKEDITOR.dom.range = function( root ) {
 
 				var currentElement;
 				walker.guard = function( node, movingOut ) {
-					// Skipping bogus before other cases (http://dev.ckeditor.com/ticket/17010).
+					// Skipping bogus before other cases (https://dev.ckeditor.com/ticket/17010).
 					if ( skipBogus && isBogus( node ) ) {
 						return true;
 					}
@@ -2134,7 +2188,7 @@ CKEDITOR.dom.range = function( root ) {
 			// So even if the initial range was placed before the bogus <br>, after creating the bookmark it
 			// is placed before the bookmark.
 			// Fortunately, getBogus() is able to skip the bookmark so it finds the bogus <br> in this case.
-			// We remove incorrectly placed one and add a brand new one. (http://dev.ckeditor.com/ticket/13001)
+			// We remove incorrectly placed one and add a brand new one. (https://dev.ckeditor.com/ticket/13001)
 			var bogus = fixedBlock.getBogus();
 			if ( bogus ) {
 				bogus.remove();
@@ -2234,7 +2288,7 @@ CKEDITOR.dom.range = function( root ) {
 
 			// Duplicate the element after it.
 			var clone = toSplit.clone( false, cloneId || false );
-			clone && clone.hasClass('_printHide') && clone.removeClass('_printHide'); // modifyBy liwenjuan YUNHIS-25021
+
 			// Place the extracted contents into the duplicated element.
 			documentFragment.appendTo( clone );
 			clone.insertAfter( toSplit );
@@ -2338,13 +2392,15 @@ CKEDITOR.dom.range = function( root ) {
 		},
 
 		/**
+		 * Verifies whether range starts on non-text or non-inline element.
+		 *
 		 * **Note:** Calls to this function may produce changes to the DOM. The range may
 		 * be updated to reflect such changes.
 		 *
+		 * @param {Boolean} skipTrimming Whether range trim should be skipped.
 		 * @returns {Boolean}
-		 * @todo
 		 */
-		checkStartOfBlock: function() {
+		checkStartOfBlock: function( skipTrimming ) {
 			var startContainer = this.startContainer,
 				startOffset = this.startOffset;
 
@@ -2356,10 +2412,13 @@ CKEDITOR.dom.range = function( root ) {
 					this.trim( 0, 1 );
 			}
 
-			// Antecipate the trim() call here, so the walker will not make
-			// changes to the DOM, which would not get reflected into this
-			// range otherwise.
-			this.trim();
+			// Trimming text node may produce unwanted `&nbsp;` at the beginning of splitted node (#3819).
+			if ( !skipTrimming ) {
+				// Anticipate the trim() call here, so the walker will not make
+				// changes to the DOM, which would not get reflected into this
+				// range otherwise.
+				this.trim();
+			}
 
 			// We need to grab the block element holding the start boundary, so
 			// let's use an element path for it.
@@ -2377,13 +2436,15 @@ CKEDITOR.dom.range = function( root ) {
 		},
 
 		/**
+		 * Verifies whether range ends on non-text or non-inline element.
+		 *
 		 * **Note:** Calls to this function may produce changes to the DOM. The range may
 		 * be updated to reflect such changes.
 		 *
+		 * @param {Boolean} skipTrimming Whether range trim should be skipped.
 		 * @returns {Boolean}
-		 * @todo
 		 */
-		checkEndOfBlock: function() {
+		checkEndOfBlock: function( skipTrimming ) {
 			var endContainer = this.endContainer,
 				endOffset = this.endOffset;
 
@@ -2395,10 +2456,13 @@ CKEDITOR.dom.range = function( root ) {
 					this.trim( 1, 0 );
 			}
 
-			// Antecipate the trim() call here, so the walker will not make
-			// changes to the DOM, which would not get reflected into this
-			// range otherwise.
-			this.trim();
+			// Trimming text node may produce unwanted `&nbsp;` at the beginning of splitted node (#3819).
+			if ( !skipTrimming ) {
+				// Anticipate the trim() call here, so the walker will not make
+				// changes to the DOM, which would not get reflected into this
+				// range otherwise.
+				this.trim();
+			}
 
 			// We need to grab the block element holding the start boundary, so
 			// let's use an element path for it.
@@ -2569,7 +2633,7 @@ CKEDITOR.dom.range = function( root ) {
 		 *
 		 * See also: {@link #moveToElementEditablePosition}.
 		 *
-		 * @since 4.3
+		 * @since 4.3.0
 		 * @param {CKEDITOR.dom.element} [element] The starting element. If not specified, the current range
 		 * position will be used.
 		 * @param {Boolean} [isMoveForward] Whether move to the end of editable. Otherwise, look back.
@@ -2652,7 +2716,7 @@ CKEDITOR.dom.range = function( root ) {
 		getEnclosedNode: function() {
 			var walkerRange = this.clone();
 
-			// Optimize and analyze the range to avoid DOM destructive nature of walker. (http://dev.ckeditor.com/ticket/5780)
+			// Optimize and analyze the range to avoid DOM destructive nature of walker. (https://dev.ckeditor.com/ticket/5780)
 			walkerRange.optimize();
 			if ( walkerRange.startContainer.type != CKEDITOR.NODE_ELEMENT || walkerRange.endContainer.type != CKEDITOR.NODE_ELEMENT )
 				return null;
@@ -2705,7 +2769,7 @@ CKEDITOR.dom.range = function( root ) {
 		 *
 		 * Note: use this method on a collapsed range.
 		 *
-		 * @since 4.3
+		 * @since 4.3.0
 		 * @returns {CKEDITOR.dom.element/CKEDITOR.dom.text}
 		 */
 		getNextEditableNode: getNextEditableNode(),
@@ -2713,7 +2777,7 @@ CKEDITOR.dom.range = function( root ) {
 		/**
 		 * See {@link #getNextEditableNode}.
 		 *
-		 * @since 4.3
+		 * @since 4.3.0
 		 * @returns {CKEDITOR.dom.element/CKEDITOR.dom.text}
 		 */
 		getPreviousEditableNode: getNextEditableNode( 1 ),
@@ -2724,7 +2788,7 @@ CKEDITOR.dom.range = function( root ) {
 		 * table, but it cannot be two different tables on the same DOM level).
 		 *
 		 * @private
-		 * @since 4.7
+		 * @since 4.7.0
 		 * @param {Object} [tableElements] Mapping of element names that should be considered.
 		 * @returns {CKEDITOR.dom.element/null}
 		 */
@@ -2739,16 +2803,14 @@ CKEDITOR.dom.range = function( root ) {
 				table: 1
 			};
 
-			var start = this.startContainer,
-				end = this.endContainer,
+			var start = this.getTouchedStartNode(),
+				end = this.getTouchedEndNode(),
 				startTable = start.getAscendant( 'table', true ),
 				endTable = end.getAscendant( 'table', true );
 
-			// Super weird edge case in Safari: if there is a table with only one cell inside and that cell
-			// is selected, then the end boundary of the table is moved into editor's editable.
-			// That case is also present when selecting the last cell inside nested table.
-			if ( CKEDITOR.env.safari && startTable && end.equals( this.root ) ) {
-				return start.getAscendant( tableElements, true );
+			// Inline editor may be initialized inside a table (#2403).
+			if ( startTable && !this.root.contains( startTable ) ) {
+				return null;
 			}
 
 			if ( this.getEnclosedNode() ) {
@@ -2814,6 +2876,264 @@ CKEDITOR.dom.range = function( root ) {
 		},
 
 		/**
+		 * Returns an array of {@link CKEDITOR.dom.rect} elements that are represented as rectangles which are covered by ranges.
+		 * Rectangles represent the area of the screen occupied by the elements contained within the range.
+		 *
+		 * In the following example:
+		 *
+		 * ```html
+		 *  <p><span>first {span</span><span> second span</span></p>
+		 *  <p><span>very long }span</span></p>
+		 * ```
+		 *
+		 * Brackets represent the beginning and the end of the selection.
+		 *
+		 * Returned rectangles would be represented by areas like below:
+		 *
+		 * ```
+		 * first [span][ second span]
+		 * [very long ]span
+		 * ```
+		 *
+		 * where each pair of brackets represents one rectangle.
+		 *
+		 * Note: Various browsers might return a different list of rectangles.
+		 *
+		 * Internet Explorer 8 does not have the native `range.getClientRects()` method, which is a base for this method, implemented.
+		 * As a workaround it will return an array containing only one rectangle which would
+		 * start in the top left-hand corner of the selection and end in the bottom right-hand corner.
+		 * Possible cases when the returned rectangle does not fully cover ranges are presented below:
+		 *
+		 * <img src="../assets/img/dom-range-selection.png" alt="Possible incorrect cases.">
+		 *
+		 * @since 4.10.0
+		 * @param {Boolean} [isAbsolute] The function will retrieve an absolute rectangle of the element,
+		 * i.e. a position relative to the upper-left corner of the topmost viewport.
+		 * @returns {CKEDITOR.dom.rect[]}
+		 */
+		getClientRects: ( function() {
+			if ( document.getSelection !== undefined ) {
+				return function( isAbsolute ) {
+					// We need to create native range so we can call native getClientRects.
+					var range = this.root.getDocument().$.createRange(),
+						rectList;
+
+					range.setStart( this.startContainer.$, this.startOffset );
+					range.setEnd( this.endContainer.$, this.endOffset );
+
+					rectList = range.getClientRects();
+
+					rectList = fixWidgetsRects( rectList, this );
+
+					if ( !rectList.length ) {
+						rectList = fixEmptyRectList( rectList, range, this );
+					}
+
+					return CKEDITOR.tools.array.map( rectList, function( item ) {
+						return convertRect( item, isAbsolute, this );
+					}, this );
+				};
+			} else {
+				return function( isAbsolute ) {
+					return [ convertRect( getRect( this.createBookmark() ), isAbsolute, this ) ];
+				};
+			}
+
+			// Remove all widget rects except for outermost one.
+			function fixWidgetsRects( rectList, context ) {
+				var rectArray = CKEDITOR.tools.array.map( rectList, function( item ) {
+						return item;
+					} ),
+					newRange = new CKEDITOR.dom.range( context.root ),
+					widgetElements,
+					widgetRects,
+					widgetRange,
+					documentFragment,
+					moveStart,
+					moveEnd;
+
+				// In case of ranges start and end container set as widget wrapper, document container won't contain wrapper and we can't find its id.
+				// Let's move ranges to parent element to fix that.
+				if ( context.startContainer instanceof CKEDITOR.dom.element ) {
+					moveStart = context.startOffset === 0 && context.startContainer.hasAttribute( 'data-widget' );
+				}
+				if ( context.endContainer instanceof CKEDITOR.dom.element ) {
+					moveEnd = context.endOffset === ( context.endContainer.getChildCount ? context.endContainer.getChildCount() : context.endContainer.length );
+					moveEnd = moveEnd && context.endContainer.hasAttribute( 'data-widget' );
+				}
+
+				if ( moveStart ) {
+					newRange.setStart( context.startContainer.getParent(), context.startContainer.getIndex() );
+				}
+				if ( moveEnd ) {
+					newRange.setEnd( context.endContainer.getParent(), context.endContainer.getIndex() + 1 );
+				}
+				if ( moveStart || moveEnd ) {
+					context = newRange;
+				}
+
+				documentFragment = context.cloneContents();
+
+				// Find all widget elements.
+				widgetElements = documentFragment.find( '[data-cke-widget-id]' ).toArray();
+				widgetElements = CKEDITOR.tools.array.map( widgetElements, function( item ) {
+					var editor = context.root.editor,
+						id = item.getAttribute( 'data-cke-widget-id' );
+					return editor.widgets.instances[ id ].element;
+				} );
+
+				if ( !widgetElements ) {
+					return;
+				}
+
+				// Once we have all widgets, get all theirs rects.
+				widgetRects = CKEDITOR.tools.array.map( widgetElements, function( element ) {
+					var rects,
+						container = element.getParent().hasClass( 'cke_widget_wrapper' ) ? element.getParent() : element;
+					widgetRange = this.root.getDocument().$.createRange();
+
+					widgetRange.setStart( container.getParent().$, container.getIndex() );
+					widgetRange.setEnd( container.getParent().$, container.getIndex() + 1 );
+
+					rects = widgetRange.getClientRects();
+					// Still some browsers might have wrong rect for widget.element so lets make sure it is correct.
+					rects.widgetRect = element.getClientRect();
+
+					return rects;
+				}, context );
+
+				CKEDITOR.tools.array.forEach( widgetRects, function( item ) {
+					var found;
+					cleanWidgetRects( 0 );
+
+					function cleanWidgetRects( startIndex ) {
+						CKEDITOR.tools.array.forEach( rectArray, function( rectArrayItem, index ) {
+							var compare = CKEDITOR.tools.objectCompare( item[ startIndex ], rectArrayItem );
+
+							if ( !compare ) {
+								compare = CKEDITOR.tools.objectCompare( item.widgetRect, rectArrayItem );
+							}
+
+							if ( compare ) {
+								// Find widget rect in rectArray and remove following rects that represent widget child elements.
+								Array.prototype.splice.call( rectArray, index, item.length - startIndex, item.widgetRect );
+								found = true;
+							}
+						} );
+
+						if ( !found ) {
+							if ( startIndex < rectArray.length - 1 ) {
+								// If first rect isn't existing inside rectArray lets take another element for reference.
+								cleanWidgetRects( startIndex + 1 );
+							} else {
+								// If none of widgets rect is found add widget element rect to rect list.
+								rectArray.push( item.widgetRect );
+							}
+						}
+					}
+				} );
+
+				return rectArray;
+			}
+
+			// Create rectList when browser natively doesn't return it.
+			function fixEmptyRectList( rectList, range, context ) {
+				var first,
+					textNode,
+					itemToInsertAfter;
+
+				if ( !range.collapsed ) {
+					// In some cases ( eg. ranges contain only image ) IE will return empty rectList.
+
+					rectList = [ getRect( context.createBookmark() ) ];
+				} else if ( context.startContainer instanceof CKEDITOR.dom.element ) {
+					// If collapsed ranges are in element add textNode and return its rects.
+
+					first = context.checkStartOfBlock();
+					textNode = new CKEDITOR.dom.text( '\u200b' );
+
+					if ( first ) {
+						context.startContainer.append( textNode, true );
+					} else {
+						if ( context.startOffset === 0 ) {
+							textNode.insertBefore( context.startContainer.getFirst() );
+						} else {
+							itemToInsertAfter = context.startContainer.getChildren().getItem( context.startOffset - 1 );
+							textNode.insertAfter( itemToInsertAfter );
+						}
+					}
+
+					// Create native collapsed ranges inside just created textNode.
+					range.setStart( textNode.$, 0 );
+					range.setEnd( textNode.$, 0 );
+
+					rectList = range.getClientRects();
+					textNode.remove();
+				} else if ( context.startContainer instanceof CKEDITOR.dom.text ) {
+					if ( context.startContainer.getText() === '' ) {
+						// In case of empty text fill it with zero width space.
+						context.startContainer.setText( '\u200b' );
+						rectList = range.getClientRects();
+
+						context.startContainer.setText( '' );
+
+					} else {
+						// If there is text node which isn't empty, but still no rects are returned use IE8 polyfill.
+						// This happens with selection at the end of line in IE.
+						rectList = [ getRect( context.createBookmark() ) ];
+					}
+				}
+				return rectList;
+			}
+
+			// Extending empty object with rect, to prevent inheriting from DOMRect, same approach as in CKEDITOR.dom.element.getClientRect().
+			function convertRect( rect, isAbsolute, context ) {
+				var newRect = CKEDITOR.tools.extend( {}, rect );
+
+				if ( isAbsolute ) {
+					newRect = CKEDITOR.tools.getAbsoluteRectPosition( context.document.getWindow(), newRect );
+				}
+
+				// Some browsers might not return width and height.
+				!newRect.width && ( newRect.width = newRect.right - newRect.left );
+				!newRect.height && ( newRect.height = newRect.bottom - newRect.top );
+				return newRect;
+			}
+
+			// Fallback helper for browsers that don't support native getClientRects().
+			function getRect( bookmark ) {
+				var start = bookmark.startNode,
+					end = bookmark.endNode,
+					rects;
+
+				// Inserting zero width space, to prevent some strange rects returned by IE.
+				start.setText( '\u200b' );
+				start.removeStyle( 'display' );
+
+				if ( end ) {
+					end.setText( '\u200b' );
+					end.removeStyle( 'display' );
+
+					rects = [ start.getClientRect(), end.getClientRect() ];
+
+					end.remove();
+				} else {
+					rects = [ start.getClientRect(), start.getClientRect() ];
+				}
+				start.remove();
+
+				return {
+					right: Math.max( rects[ 0 ].right, rects[ 1 ].right ),
+					bottom: Math.max( rects[ 0 ].bottom, rects[ 1 ].bottom ),
+					left: Math.min( rects[ 0 ].left, rects[ 1 ].left ),
+					top: Math.min( rects[ 0 ].top, rects[ 1 ].top ),
+					width: Math.abs( rects[ 0 ].left - rects[ 1 ].left ),
+					height: Math.max( rects[ 0 ].bottom, rects[ 1 ].bottom ) - Math.min( rects[ 0 ].top, rects[ 1 ].top )
+				};
+			}
+		} )(),
+
+		/**
 		 * Setter for the {@link #startContainer}.
 		 *
 		 * @since 4.4.6
@@ -2854,7 +3174,7 @@ CKEDITOR.dom.range = function( root ) {
 		 *
 		 * @since 4.5.11
 		 * @private
-		 * @param {String} query
+		 * @param {String} query A valid [CSS selector](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors).
 		 * @param {Boolean} [includeNonEditables=false] Whether elements with `contenteditable` set to `false` should
 		 * be included.
 		 * @returns {CKEDITOR.dom.element[]}
@@ -2882,7 +3202,7 @@ CKEDITOR.dom.range = function( root ) {
 						continue;
 					}
 
-					// It's not enough to get elements from common ancestor, because it migth contain too many matches.
+					// It's not enough to get elements from common ancestor, because it might contain too many matches.
 					// We need to ensure that returned items are between boundary points.
 					isStartGood = ( curItem.getPosition( boundaries.startNode ) & CKEDITOR.POSITION_FOLLOWING ) || boundaries.startNode.equals( curItem );
 					isEndGood = ( curItem.getPosition( boundaries.endNode ) & ( CKEDITOR.POSITION_PRECEDING + CKEDITOR.POSITION_IS_CONTAINED ) ) || boundaries.endNode.equals( curItem );

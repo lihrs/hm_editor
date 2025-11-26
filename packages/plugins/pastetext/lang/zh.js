@@ -1,8 +1,9 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'pastetext', 'zh', {
 	button: '貼成純文字',
-	pasteNotification: 'Your browser does not allow you to paste plain text this way. Press %1 to paste.' // MISSING
+	pasteNotification: '請按下「%1」貼上。您的瀏覽器不支援工具列按鈕或是內容功能表選項。 ',
+	title: '貼成純文字'
 } );

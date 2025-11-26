@@ -1,10 +1,10 @@
 ﻿/**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
- * @fileOverview Undo/Redo system for saving a shapshot for document modification
+ * @fileOverview Undo/Redo system for saving a snapshot for document modification
  *		and other recordable changes.
  */
 
@@ -20,7 +20,7 @@
 
 	CKEDITOR.plugins.add( 'undo', {
 		// jscs:disable maximumLineLength
-		lang: 'en,en-au,en-ca,en-gb,zh,zh-cn', // %REMOVE_LINE_CORE%
+		lang: 'af,ar,az,bg,bn,bs,ca,cs,cy,da,de,de-ch,el,en,en-au,en-ca,en-gb,eo,es,es-mx,et,eu,fa,fi,fo,fr,fr-ca,gl,gu,he,hi,hr,hu,id,is,it,ja,ka,km,ko,ku,lt,lv,mk,mn,ms,nb,nl,no,oc,pl,pt,pt-br,ro,ru,si,sk,sl,sq,sr,sr-latn,sv,th,tr,tt,ug,uk,vi,zh,zh-cn', // %REMOVE_LINE_CORE%
 		// jscs:enable maximumLineLength
 		icons: 'redo,redo-rtl,undo,undo-rtl', // %REMOVE_LINE_CORE%
 		hidpi: true, // %REMOVE_LINE_CORE%
@@ -63,13 +63,8 @@
 
 			function recordCommand( event ) {
 				// If the command hasn't been marked to not support undo.
-				// 禁止保存操作和纸张大小设置触发onchange
-				if (undoManager.enabled &&
-					event.data.name !== 'save' &&
-					event.data.name !== 'paperSize' &&  // 添加这个条件
-					event.data.command.canUndo !== false) {
-					undoManager.save(undefined, undefined, undefined, event);
-				}
+				if ( undoManager.enabled && event.data.command.canUndo !== false )
+					undoManager.save();
 			}
 
 			// We'll save snapshots before and after executing a command.
@@ -78,20 +73,15 @@
 
 			// Save snapshots before doing custom changes.
 			editor.on( 'saveSnapshot', function( evt ) {
-				undoManager.save(
-					evt.data && evt.data.contentOnly,
-					undefined,
-					undefined,
-					evt,
-					evt.data && evt.data.tagName);
+				undoManager.save( evt.data && evt.data.contentOnly );
 			} );
 
 			// Event manager listeners should be attached on contentDom.
 			editor.on( 'contentDom', editingHandler.attachListeners, editingHandler );
 
-			editor.on( 'instanceReady', function(e) {
+			editor.on( 'instanceReady', function() {
 				// Saves initial snapshot.
-				editor.fire( 'saveSnapshot', e );
+				editor.fire( 'saveSnapshot' );
 			} );
 
 			// Always save an undo snapshot - the previous mode might have
@@ -162,14 +152,14 @@
 			 * Locks the undo manager to prevent any save/update operations.
 			 *
 			 * It is convenient to lock the undo manager before performing DOM operations
-			 * that should not be recored (e.g. auto paragraphing).
+			 * that should not be recorded (e.g. auto paragraphing).
 			 *
 			 * See {@link CKEDITOR.plugins.undo.UndoManager#lock} for more details.
 			 *
 			 * **Note:** In order to unlock the undo manager, {@link #unlockSnapshot} has to be fired
 			 * the same number of times that `lockSnapshot` has been fired.
 			 *
-			 * @since 4.0
+			 * @since 4.0.0
 			 * @event lockSnapshot
 			 * @member CKEDITOR.editor
 			 * @param {CKEDITOR.editor} editor This editor instance.
@@ -179,19 +169,15 @@
 			 * @param {Boolean} [data.forceUpdate] When set to `true`, the last snapshot will always be updated
 			 * with the current content and selection. Read more in the {@link CKEDITOR.plugins.undo.UndoManager#lock} method.
 			 */
-			editor.on('lockSnapshot', function (evt) {
+			editor.on( 'lockSnapshot', function( evt ) {
 				var data = evt.data;
-				if (data) {
-					undoManager.lock(data.dontUpdate, data.forceUpdate, data);
-				} else {
-					undoManager.lock();
-				}
-			});
+				undoManager.lock( data && data.dontUpdate, data && data.forceUpdate );
+			} );
 
 			/**
 			 * Unlocks the undo manager and updates the latest snapshot.
 			 *
-			 * @since 4.0
+			 * @since 4.0.0
 			 * @event unlockSnapshot
 			 * @member CKEDITOR.editor
 			 * @param {CKEDITOR.editor} editor This editor instance.
@@ -258,37 +244,38 @@
 		 */
 		this.strokesLimit = 25;
 
+		/**
+		 * An array of filter rules.
+		 *
+		 * @since 4.13.0
+		 * @private
+		 * @property {Function[]}
+		 */
+		this._filterRules = [];
+
 		this.editor = editor;
 
 		// Reset the undo stack.
 		this.reset();
+
+		// In IE, we need to remove the expando attributes.
+		if ( CKEDITOR.env.ie ) {
+			this.addFilterRule( function( data ) {
+				return data.replace( /\s+data-cke-expando=".*?"/g, '' );
+			} );
+		}
 	};
 
 	UndoManager.prototype = {
 		/**
-		 * Handles keystroke support for the undo manager. It is called on `keyup` event for
+		 * Handles keystroke support for the undo manager. It is called on the `keyup` event for
 		 * keystrokes that can change the editor content.
 		 *
 		 * @param {Number} keyCode The key code.
 		 * @param {Boolean} [strokesPerSnapshotExceeded] When set to `true`, the method will
 		 * behave as if the strokes limit was exceeded regardless of the {@link #strokesRecorded} value.
 		 */
-		type: function (keyCode, strokesPerSnapshotExceeded, evt) {
-			// region 处理数据元的 placeholder
-			var $boundaryPair = this.editor.plugins.datasource.getRangeBoundaryNewtextbox();
-			if ($boundaryPair) {
-				this.editor.editable().fire('togglePlaceHolder', {
-					name: 'type',
-					data: evt,
-					strokesPerSnapshotExceeded: strokesPerSnapshotExceeded,
-					keyCode: keyCode,
-					container: new CKEDITOR.dom.element($boundaryPair[0]).getAscendant({td: 1, p: 1})
-				});
-			}
-			// endregion
-
-
-
+		type: function( keyCode, strokesPerSnapshotExceeded ) {
 			var keyGroup = UndoManager.getKeyGroup( keyCode ),
 				// Count of keystrokes in current a row.
 				// Note if strokesPerSnapshotExceeded will be exceeded, it'll be restarted.
@@ -303,15 +290,16 @@
 			if ( strokesPerSnapshotExceeded ) {
 				// Reset the count of strokes, so it'll be later assigned to this.strokesRecorded.
 				strokesRecorded = 0;
-				this.editor.fire('saveSnapshot', {name: 'type', keyCode: keyCode});
+
+				this.editor.fire( 'saveSnapshot' );
 			} else {
 				// Fire change event.
-				this.editor.fire('change', {name: 'type', keyCode: keyCode});
+				this.editor.fire( 'change' );
 			}
 
 			// Store recorded strokes count.
 			this.strokesRecorded[ keyGroup ] = strokesRecorded;
-			// This prop will tell in next itaration what kind of group was processed previously.
+			// This prop will tell in next iteration what kind of group was processed previously.
 			this.previousKeyGroup = keyGroup;
 		},
 
@@ -363,8 +351,8 @@
 		 */
 		refreshState: function() {
 			// These lines can be handled within onChange() too.
-			this.hasUndo = !!this.getNextImage(true, this.editor.HMConfig.realtimePageBreak ? 'afterPaging' : '-afterPaging');
-			this.hasRedo = !!this.getNextImage(false, this.editor.HMConfig.realtimePageBreak ? 'afterPaging' : '-afterPaging');
+			this.hasUndo = !!this.getNextImage( true );
+			this.hasRedo = !!this.getNextImage( false );
 			// Reset typing
 			this.resetType();
 			this.onChange();
@@ -376,14 +364,8 @@
 		 * @param {Boolean} onContentOnly If set to `true`, the snapshot will be saved only if the content has changed.
 		 * @param {CKEDITOR.plugins.undo.Image} image An optional image to save. If skipped, current editor will be used.
 		 * @param {Boolean} [autoFireChange=true] If set to `false`, will not trigger the {@link CKEDITOR.editor#change} event to editor.
-		 * @param {object} [event] YanJunwei - 调用此函数的事件名, 用于 editor.fire( 'change' )
-		 * @param {string[]} [tags] YanJunwei - 镜像的标签
 		 */
-		save: function( onContentOnly, image, autoFireChange, event, tags ) {
-			// YanJunwei - 纸张大小设置前不触发保存, 应该在设置纸张大小之后再进行保存.
-			if (event && event.name === 'beforeCommandExec' && event.data.name === 'paperSize') {
-				return;
-			}
+		save: function( onContentOnly, image, autoFireChange ) {
 			var editor = this.editor;
 			// Do not change snapshots stack when locked, editor is not ready,
 			// editable is not ready or when editor is in mode difference than 'wysiwyg'.
@@ -398,7 +380,7 @@
 
 			// Get a content image.
 			if ( !image )
-				image = new Image( editor, false, tags );
+				image = new Image( editor );
 
 			// Do nothing if it was not possible to retrieve an image.
 			if ( image.contents === false )
@@ -407,13 +389,13 @@
 			// Check if this is a duplicate. In such case, do nothing.
 			if ( this.currentImage ) {
 				if ( image.equalsContent( this.currentImage ) ) {
-					if (onContentOnly || image.equalsSelection(this.currentImage)) {
-						// 更新tags
-						this.currentImage.updateTagsFrom(image);
+					if ( onContentOnly )
 						return false;
-					}
+
+					if ( image.equalsSelection( this.currentImage ) )
+						return false;
 				} else if ( autoFireChange !== false ) {
-					editor.fire('change', event);
+					editor.fire( 'change' );
 				}
 			}
 
@@ -421,7 +403,7 @@
 			snapshots.splice( this.index + 1, snapshots.length - this.index - 1 );
 
 			// If we have reached the limit, remove the oldest one.
-			if ( snapshots.length >= this.limit )
+			if ( snapshots.length == this.limit )
 				snapshots.shift();
 
 			// Add the new image, updating the current index.
@@ -439,152 +421,72 @@
 		 *
 		 * @param {CKEDITOR.plugins.undo.Image} image
 		 */
-		restoreImage: function (image, evt) {
-			var that=this;
-			function callback4RestoreImage(){
+		restoreImage: function( image ) {
+			// Bring editor focused to restore selection.
+			var editor = this.editor,
+				sel;
 
-				// Bring editor focused to restore selection.
-				var editor = that.editor,
-					sel;
-
-				if ( image.bookmarks ) {
-					editor.focus();
-					// Retrieve the selection beforehand. (http://dev.ckeditor.com/ticket/8324)
-					sel = editor.getSelection();
-				}
-
-				// 老的锁定状态
-				var oldLocked = that.locked;
-				// Start transaction - do not allow any mutations to the
-				// snapshots stack done when selecting bookmarks (much probably
-				// by selectionChange listener).
-				that.locked = { level: 999 };
-
-				that.editor.loadSnapshot( image.contents );
-
-				// body 样式
-				var body = that.editor.document.getBody();
-				for (var _ in image.bodyStyle) {
-					body.setStyle(_, image.bodyStyle[_]);
-				}
-
-				// initEditPermissions(editor, 'undo');
-
-				try {
-					if (image.bookmarks)
-						sel.selectBookmarks(image.bookmarks);
-					else if (CKEDITOR.env.ie) {
-						// IE BUG: If I don't set the selection to *somewhere* after setting
-						// document contents, then IE would create an empty paragraph at the bottom
-						// the next time the document is modified.
-						var $range = that.editor.document.getBody().$.createTextRange();
-						$range.collapse(true);
-						$range.select();
-					}
-				} catch (e) {
-					console.error(e);
-					debugger;
-				}
-
-				// 恢复锁定状态
-				that.locked = oldLocked;
-
-				that.index = image.index;
-				that.currentImage = that.snapshots[ that.index ];
-
-				// Update current image with the actual editor
-				// content, since actualy content may differ from
-				// the original snapshot due to dom change. (http://dev.ckeditor.com/ticket/4622)
-				// ↑ 翻译过来就是 data-cke-widget-id 会变... 所以我们需要保留 tags, data-cke-widget-id 变了就变了
-				that.update();
-				that.refreshState();
-
-				editor.fire('change', {name: 'restoreImage', data: evt});
+			if ( image.bookmarks ) {
+				editor.focus();
+				// Retrieve the selection beforehand. (https://dev.ckeditor.com/ticket/8324)
+				sel = editor.getSelection();
 			}
 
-			if (!CKEDITOR.plugins.pagebreakCmd.autoPaging) {
-				callback4RestoreImage();
-			} else {
-				var restoreImageWaitPagingComplete = setInterval(function () {
-					if (!CKEDITOR.plugins.pagebreakCmd.autoPaging) {
-						window.clearInterval(restoreImageWaitPagingComplete);
-						callback4RestoreImage();
-					}
-				}, 10);
+			// Start transaction - do not allow any mutations to the
+			// snapshots stack done when selecting bookmarks (much probably
+			// by selectionChange listener).
+			this.locked = { level: 999 };
+
+			this.editor.loadSnapshot( image.contents );
+
+			if ( image.bookmarks )
+				sel.selectBookmarks( image.bookmarks );
+			else if ( CKEDITOR.env.ie ) {
+				// IE BUG: If I don't set the selection to *somewhere* after setting
+				// document contents, then IE would create an empty paragraph at the bottom
+				// the next time the document is modified.
+				var $range = this.editor.document.getBody().$.createTextRange();
+				$range.collapse( true );
+				$range.select();
 			}
+
+			this.locked = null;
+
+			this.index = image.index;
+			this.currentImage = this.snapshots[ this.index ];
+
+			// Update current image with the actual editor
+			// content, since actually content may differ from
+			// the original snapshot due to dom change. (https://dev.ckeditor.com/ticket/4622)
+			this.update();
+			this.refreshState();
+
+			editor.fire( 'change' );
 		},
 
 		/**
 		 * Gets the closest available image.
 		 *
 		 * @param {Boolean} isUndo If `true`, it will return the previous image.
-		 * @param {string} tagName 如果设置了 tagName, 就会在之前的镜像中查找带有该标志的镜像, 如果未找到就返回 null.
-		 * 							支持反选: tagName 前面加 "-" 则表示不选择包含此 tagName 的镜像.
-		 *
 		 * @returns {CKEDITOR.plugins.undo.Image} Next image or `null`.
 		 */
-		getNextImage: function(isUndo, tagName) {
+		getNextImage: function( isUndo ) {
 			var snapshots = this.snapshots,
 				currentImage = this.currentImage,
-				image, i,
-			reverseSelect, tagMatched;
+				image, i;
 
-			//deal with &#8203;
-			var firstDom = this.editor.document.getBody().getChildren().getItem(0);
-			if(firstDom.type === CKEDITOR.NODE_TEXT){
-				firstDom.remove();
-			}
 			if ( currentImage ) {
 				if ( isUndo ) {
 					for ( i = this.index - 1; i >= 0; i-- ) {
 						image = snapshots[ i ];
-
-						// 查找指定 tag.
-						if (typeof tagName === 'string') {
-							// 反选
-							reverseSelect = tagName.startsWith('-');
-							if (reverseSelect) {
-								tagName = tagName.substr(1);
-							}
-							tagMatched = image.tags.includes(tagName);
-
-							// (tagMatched && reverseSelect) || (!tagMatched && !reverseSelect)
-							if (!(tagMatched ^ reverseSelect)) {
-								continue;
-							}
-						}
-
-						//泰安
-						if(image.contents.startsWith("<p><br></p>") || image.contents.startsWith('<div class="emrWidget">')){
-							image.index = 0;
-							return null;
-						}
 						if ( !currentImage.equalsContent( image ) ) {
 							image.index = i;
-							//泰安
-							if (i === 2 && snapshots[i - 1].contents.startsWith('<div class="emrWidget">')) {
-								return null;
-							}
 							return image;
 						}
 					}
 				} else {
 					for ( i = this.index + 1; i < snapshots.length; i++ ) {
 						image = snapshots[ i ];
-
-						// 查找指定 tag.
-						if (typeof tagName === 'string') {
-							// 反选
-							reverseSelect = tagName.startsWith('-');
-							if (reverseSelect) {
-								tagName = tagName.substr(1);
-							}
-							tagMatched = image.tags.includes(tagName);
-							if (!(tagMatched ^ reverseSelect)) {
-								continue;
-							}
-						}
-
 						if ( !currentImage.equalsContent( image ) ) {
 							image.index = i;
 							return image;
@@ -619,17 +521,11 @@
 		 */
 		undo: function() {
 			if ( this.undoable() ) {
-				var that = this;
-				var undoWaitPagingComplete = setInterval(function () {
-					if (!CKEDITOR.plugins.pagebreakCmd.autoPaging) {
-						window.clearInterval(undoWaitPagingComplete);
-						that.save(true, undefined, undefined, {name: 'undo'});
+				this.save( true );
 
-						var image = that.getNextImage(true, that.editor.HMConfig.realtimePageBreak ? 'afterPaging' :  '-afterPaging');
-						if (image)
-							return that.restoreImage(image, {name: 'undo'}), true;
-					}
-				},10);
+				var image = this.getNextImage( true );
+				if ( image )
+					return this.restoreImage( image ), true;
 			}
 
 			return false;
@@ -642,13 +538,13 @@
 			if ( this.redoable() ) {
 				// Try to save. If no changes have been made, the redo stack
 				// will not change, so it will still be redoable.
-				this.save(true, null, null, {name: 'beforeRedo'});
+				this.save( true );
 
 				// If instead we had changes, we can't redo anymore.
 				if ( this.redoable() ) {
-					var image = this.getNextImage(false, this.editor.HMConfig.realtimePageBreak ? 'afterPaging' :  '-afterPaging');
-					if ( image ){}
-						return this.restoreImage(image, {name: 'redo'}), true;
+					var image = this.getNextImage( false );
+					if ( image )
+						return this.restoreImage( image ), true;
 				}
 			}
 
@@ -660,15 +556,14 @@
 		 *
 		 * @param {CKEDITOR.plugins.undo.Image} [newImage] The image which will replace the current one.
 		 * If it is not set, it defaults to the image taken from the editor.
-		 * @param {string[]} [tags] 创建镜像时添加标签
 		 */
-		update: function( newImage, tags ) {
+		update: function( newImage ) {
 			// Do not change snapshots stack is locked.
 			if ( this.locked )
 				return;
 
 			if ( !newImage )
-				newImage = new Image(this.editor, false, tags);
+				newImage = new Image( this.editor );
 
 			var i = this.index,
 				snapshots = this.snapshots;
@@ -680,7 +575,6 @@
 
 			snapshots.splice( i, this.index - i + 1, newImage );
 			this.index = i;
-			newImage.updateTagsFrom(this.currentImage);
 			this.currentImage = newImage;
 		},
 
@@ -720,7 +614,7 @@
 		 *
 		 * **Note:** For every `lock` call you must call {@link #unlock} once to unlock the undo manager.
 		 *
-		 * @since 4.0
+		 * @since 4.0.0
 		 * @param {Boolean} [dontUpdate] When set to `true`, the last snapshot will not be updated
 		 * with current content and selection. By default, if undo manager was up to date when the lock started,
 		 * the last snapshot will be updated to the current state when unlocking. This means that all changes
@@ -732,15 +626,8 @@
 		 * When not set, the last snapshot will be updated only if the undo manager was up to date when locking.
 		 * Additionally, this option makes it possible to lock the snapshot when the editor is not in the `wysiwyg` mode,
 		 * because when it is passed, the snapshots will not need to be compared.
-		 * @param {object} [data] YanJunwei - json 格式数据, 用于传递标签和返回值:
-		 * 					data.tags @param {string[]}: 创建镜像时添加标签
-		 * 					data.image @return {CKEDITOR.plugin.undo.Image}: 创建的镜像(如有)
 		 */
-		lock: function( dontUpdate, forceUpdate , data) {
-			if (!data) {
-				data = {};
-			}
-			var imageBefore = null;
+		lock: function( dontUpdate, forceUpdate ) {
 			if ( !this.locked ) {
 				if ( dontUpdate )
 					this.locked = { level: 1 };
@@ -754,28 +641,23 @@
 						// * we don't compare them,
 						// * there's a chance that DOM has been changed since
 						// locked (e.g. fake) selection was made, so createBookmark2 could fail.
-						// http://dev.ckeditor.com/ticket/11027#comment:3
-						imageBefore = new Image(this.editor, true, data.tags);
+						// https://dev.ckeditor.com/ticket/11027#comment:3
+						var imageBefore = new Image( this.editor, true );
 
 						// If current editor content matches the tip of snapshot stack,
 						// the stack tip must be updated by unlock, to include any changes made
 						// during this period.
-						if (this.currentImage && this.currentImage.equalsContent(imageBefore)) {
-							// 更新 tags
-							this.currentImage.updateTagsFrom(imageBefore);
-							imageBefore = this.currentImage;
+						if ( this.currentImage && this.currentImage.equalsContent( imageBefore ) )
 							update = imageBefore;
-						}
 					}
 
-					this.locked = {update: update, level: 1, tags: data.tags};
+					this.locked = { update: update, level: 1 };
 				}
 
 			// Increase the level of lock.
 			} else {
 				this.locked.level++;
 			}
-			data.image = imageBefore;
 		},
 
 		/**
@@ -783,29 +665,39 @@
 		 *
 		 * See {@link #lock} for more details.
 		 *
-		 * @since 4.0
+		 * @since 4.0.0
 		 */
 		unlock: function() {
 			if ( this.locked ) {
 				// Decrease level of lock and check if equals 0, what means that undoM is completely unlocked.
 				if ( !--this.locked.level ) {
 					var update = this.locked.update;
-					var tags = this.locked.tags;
 
 					this.locked = null;
 
 					// forceUpdate was passed to lock().
 					if ( update === true )
-						this.update(null, tags);
+						this.update();
 					// update is instance of Image.
 					else if ( update ) {
-						var newImage = new Image( this.editor, true, tags );
+						var newImage = new Image( this.editor, true );
 
 						if ( !update.equalsContent( newImage ) )
-							this.update(null, tags);
+							this.update();
 					}
 				}
 			}
+		},
+
+		/**
+		 * Registers a filtering rule.
+		 *
+		 * @since 4.13.0
+		 * @param {Function} rule Callback function that returns filtered data.
+		 * @param {String} rule.data The data passed to the callback.
+		 */
+		addFilterRule: function( rule ) {
+			this._filterRules.push( rule );
 		}
 	};
 
@@ -842,30 +734,6 @@
 		PRINTABLE: 0,
 		FUNCTIONAL: 1
 	};
-
-	// YanJunwei - 被输入法识别为输入状态, 但是没有输入结束状态 (直接写在页面上) 的标点符号
-	UndoManager.punctuationCodes =
-		['Backquote',
-		'Digit1',
-		'Digit2',
-		'Digit3',
-		'Digit4',
-		'Digit5',
-		'Digit6',
-		'Digit7',
-		'Digit8',
-		'Digit9',
-		'Digit0',
-		'Minus',
-		'Equal',
-		'BracketLeft',
-		'BracketRight',
-		'Backslash',
-		'Semicolon',
-		'Quote',
-		'Comma',
-		'Period',
-		'Slash'];
 
 	/**
 	 * Checks whether a key is one of navigation keys (*Arrows*, *Page Up/Down*, etc.).
@@ -938,78 +806,36 @@
 	 * @constructor Creates an Image class instance.
 	 * @param {CKEDITOR.editor} editor The editor instance on which the image is created.
 	 * @param {Boolean} [contentsOnly] If set to `true`, the image will only contain content without the selection.
-	 * @param {string[]} [tags] 创建镜像时添加标签
 	 */
-	var Image = CKEDITOR.plugins.undo.Image = function( editor, contentsOnly, tags ) {
-		editor.fire( 'beforeUndoImage' );
-		var body = editor.document.getBody();
+	var Image = CKEDITOR.plugins.undo.Image = function( editor, contentsOnly ) {
+			this.editor = editor;
 
-		// Image 的参数
-		this.editor = editor;
-		this.contents;
-		this.bodyStyle; // YanJunwei - body 的样式: 自动分页会改变 body 的宽/padding/背景色.
-		this.paperSize = body.getAttribute('data-hm-papersize'); // YanJunwei - 需要保存纸张大小设置
-		this.bookmarks;
-		this.tags = []; // YanJunwei - 镜像的标签
+			editor.fire( 'beforeUndoImage' );
 
+			var contents = editor.getSnapshot();
 
-		var contents = editor.getSnapshot();
-		// In IE, we need to remove the expando attributes.
-		if ( CKEDITOR.env.ie && contents )
-			contents = contents.replace( /\s+data-cke-expando=".*?"/g, '' );
-		this.contents = contents;
-
-		this.bodyStyle={
-			width: body.getStyle('width'),
-			paddingLeft: body.getStyle('padding-left'),
-			paddingRight: body.getStyle('padding-right'),
-			background: body.getStyle('background')
-		};
-
-		if ( !contentsOnly ) {
-			var selection = contents && editor.getSelection();
-			try{
-			this.bookmarks = selection && selection.createBookmarks2( true );
-		}catch(e){
-			console.log('创建书签出错',e)}
-		}
-		if (tags && tags.length) {
-			if (typeof tags === 'string') {
-				this.tags = [tags];
-			} else if (typeof tags === 'object') {// tags 去重
-				for (var tagIndex = 0; tagIndex < tags.length; tagIndex++) {
-					if (typeof tags[tagIndex] !== 'string') {
-						// throw new Error('tags 数组内的元素必须是字符串');
-						console.warn('tags 数组内的元素必须是字符串');
-					}
-					this.tags.push(tags[tagIndex]);
-				}
-				// this.tags.sort();
+			if ( contents ) {
+				this.contents = applyRules( contents, editor.undoManager._filterRules );
 			}
-		}
 
-		editor.fire( 'afterUndoImage' );
-	};
+			if ( !contentsOnly ) {
+				var selection = contents && editor.getSelection();
+				this.bookmarks = selection && selection.createBookmarks2( true );
+			}
+
+			editor.fire( 'afterUndoImage' );
+		};
 
 	// Attributes that browser may changing them when setting via innerHTML.
 	var protectedAttrs = /\b(?:href|src|name)="[^"]*?"/gi;
 
-	Image.prototype = {
-		/**
-		 * @param {CKEDITOR.plugins.undo.Image} otherImage Image to compare to.
-		 * @returns {Boolean} Returns `true` if content in `otherImage` has the same body style.
-		 */
-		equalsBodyStyle: function( otherImage ) {
-			var thisStyle = this.bodyStyle,
-				otherStyle = otherImage.bodyStyle;
-			for (var i in thisStyle) {
-				if (otherStyle[i] !== thisStyle[i]) {
-					return false;
-				}
-			}
-			return true;
-		},
+	function applyRules( data, rules ) {
+		return CKEDITOR.tools.array.reduce( rules, function( currentData, rule ) {
+			return rule( currentData );
+		}, data );
+	}
 
+	Image.prototype = {
 		/**
 		 * @param {CKEDITOR.plugins.undo.Image} otherImage Image to compare to.
 		 * @returns {Boolean} Returns `true` if content in `otherImage` is the same.
@@ -1018,17 +844,16 @@
 			var thisContents = this.contents,
 				otherContents = otherImage.contents;
 
-			// For IE7 and IE QM: Comparing only the protected attribute values but not the original ones.(http://dev.ckeditor.com/ticket/4522)
+			// For IE7 and IE QM: Comparing only the protected attribute values but not the original ones.(https://dev.ckeditor.com/ticket/4522)
 			if ( CKEDITOR.env.ie && ( CKEDITOR.env.ie7Compat || CKEDITOR.env.quirks ) ) {
 				thisContents = thisContents.replace( protectedAttrs, '' );
 				otherContents = otherContents.replace( protectedAttrs, '' );
 			}
-			// 去掉零宽字符!!!
-			thisContents = thisContents.replace( zeroWidthChar, '' );
-			otherContents = otherContents.replace( zeroWidthChar, '' );
 
-			// Yanjunwei - 增加纸张大小判断
-			return (thisContents === otherContents) && (this.paperSize === otherImage.paperSize) && (this.equalsBodyStyle(otherImage));
+			if ( thisContents != otherContents )
+				return false;
+
+			return true;
 		},
 
 		/**
@@ -1056,51 +881,6 @@
 			}
 
 			return true;
-		},
-
-
-		/**
-		 * 对 image 赋值的同时更新 tag, 注意: 该行为目前除了 tag 和 paperSize 之外, 均为引用赋值而不是直接赋值.
-		 *
-		 * @param {CKEDITOR.plugins.undo.Image} otherImage Image to compare to.
-		 */
-		setImageFrom: function( otherImage ) {
-			this.editor = otherImage.editor;
-			this.contents = otherImage.contents;
-			this.bodyStyle = otherImage.bodyStyle;
-			this.paperSize = otherImage.paperSize;
-			this.bookmarks = otherImage.bookmarks;
-			this.updateTagsFrom(otherImage);
-		},
-
-		/**
-		 * 对 tags 进行赋值
-		 *
-		 * @param {CKEDITOR.plugins.undo.Image} otherImage Image to compare to.
-		 */
-		updateTagsFrom: function(otherImage ) {
-			if(!otherImage){
-				return;
-			}
-			// 合并 tags
-			for (var otherTagIndex = 0; otherTagIndex < otherImage.tags.length; otherTagIndex++) {
-				this.tags.push(otherImage.tags[otherTagIndex]);
-			}
-			// this.tags.sort();
-		},
-
-
-		/**
-		 * 添加一个 tag
-		 * @param {string} tag
-		 */
-		addTag: function (tag) {
-			if (typeof tag !== 'string') {
-				// throw new Error('tags 数组内的元素必须是字符串');
-				console.warn('tags 数组内的元素必须是字符串')
-			}
-			this.tags.push(tag);
-			// this.tags.sort();
 		}
 
 		/**
@@ -1132,7 +912,7 @@
 	 */
 	var NativeEditingHandler = CKEDITOR.plugins.undo.NativeEditingHandler = function( undoManager ) {
 		// We'll use keyboard + input events to determine if snapshot should be created.
-		// Since `input` event is fired before `keyup`. We can tell in `keyup` event if input occured.
+		// Since `input` event is fired before `keyup`. We can tell in `keyup` event if input occurred.
 		// That will tell us if any printable data was inserted.
 		// On `input` event we'll increase input fired counter for proper key code.
 		// Eventually it might be canceled by paste/drop using `ignoreInputEvent` flag.
@@ -1175,34 +955,15 @@
 		 *
 		 * @param {CKEDITOR.dom.event} evt
 		 */
-		// 输入之前的选区是否选中多个字符
-		rangeCollapsed: false,
-		// composing 为输入法编辑状态
-		composing: false,
-		// IMEinput 为当前键是否为输入法的键
-		IMEinput : false,
-		IMEChar : '',
-		onKeydown: function HandleNativeEdit1( evt ) {
+		onKeydown: function( evt ) {
 			var keyCode = evt.data.getKey();
-			var keyName = evt.data.$.code;
 
-			// 输入前的选区是否为选中状态
-			var ranges = evt.sender.editor.getSelection().getRanges();
-			if (ranges.length > 1 || (ranges.length && !ranges[0].collapsed)) {
-				this.rangeCollapsed = true;
-			}
-
-			// The composition is in progress - ignore the key. (http://dev.ckeditor.com/ticket/12597)
-			// Yanjunwei - 非输入法编辑状态且输入标点符号则不能忽略此键 (输入法误判成编辑状态); 否则需要 转换成输入法编辑状态 并且 取消后续操作.
-			// 229 代表输入法的编辑状态; 搜狗输入法中, 连续两次输入英文方括号时 keyName 会为空.
-			if (keyCode === 229 && keyName && (this.IMEinput || UndoManager.punctuationCodes.indexOf(keyName) === -1)) {
-				this.composing = true;
-				this.IMEinput = true;
-				this.IMECode = keyName;
+			// The composition is in progress - ignore the key. (https://dev.ckeditor.com/ticket/12597)
+			if ( keyCode === 229 ) {
 				return;
 			}
 
-			// Block undo/redo keystrokes when at the bottom/top of the undo stack (http://dev.ckeditor.com/ticket/11126 and http://dev.ckeditor.com/ticket/11677).
+			// Block undo/redo keystrokes when at the bottom/top of the undo stack (https://dev.ckeditor.com/ticket/11126 and https://dev.ckeditor.com/ticket/11677).
 			if ( CKEDITOR.tools.indexOf( keystrokes, evt.data.getKeystroke() ) > -1 ) {
 				evt.data.preventDefault();
 				return;
@@ -1227,45 +988,21 @@
 				if ( undoManager.strokesRecorded[ 0 ] || undoManager.strokesRecorded[ 1 ] ) {
 					// We already have image, so we'd like to reuse it.
 
-					// http://dev.ckeditor.com/ticket/12300
+					// https://dev.ckeditor.com/ticket/12300
 					undoManager.save( false, this.lastKeydownImage, false );
 					undoManager.resetType();
 				}
 			}
 		},
 
-		onCompositionend:function HandleNativeEdit2(){
-			this.composing = false;
-
-			// 输入法输入时点击其他地方
-			this.rangeCollapsed && this.undoManager.save(null, null, null, {name: '输入法输入意外中断'});
-			this.rangeCollapsed = false;
-		},
-
 		/**
 		 * The `input` event listener.
 		 */
-		onInput: function HandleNativeEdit3() {
-			// YanJunwei - 标点符号会被搜狗输入法判定为输入法, 但是只输入标点符号时不会触发 compositionend 事件.
-			if(this.IMEinput){
-				switch (this.IMECode) {
-					case 'Space':
-						this.undoManager.type(0, null, {name: 'onInput', data: this});
-						this.rangeCollapsed = false;
-						break;
-					case 'Escape':
-						// esc 是先触发 input 再触发 compositionEnd
-						this.rangeCollapsed && this.undoManager.save(null, null, null, {name: '输入法esc'});
-						this.rangeCollapsed = false;
-						break;
-				}
-				return;
-			}
+		onInput: function() {
 			// Input event is ignored if paste/drop event were fired before.
 			if ( this.ignoreInputEvent ) {
 				// Reset flag - ignore only once.
 				this.ignoreInputEvent = false;
-				this.rangeCollapsed = false;
 				return;
 			}
 
@@ -1281,8 +1018,7 @@
 
 			// Exceeded limit.
 			if ( this.keyEventsStack.getTotalInputs() >= this.undoManager.strokesLimit ) {
-				this.rangeCollapsed = false;
-				this.undoManager.type(lastInput.keyCode, true, {name: 'onInput', data: this});
+				this.undoManager.type( lastInput.keyCode, true );
 				this.keyEventsStack.resetInputs();
 			}
 		},
@@ -1292,35 +1028,24 @@
 		 *
 		 * @param {CKEDITOR.dom.event} evt
 		 */
-		onKeyup: function HandleNativeEdit4( evt ) {
-
+		onKeyup: function( evt ) {
 			var undoManager = this.undoManager,
 				keyCode = evt.data.getKey(),
 				totalInputs = this.keyEventsStack.getTotalInputs();
 
-			// chrome 68 打开输入法之后快速敲几个字母 (未完成输入) 时, this.IMEinput 会等于 false, 但是 evt.data.$.isComposing 为 true.
-			if (this.IMEinput || evt.data.$.isComposing) {
-				this.IMEinput = false;
-				this.IMECode = '';
-				return;
-			}
 			// Remove record from stack for provided key code.
 			this.keyEventsStack.remove( keyCode );
 
 			// Second part of the workaround for IEs functional keys bug. We need to check whether something has really
 			// changed because we blindly mocked the keypress event.
-			// Also we need to be aware that lastKeydownImage might not be available (http://dev.ckeditor.com/ticket/12327).
+			// Also we need to be aware that lastKeydownImage might not be available (https://dev.ckeditor.com/ticket/12327).
 			if ( UndoManager.ieFunctionalKeysBug( keyCode ) && this.lastKeydownImage &&
 				this.lastKeydownImage.equalsContent( new Image( undoManager.editor, true ) ) ) {
 				return;
 			}
 
-			// 这个 totalInputs 判断的有问题, 存在一些情况 (粘贴等) 使其等于0. 如果没有问题的话 togglePlaceholder 就不再需要在 keydown 的时候执行了.
-			if (totalInputs > 0 || keyCode === $.ui.keyCode.DELETE || keyCode === $.ui.keyCode.BACKSPACE) {
-				undoManager.type(keyCode, null, evt);
-				this.rangeCollapsed = false;
-				// 360极速浏览器上搜狗输入中文选择对应的数字内容输入时会存在多次keycode为0历史栈信息，故在键入后清除
-				this.keyEventsStack.removeall();
+			if ( totalInputs > 0 ) {
+				undoManager.type( keyCode );
 			} else if ( UndoManager.isNavigationKey( keyCode ) ) {
 				// Note content snapshot has been checked in keydown.
 				this.onNavigationKey( true );
@@ -1337,7 +1062,7 @@
 		 *
 		 * @param {Boolean} skipContentCompare If set to `true`, it will not compare content, and only do a selection check.
 		 */
-		onNavigationKey: function HandleNativeEdit5( skipContentCompare ) {
+		onNavigationKey: function( skipContentCompare ) {
 			var undoManager = this.undoManager;
 
 			// We attempt to save content snapshot, if content didn't change, we'll
@@ -1346,15 +1071,21 @@
 				undoManager.updateSelection( new Image( undoManager.editor ) );
 
 			undoManager.resetType();
-			this.rangeCollapsed = false;
 		},
 
 		/**
 		 * Makes the next `input` event to be ignored.
 		 */
-		ignoreInputEventListener: function HandleNativeEdit6() {
+		ignoreInputEventListener: function() {
 			this.ignoreInputEvent = true;
-			this.rangeCollapsed = false;
+		},
+
+		/**
+		 * Stops ignoring `input` events.
+		 * @since 4.7.3
+		 */
+		activateInputEventListener: function() {
+			this.ignoreInputEvent = false;
 		},
 
 		/**
@@ -1367,7 +1098,7 @@
 
 			// We'll create a snapshot here (before DOM modification), because we'll
 			// need unmodified content when we got keygroup toggled in keyup.
-			editable.attachListener( editable, 'keydown', function prepareTakeSnapShot( evt ) {
+			editable.attachListener( editable, 'keydown', function( evt ) {
 				that.onKeydown( evt );
 
 				// On IE keypress isn't fired for functional (backspace/delete) keys.
@@ -1376,11 +1107,6 @@
 					that.onInput();
 				}
 			}, null, null, 999 );
-
-			// Yanjunwei - 输入法输入完成时需要取消输入状态标志.
-			editable.attachListener(editable, 'compositionend', function clearComposeState() {
-				that.onCompositionend();
-			}, null, null, null );
 
 			// Only IE can't use input event, because it's not fired in contenteditable.
 			editable.attachListener( editable, ( CKEDITOR.env.ie ? 'keypress' : 'input' ), that.onInput, that, null, 999 );
@@ -1393,10 +1119,13 @@
 			editable.attachListener( editable, 'paste', that.ignoreInputEventListener, that, null, 999 );
 			editable.attachListener( editable, 'drop', that.ignoreInputEventListener, that, null, 999 );
 
+			// After paste we need to re-enable input event listener (#554).
+			editor.on( 'afterPaste', that.activateInputEventListener, that, null, 999 );
+
 			// Click should create a snapshot if needed, but shouldn't cause change event.
 			// Don't pass onNavigationKey directly as a listener because it accepts one argument which
 			// will conflict with evt passed to listener.
-			// http://dev.ckeditor.com/ticket/12324 comment:4
+			// https://dev.ckeditor.com/ticket/12324 comment:4
 			editable.attachListener( editable.isInline() ? editable : editor.document.getDocumentElement(), 'click', function() {
 				that.onNavigationKey();
 			}, null, null, 999 );
@@ -1404,11 +1133,8 @@
 			// When pressing `Tab` key while editable is focused, `keyup` event is not fired.
 			// Which means that record for `tab` key stays in key events stack.
 			// We assume that when editor is blurred `tab` key is already up.
-			// 如果连续输入过程中鼠标点击其他窗口 (或者弹出其他窗口) 也会 blur 并且在之后按功能键也会触发 onchange... 要不要把 keyEventsStack 全移掉?
 			editable.attachListener( this.undoManager.editor, 'blur', function() {
 				that.keyEventsStack.remove( 9 /*Tab*/ );
-				this.rangeCollapsed && this.undoManager.save(null, null, null, {name: '选中选区然后blur'});
-				this.rangeCollapsed = false;
 			}, null, null, 999 );
 		}
 	};
@@ -1504,14 +1230,6 @@
 			if ( index != -1 ) {
 				this.stack.splice( index, 1 );
 			}
-		},
-		/**
-		 * Removes all the  record from the stack for the provided `keyCode`. by liujian
-		 *
-		 */
-		removeall: function() {
-
-			this.stack.splice( 0, this.stack.length);
 		},
 
 		/**
@@ -1645,7 +1363,7 @@
  *			}
  *		} );
  *
- * @since 4.2
+ * @since 4.2.0
  * @event change
  * @member CKEDITOR.editor
  * @param {CKEDITOR.editor} editor This editor instance.

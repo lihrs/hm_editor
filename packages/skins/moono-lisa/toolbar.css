@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 
 /*
@@ -99,12 +99,17 @@ a.cke_button
 {
 	display: inline-block;
 	height: 18px;
-	padding: 4px 4px;
+	padding: 4px 6px;
 	outline: none;
 	cursor: default;
 	float: left;
 	border: 0;
 	position: relative;
+}
+
+/* #2483 */
+a.cke_button_expandable {
+	padding: 4px 5px;
 }
 
 .cke_rtl a.cke_button
@@ -136,6 +141,12 @@ a.cke_button_on
 	padding: 3px 5px;
 }
 
+/* #2483 */
+a.cke_button_expandable.cke_button_on
+{
+	padding: 3px 4px;
+}
+
 
 /* Button states. */
 a.cke_button_off:hover,
@@ -145,7 +156,15 @@ a.cke_button_off:active
 	background: #e5e5e5;
 	border: 1px #bcbcbc solid;
 	/* Compensate the border change */
-	padding: 3px;
+	padding: 3px 5px;
+}
+
+/* Expandable button states (#2483). */
+a.cke_button_expandable.cke_button_off:hover,
+a.cke_button_expandable.cke_button_off:focus,
+a.cke_button_expandable.cke_button_off:active
+{
+	padding: 3px 4px;
 }
 
 .cke_hc a.cke_button_on,
@@ -159,6 +178,35 @@ a.cke_button_off:active
 	padding: 1px 3px;
 }
 
+/* Disable hover styles on mobile devices (#4611). */
+@media screen and ( hover: none ) {
+	a.cke_button_off:hover
+	{
+		background: transparent;
+		border: 0;
+		padding: 4px 6px;
+	}
+
+	a.cke_button_expandable.cke_button_off:hover
+	{
+		padding: 4px 5px;
+	}
+
+	/* We need to restore :active styles. */
+	a.cke_button_off:active
+	{
+		background: #e5e5e5;
+		border: 1px #bcbcbc solid;
+		/* Compensate the border change */
+		padding: 3px 5px;
+	}
+
+	a.cke_button_expandable.cke_button_off:active
+	{
+		padding: 3px 4px;
+	}
+}
+
 
 /* Disabled Button states. */
 a.cke_button_disabled:hover,
@@ -166,13 +214,25 @@ a.cke_button_disabled:focus,
 a.cke_button_disabled:active
 {
 	border: 0;
-	padding: 4px;
+	padding: 4px 6px;
 	background-color: transparent;
+}
+
+/* Expandable disabled Button states (#2483). */
+a.cke_button_expandable.cke_button_disabled:hover,
+a.cke_button_expandable.cke_button_disabled:active
+{
+	padding: 4px 5px;
 }
 
 a.cke_button_disabled:focus {
 	border: 1px #bcbcbc solid;
-	padding: 3px;
+	padding: 3px 5px;
+}
+
+/* #2483 */
+a.cke_button_expandable.cke_button_disabled:focus {
+	padding: 3px 4px;
 }
 
 .cke_hc a.cke_button_disabled:hover,
@@ -266,6 +326,7 @@ a.cke_button_disabled .cke_button_arrow
 
 /* Adjust separator position on button hover. */
 .cke_toolgroup a.cke_button:hover:last-child:after,
+.cke_toolgroup a.cke_button:focus:last-child:after,
 .cke_toolgroup a.cke_button.cke_button_on:last-child:after
 {
 	top: -1px;
@@ -273,6 +334,7 @@ a.cke_button_disabled .cke_button_arrow
 }
 
 .cke_rtl .cke_toolgroup a.cke_button:hover:last-child:after,
+.cke_rtl .cke_toolgroup a.cke_button:focus:last-child:after,
 .cke_rtl .cke_toolgroup a.cke_button.cke_button_on:last-child:after
 {
 	top: -1px;
@@ -362,7 +424,7 @@ a.cke_button_disabled .cke_button_arrow
 {
 	/* Arrow in CSS */
 	display: inline-block;
-	margin: 8px 0 0 1px;
+	margin: 8px 0 0 3px;
 	width: 0;
 	height: 0;
 	cursor: default;

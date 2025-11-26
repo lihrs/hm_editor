@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 
 /*
@@ -147,17 +147,6 @@ Comments in this file will give more details about each of the above blocks.
 	margin-top: 22px;
 }
 
-.cke_dialog_contents_body::-webkit-scrollbar {
-	width: 6px;
-	height: 6px;
-	border-radius: 8px;
-  }
-
-.cke_dialog_contents_body::-webkit-scrollbar-thumb {
-	background: #cdcdcd;
-	border-radius: 8px;
-  }
-  
 /* The dialog footer, which usually contains the "Ok" and "Cancel" buttons as
    well as a resize handler. */
 .cke_dialog_footer
@@ -291,6 +280,11 @@ a.cke_dialog_tab_selected:focus
 {
 	border: 3px solid;
 	padding: 2px 6px;
+}
+
+/* #4934 */
+.cke_hc a.cke_dialog_tab:focus {
+	text-decoration: underline;
 }
 
 a.cke_dialog_tab_disabled
@@ -431,7 +425,7 @@ It is possible to have nested V/H-Boxes.
 .cke_dialog_ui_hbox_child,
 .cke_dialog_ui_hbox_last
 {
-	vertical-align: middle;
+	vertical-align: top;
 }
 
 .cke_ltr .cke_dialog_ui_hbox_first,
@@ -462,6 +456,7 @@ It is possible to have nested V/H-Boxes.
 /* Applies to all labeled dialog fields */
 .cke_hc div.cke_dialog_ui_input_text,
 .cke_hc div.cke_dialog_ui_input_password,
+.cke_hc div.cke_dialog_ui_input_tel,
 .cke_hc div.cke_dialog_ui_input_textarea,
 .cke_hc div.cke_dialog_ui_input_select,
 .cke_hc div.cke_dialog_ui_input_file
@@ -517,6 +512,7 @@ textarea.cke_dialog_ui_input_textarea
 
 input.cke_dialog_ui_input_text,
 input.cke_dialog_ui_input_password,
+input.cke_dialog_ui_input_tel,
 textarea.cke_dialog_ui_input_textarea
 {
 	background-color: #fff;
@@ -536,6 +532,7 @@ textarea.cke_dialog_ui_input_textarea
 
 input.cke_dialog_ui_input_text:hover,
 input.cke_dialog_ui_input_password:hover,
+input.cke_dialog_ui_input_tel:hover,
 textarea.cke_dialog_ui_input_textarea:hover
 {
 	border: 1px solid #aeb3b9;
@@ -543,6 +540,7 @@ textarea.cke_dialog_ui_input_textarea:hover
 
 input.cke_dialog_ui_input_text:focus,
 input.cke_dialog_ui_input_password:focus,
+input.cke_dialog_ui_input_tel:focus,
 textarea.cke_dialog_ui_input_textarea:focus,
 select.cke_dialog_ui_input_select:focus
 {
@@ -665,12 +663,12 @@ a.cke_dialog_ui_button:active
 a.cke_dialog_ui_button_ok
 {
 	color: #fff;
-	background: #4297FE;
-	border: 1px solid #4297FE;
+	background: #09863E;
+	border: 1px solid #09863E;
 }
 
 .cke_hc a.cke_dialog_ui_button {
-	border: 3px solid #bcbcbc;
+	border: 1px solid #bcbcbc;
 }
 
 
@@ -757,6 +755,13 @@ select.cke_dialog_ui_input_select
 .cke_dialog_ui_labeled_label
 {
 	margin-left: 1px;
+}
+
+/* (#3433) */
+.cke_dialog_ui_labeled_required
+{
+	font-weight: bold;
+	font-size: 1.2em;
 }
 
 /*
@@ -896,7 +901,6 @@ select.cke_dialog_ui_input_select
 .cke_dialog fieldset .cke_dialog_ui_vbox .cke_dialog_ui_checkbox .cke_dialog_ui_checkbox_input,
 .cke_dialog fieldset .cke_dialog_ui_vbox .cke_dialog_ui_checkbox .cke_dialog_ui_checkbox_input + label {
 	vertical-align: middle;
-    margin:0;
 }
 
 /*
@@ -931,17 +935,6 @@ tendency that these will be moved to the plugins code in the future.
 	filter: alpha(opacity = 90);
 
 	background-color: #e4e4e4;
-}
-
-.cke_dialog .FlashPreviewBox
-{
-	white-space: normal;
-	border: 1px solid #bcbcbc;
-	overflow: auto;
-	height: 160px;
-	width: 390px;
-	padding: 2px;
-	background-color: white;
 }
 
 .cke_dialog .cke_pastetext
@@ -1018,10 +1011,9 @@ a.cke_specialchar
 {
 	cursor: inherit;
 	display: block;
-	/* height: 1.25em; */
+	height: 1.25em;
 	padding: 0.2em 0.3em;
 	text-align: center;
-    line-height: 1.25em;
 }
 
 a.cke_smile,
@@ -1129,8 +1121,7 @@ a.cke_specialchar:active
 	padding-top: 4px;
 }
 
-.cke_dialog_image_url .cke_dialog_ui_hbox_last,
-.cke_dialog_flash_url .cke_dialog_ui_hbox_last
+.cke_dialog_image_url .cke_dialog_ui_hbox_last
 {
 	vertical-align: bottom;
 }

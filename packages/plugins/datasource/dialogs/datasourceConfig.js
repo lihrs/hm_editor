@@ -23,7 +23,7 @@ CKEDITOR.dialog.add('datasourceConfig', function (editor) {
                     }
                     var iframe = $('#dsConfig')[0];
                     // 获取iframe body 加载
-                    $.getTplHtml(sdkHost + '/plugins/datasource/dialogs/config/index.html', {
+                    $.getTplHtml(sdkHost+'../../../../packages/plugins/datasource/dialogs/config/index.html', {
                         sdkHost: sdkHost
                     }, function (bodyHtml) {
                         var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -78,7 +78,7 @@ CKEDITOR.dialog.add('datasourceConfig', function (editor) {
                     return false;
                 }
             }
-            
+
 
             if (!this.insertMode) {
                 _handleEdit(editor, d);
@@ -125,12 +125,12 @@ function _handleEdit(editor, sourceData) {
     var element = editor.contextTargetElement;
     if (!element.hasAttribute('data-hm-node') && !element.is('button')) {
         var $element = $(element.$).closest('[data-hm-node]');
-        
+
         // 如果找到了带data-hm-node的元素
         if ($element.length) {
             element = new CKEDITOR.dom.element($element[0]);
-            
-        } 
+
+        }
     }
     var td = editor.elementPath().contains('td');
     if (td && td.hasAttribute('data-hm-node')) element = td;
@@ -138,16 +138,16 @@ function _handleEdit(editor, sourceData) {
     // 更新节点类型
     var oldType = element.getAttribute('data-hm-node');
     var newType = sourceData['data-hm-node'];
-    
+
     // 如果类型发生变化，需要重新创建节点
     if (oldType !== newType) {
         // 保存原节点的基本属性
         var oldId = element.getAttribute('data-hm-id');
         sourceData['data-hm-id'] = oldId; // 保持原有ID
-        
+
         // 使用_handleCreate创建新节点，传入isEdit=true表示编辑模式
         var newNode = _handleCreate(editor, sourceData, true);
-        
+
         if (newNode) {
             // 如果原节点是单元类型，需要特殊处理
             if (oldType === 'cellbox') {
@@ -319,7 +319,7 @@ function _handleEdit(editor, sourceData) {
                 var errorLevel = sourceData._qrcode_error_level || 'M';
                 var textPosition = sourceData._qrcode_text_position || 'bottom';
                 var previewText = '123456';
-                
+
                 // 尝试获取编辑器的二维码生成方法并更新预览
                 try {
                     var _t = window.hmEditor.documentModel;
@@ -350,7 +350,7 @@ function _handleEdit(editor, sourceData) {
                 var barWidth = sourceData._barcode_bar_width || '2';
                 var textPosition = sourceData._barcode_text_position || 'bottom';
                 var previewText = '123456';
-                
+
                 // 尝试获取编辑器的条形码生成方法并更新预览
                 try {
                     var _t = window.hmEditor.documentModel;
@@ -418,10 +418,10 @@ function removeDefineAttr(element) {
 }
 
 function _handleCreate(editor, sourceData, isEdit) {
-    // sourceData.autoLable = true; 
+    // sourceData.autoLable = true;
     var ranges = editor.getSelection().getRanges();
     var legalRange = true;
-    
+
     // 如果不是编辑模式，才检查插入位置的合法性
     if (!isEdit) {
         if (ranges.length == 1 && ranges[0].collapsed) {
@@ -468,7 +468,7 @@ function _handleCreate(editor, sourceData, isEdit) {
         editor.editable().insertText('\u200B');
 
         // 自动插入labelbox标题
-        if (sourceData['autoLable'] && sourceData['data-hm-node'] != 'labelbox') { 
+        if (sourceData['autoLable'] && sourceData['data-hm-node'] != 'labelbox') {
             var labelboxNode = new CKEDITOR.dom.element('span');
             labelboxNode.setText('\u200B');
             labelboxNode.setAttribute('contentEditable', 'false');
@@ -511,7 +511,7 @@ function _handleCreate(editor, sourceData, isEdit) {
                 if (sourceData._texttype == '下拉') {
                     sourceData['data-hm-items'] && newtextPlaceholder.setAttribute('data-hm-items', sourceData['data-hm-items']);
                 }
-                
+
                 // 如果是二维码类型，创建预览二维码
                 if (sourceData._texttype == '二维码') {
                     // 获取二维码配置参数
@@ -520,7 +520,7 @@ function _handleCreate(editor, sourceData, isEdit) {
                     var errorLevel = sourceData._qrcode_error_level || 'M';
                     var textPosition = sourceData._qrcode_text_position || 'bottom';
                     var previewText = '123456';
-                    
+
                     // 尝试获取编辑器的二维码生成方法并生成预览
                     try {
                         var _t = window.hmEditor.documentModel;
@@ -551,7 +551,7 @@ function _handleCreate(editor, sourceData, isEdit) {
                     var barWidth = sourceData._barcode_bar_width || '2';
                     var textPosition = sourceData._barcode_text_position || 'bottom';
                     var previewText = '123456';
-                    
+
                     // 尝试获取编辑器的条形码生成方法并生成预览
                     try {
                         var _t = window.hmEditor.documentModel;
@@ -691,7 +691,7 @@ function _handleCreate(editor, sourceData, isEdit) {
                 editor.showNotification('请选择一种数据元类型');
                 break;
         }
-        
+
         // 如果不是编辑模式，插入节点
         if (!isEdit && resultNode) {
             if (sourceData['data-hm-node'] !== 'cellbox') {
@@ -790,7 +790,7 @@ function _handleRelevance(node) {
         val = nodeVal.value.replace(zeroWidthChar, '');
     }else{
         val = nodeVal.replace(zeroWidthChar, '');
-    } 
+    }
     // console.log('值------------' + val)
     var valArr = [];
     var nodeType = node.attr('data-hm-node');

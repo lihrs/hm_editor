@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -69,8 +69,8 @@
 			} );
 		}
 
-		// Coordinate with the "maximize" plugin. (http://dev.ckeditor.com/ticket/9311)
-		editor.on( 'afterCommandExec', function resizer1( evt ) {
+		// Coordinate with the "maximize" plugin. (https://dev.ckeditor.com/ticket/9311)
+		editor.on( 'afterCommandExec', function( evt ) {
 			if ( evt.data.name == 'maximize' && evt.editor.mode == 'wysiwyg' ) {
 				if ( evt.data.command.state == CKEDITOR.TRISTATE_ON )
 					scrollable.removeStyle( 'overflow-y' );
@@ -95,7 +95,7 @@
 			scrollable = CKEDITOR.env.quirks ? doc.getBody() : doc.getDocumentElement();
 
 			// Reset scrollable body height and min-height css values.
-			// While set by outside code it may break resizing. (http://dev.ckeditor.com/ticket/14620)
+			// While set by outside code it may break resizing. (https://dev.ckeditor.com/ticket/14620)
 			var body = CKEDITOR.env.quirks ? scrollable : scrollable.findOne( 'body' );
 			if ( body ) {
 				body.setStyle( 'height', 'auto' );
@@ -114,7 +114,7 @@
 
 			return (
 				!editor.window ||
-				// Disable autogrow when the editor is maximized. (http://dev.ckeditor.com/ticket/6339)
+				// Disable autogrow when the editor is maximized. (https://dev.ckeditor.com/ticket/6339)
 				maximizeCommand && maximizeCommand.state == CKEDITOR.TRISTATE_ON
 			);
 		}
@@ -143,11 +143,13 @@
 			newHeight = Math.max( newHeight, configMinHeight );
 			newHeight = Math.min( newHeight, configMaxHeight );
 
-			// http://dev.ckeditor.com/ticket/10196 Do not resize editor if new height is equal
+			// https://dev.ckeditor.com/ticket/10196 Do not resize editor if new height is equal
 			// to the one set by previous resizeEditor() call.
 			if ( newHeight != currentHeight && lastHeight != newHeight ) {
 				newHeight = editor.fire( 'autoGrow', { currentHeight: currentHeight, newHeight: newHeight } ).newHeight;
-				editor.resize( editor.container.getStyle( 'width' ), newHeight, true );
+
+				// Set width parameter as null, to update only the height of the editor. (#4891)
+				editor.resize( null, newHeight, true );
 				lastHeight = newHeight;
 			}
 
@@ -165,12 +167,12 @@
  * The minimum height that the editor can assume when adjusting to content by using the Auto Grow
  * feature. This option accepts a value in pixels, without the unit (for example: `300`).
  *
- * Read more in the [documentation](#!/guide/dev_autogrow)
- * and see the [SDK sample](http://sdk.ckeditor.com/samples/autogrow.html).
+ * Read more in the {@glink features/autogrow documentation}
+ * and see the {@glink examples/autogrow example}.
  *
  *		config.autoGrow_minHeight = 300;
  *
- * @since 3.4
+ * @since 3.4.0
  * @cfg {Number} [autoGrow_minHeight=200]
  * @member CKEDITOR.config
  */
@@ -180,12 +182,12 @@
  * feature. This option accepts a value in pixels, without the unit (for example: `600`).
  * Zero (`0`) means that the maximum height is not limited and the editor will expand infinitely.
  *
- * Read more in the [documentation](#!/guide/dev_autogrow)
- * and see the [SDK sample](http://sdk.ckeditor.com/samples/autogrow.html).
+ * Read more in the {@glink features/autogrow documentation}
+ * and see the {@glink examples/autogrow example}.
  *
  *		config.autoGrow_maxHeight = 400;
  *
- * @since 3.4
+ * @since 3.4.0
  * @cfg {Number} [autoGrow_maxHeight=0]
  * @member CKEDITOR.config
  */
@@ -194,8 +196,8 @@
  * Whether automatic editor height adjustment brought by the Auto Grow feature should happen on
  * editor creation.
  *
- * Read more in the [documentation](#!/guide/dev_autogrow)
- * and see the [SDK sample](http://sdk.ckeditor.com/samples/autogrow.html).
+ * Read more in the {@glink features/autogrow documentation}
+ * and see the {@glink examples/autogrow example}.
  *
  *		config.autoGrow_onStartup = true;
  *
@@ -209,8 +211,8 @@
  * editor height to content by using the Auto Grow feature. This option accepts a value in pixels,
  * without the unit (for example: `50`).
  *
- * Read more in the [documentation](#!/guide/dev_autogrow)
- * and see the [SDK sample](http://sdk.ckeditor.com/samples/autogrow.html).
+ * Read more in the {@glink features/autogrow documentation}
+ * and see the {@glink examples/autogrow example}.
  *
  *		config.autoGrow_bottomSpace = 50;
  *

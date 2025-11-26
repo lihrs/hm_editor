@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -55,7 +55,7 @@
  *
  * While the editor is able to handle non-HTML data (like BBCode), it can only
  * handle HTML data at runtime. The role of the data processor is to transform
- * the HTML data containined by the editor into a specific data format through
+ * the HTML data contained by the editor into a specific data format through
  * this function.
  *
  *		// Tranforming into BBCode data, with a custom BBCode data processor available.

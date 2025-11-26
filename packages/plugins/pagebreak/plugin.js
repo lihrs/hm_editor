@@ -751,7 +751,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                 selection.selectRanges([range0]);
                             } catch (e) {
                                 console.error(e);
-                                debugger;
                             }
                             // 如果删除导致 'has-br' 被删除, 需要重新分页.
                             evt.sender.editor.fire('saveSnapshot', {name: 'selectionMoveLeft'});
@@ -773,7 +772,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                     }
                                 }
                             } else {
-                                debugger;
                             }
                         }
                         range0.moveToPosition(previous, CKEDITOR.POSITION_BEFORE_END);
@@ -781,7 +779,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                             selection.selectRanges([range0]);
                         } catch (e) {
                             console.error(e);
-                            debugger;
                         }
                     }
                 }
@@ -945,7 +942,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                             selection.selectRanges([range0]);
                         } catch (e) {
                             console.error(e);
-                            debugger;
                         }
                     }
                 }
@@ -1063,7 +1059,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                         combineFormat(editor, firstChild, true);
                     } else {
                         console.log('有页面未包含任何内容?');
-                        debugger;
                     }
                 }
                 // 把内容放到 body 里面
@@ -1331,7 +1326,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                             } catch (e) {
                                 console.error('书签创建错误');
                                 console.error(e);
-                                debugger;
                             }
                             lastTimeSelectSpans.remove();
                         }
@@ -1484,7 +1478,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                     splitter.remove();
                                     splitter = null;
                                 } else {
-                                    debugger;
                                 }
                             }
 
@@ -1739,7 +1732,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                             lastTableInPrevPage: lastTableInPrevPage
                                         });
                                         if (!theFirstChar.node) {
-                                            // debugger;
                                             continue;
                                         }
                                         if (theFirstChar.node.length === 0) break;
@@ -1751,7 +1743,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                                 setPageOffset(prevPage, calcPageOffset(prevPage, !!theFirstChar.tableHasConnector));
                                             }
                                         } else {
-                                            debugger;
                                             prevPageContent.appendChild(theFirstChar);
                                         }
                                         // 如果后面一页无内容了就删除页
@@ -1762,7 +1753,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                             nextPageContent = nextPage.getElementsByClassName(PAGE_CONTENT_CLASS)[0];
                                             if (!nextPage) {
                                                 // 需要处理末页高度的问题
-                                                debugger;
                                                 break;
                                             }
                                         }
@@ -1789,7 +1779,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                 forceStopPaging = true;
                                 setPageBreakByHandLabel(false);
                                 autoPageError(editor);
-                                debugger
                                 throw(e);
                             }
                             // endregion
@@ -1832,7 +1821,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                             parentTop: prevPageContent.offsetTop
                                         });
                                         if (!theLastChar.node) {
-                                            // debugger;
                                             continue;
                                         }
                                         // 更新 在此页前后分页 的标记
@@ -1870,13 +1858,11 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                                 setPageOffset(prevPage, calcPageOffset(prevPage, !!theLastChar.tableHasConnector));
                                             }
                                         } else {
-                                            debugger
                                             nextPageContent.insertBefore(theLastChar.node, nextPageContent.firstChild);
                                         }
                                         if (prevPageContent.childNodes.length === 0) {
                                             // 聚合病历的模板不能开启分页, 否则就会报这个错
                                             console.error('分页失败, 原因可能是有超出页面长度的元素');
-                                            debugger
                                             // prevPage.remove();
                                             // logicPages = body.getElementsByClassName(LOGIC_PAGE_CLASS);
                                             // logicPageIndex--;
@@ -1891,7 +1877,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                 forceStopPaging = true;
                                 setPageBreakByHandLabel(false);
                                 autoPageError(editor);
-                                debugger
                                 throw(e);
                             }
                             // endregion
@@ -2012,7 +1997,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                         forceStopPaging = true;
                         setPageBreakByHandLabel(false);
                         autoPageError(editor);
-                        debugger
                         throw(e);
                     } finally {
                         timeLogger('分页后处理', 0);
@@ -2040,7 +2024,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                 }
                             } catch (e) {
                                 console.warn(e);
-                                debugger;
                             }
                         } else {
                             // 还原光标位置
@@ -2060,7 +2043,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                     // 书签前后没东西了?
                                     next = new CKEDITOR.dom.text('\u200b');
                                     next.appendTo(bookmarks[0].startNode.getParent());
-                                    debugger
                                 }
                                 selection.selectBookmarks(bookmarks, true);
 
@@ -2128,7 +2110,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                             } catch (e) {
                                 console.error('书签恢复错误');
                                 console.error(e);
-                                debugger
                             }
                         }
                         // 聚合病历打开/新建时需要定位
@@ -3219,7 +3200,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
 
                         // 识别 rowspan: prev 可能没有 rowspan, 但是 next 肯定有
                         if (hasClass(next0, thisCmd.HAS_ROWSPAN)) {
-                            debugger
                             // 如果上一行对应位置有 rowspan 且 前后缀相同, 直接合并, 不用重新设置rowspan
                             if (hasClass(prevCell, thisCmd.HAS_ROWSPAN) &&
                                 getAttributesEqualOrComplemented(prev, next)) {
@@ -3260,7 +3240,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                                     }
                                 } else {
                                     console.log('有分割的表格但是未找到对应匹配项');
-                                    debugger;
                                 }
                             }
                         } else {
@@ -3378,7 +3357,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
             console.error(e);
             forceStopPaging = true;
             setPageBreakByHandLabel(false);
-            debugger
             throw(e);
         }
     }
@@ -3693,7 +3671,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
     function getFirstChar(editor, node, args) {
         if (!node) {
             // 这里不应该为空
-            debugger
             return {node: null};
         }
         try {
@@ -3998,7 +3975,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                         if (!nextCell) {
                             console.error('找不到nextCell???');
                             switchNodes(prevRowCells[nextCellIndex], prevRowCellsClone[nextCellIndex]);
-                            debugger;
                             continue;
                         }
 
@@ -4114,7 +4090,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
             console.error(e);
             forceStopPaging = true;
             setPageBreakByHandLabel(false);
-            debugger
             throw(e);
         }
     }
@@ -4141,7 +4116,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
     function getLastChar(editor, node, args) {
         if (!node) {
             // 这里不应该为空
-            debugger
             return {node: null};
         }
         try {
@@ -4179,7 +4153,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                             }
                         } else if (last && last.nodeType === CKEDITOR.NODE_ELEMENT && last.offsetHeight === 0) {
                             // 如果最后一个字是 书签/无内容的新文本 就会这样, 然后如果前一个字符还是 br, 就需要先把书签挪到后一页去
-                            debugger
                             nodeClone = node.cloneNode();
                             addConnectorsWhenSplitting(node, nodeClone);
                             nodeClone.appendChild(last);
@@ -4751,7 +4724,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
                     // 如果程序把 prevCell 整个挪到下一页, 导致 node 为空时直接返回之
                     if (node.cells.length === 0) {
                         // 这里需要处理被拿出去的合并单元格
-                        debugger
                         returns.node = node;
                         returns.nodeRemoved = true;
                         return returns;
@@ -4912,7 +4884,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
             console.error(e);
             forceStopPaging = true;
             setPageBreakByHandLabel(false);
-            debugger
             throw(e);
         }
     }
@@ -5028,7 +4999,6 @@ var removeSplitterDebugger = false; // 调试保存使用, 去除所有分页符
 
     function putSplitMarker(node, pageSplitMarker) {
         if (!node) {
-            debugger;
             return;
         }
         if (node.nodeType !== 1 || !hasClassPrefix(node, thisCmd.CONNECTOR_PREFIX)) {

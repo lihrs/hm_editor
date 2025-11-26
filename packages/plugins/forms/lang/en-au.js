@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'forms', 'en-au', {
 	button: {
@@ -16,7 +16,7 @@ CKEDITOR.plugins.setLang( 'forms', 'en-au', {
 		radioTitle: 'Radio Button Properties',
 		value: 'Value',
 		selected: 'Selected',
-		required: 'Required' // MISSING
+		required: 'Required'
 	},
 	form: {
 		title: 'Form Properties',
@@ -38,7 +38,7 @@ CKEDITOR.plugins.setLang( 'forms', 'en-au', {
 		size: 'Size',
 		lines: 'lines',
 		chkMulti: 'Allow multiple selections',
-		required: 'Required', // MISSING
+		required: 'Required',
 		opText: 'Text',
 		opValue: 'Value',
 		btnAdd: 'Add',
@@ -59,13 +59,13 @@ CKEDITOR.plugins.setLang( 'forms', 'en-au', {
 		value: 'Value',
 		charWidth: 'Character Width',
 		maxChars: 'Maximum Characters',
-		required: 'Required', // MISSING
+		required: 'Required',
 		type: 'Type',
 		typeText: 'Text',
 		typePass: 'Password',
-		typeEmail: 'Email', // MISSING
-		typeSearch: 'Search', // MISSING
-		typeTel: 'Telephone Number', // MISSING
+		typeEmail: 'Email',
+		typeSearch: 'Search',
+		typeTel: 'Telephone Number',
 		typeUrl: 'URL'
 	}
 } );

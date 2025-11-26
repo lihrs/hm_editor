@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -28,6 +28,27 @@
  *
  *		// Check if <p> is a block element.
  *		alert( !!CKEDITOR.dtd.$block[ 'p' ] ); // true
+ *
+ * It is also possible to add a new element to DTD. It will ensure it is handled correctly e.g. in terms of nesting or positioning.
+ *
+ * For example, you can define a block element, which can be empty:
+ *
+ * ```js
+ * // Let's add a DTD for a new element <signature>
+ * // and specify it can contain <p> and <img> elements:
+ * CKEDITOR.dtd[ 'signature' ] = {
+ * 	p: 1,
+ * 	img: 1
+ * };
+ *
+ *  // Define <signature> as a block element.
+ * CKEDITOR.dtd.$block[ 'signature' ] = 1;
+ *
+ * // Allow <signature> element to be empty.
+ * CKEDITOR.dtd.$empty[ 'signature' ] = 1;
+ * ```
+ *
+ * **Note**: Editing the DTD for existing elements is also possible this way, but may cause an unexpected outcome and inconsistent editing behaviour, so **it is not recommended**.
  *
  * @class CKEDITOR.dtd
  * @singleton
@@ -261,7 +282,7 @@ CKEDITOR.dtd = ( function() {
 		 * List of elements that are accepted as inline editing hosts.
 		 */
 		$editable: {
-			address: 1, article: 1, aside: 1, blockquote: 1, body: 1, details: 1, div: 1, span: 1, fieldset: 1,
+			address: 1, article: 1, aside: 1, blockquote: 1, body: 1, details: 1, div: 1, fieldset: 1,
 			figcaption: 1, footer: 1, form: 1, h1: 1, h2: 1, h3: 1, h4: 1, h5: 1, h6: 1, header: 1, hgroup: 1,
 			main: 1, nav: 1, p: 1, pre: 1, section: 1
 		},

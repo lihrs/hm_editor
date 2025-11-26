@@ -1859,7 +1859,6 @@ CKEDITOR.plugins.add('document', {
                                 case 'cancelPageNumberOfDoc':
                                     break;
                                 default:
-                                    // debugger;
                                     break;
                             }
                             break;
@@ -1876,7 +1875,6 @@ CKEDITOR.plugins.add('document', {
                     }
                 } catch (e) {
                     console.warn('Onchange - 事件溯源失败: ', e);
-                    debugger;
                 }
                 pageBreak.performAutoPaging(this, event); // editor.on('change')
             }

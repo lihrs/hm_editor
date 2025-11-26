@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 /**
@@ -64,7 +64,7 @@
 	 *			taskC.done();
 	 *		}, 3000 );
 	 *
-	 * @since 4.5
+	 * @since 4.5.0
 	 * @class CKEDITOR.plugins.notificationAggregator
 	 * @mixins CKEDITOR.event
 	 * @constructor Creates a notification aggregator instance.
@@ -392,7 +392,7 @@
 	 * and then as the file upload progresses you just call the `update` method with the number of bytes actually
 	 * downloaded.
 	 *
-	 * @since 4.5
+	 * @since 4.5.0
 	 * @class CKEDITOR.plugins.notificationAggregator.task
 	 * @mixins CKEDITOR.event
 	 * @constructor Creates a task instance for notification aggregator.

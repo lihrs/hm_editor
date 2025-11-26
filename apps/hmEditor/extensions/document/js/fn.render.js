@@ -4,7 +4,7 @@ commonHM.component['documentModel'].fn({
      * @param {Object} options - 二维码配置选项
      * @param {string} options.text - 二维码内容文本
      * @param {string} options.width - 二维码宽度 (默认100)
-     * @param {string} options.height - 二维码高度 (默认100) 
+     * @param {string} options.height - 二维码高度 (默认100)
      * @param {string} options.errorLevel - 纠错等级 L/M/Q/H (默认M)
      * @param {string} options.textPosition - 文本位置 top/bottom/none (默认bottom)
      * @param {jQuery} options.container - 容器元素
@@ -494,7 +494,7 @@ commonHM.component['documentModel'].fn({
                 // 新的行模式逻辑（按列处理）
                 _t._renderTableDataByColumn($table, $tbody, tableData);
             } else {
-                // 使用列模式 
+                // 使用列模式
                 _t._renderTableDataByRow($table, $tbody, tableData);
             }
             console.log('列表类表格数据渲染完成');
@@ -647,7 +647,7 @@ commonHM.component['documentModel'].fn({
                 // 清空单选框选中状态
                 $newTd.find('[data-hm-node=radiobox]').prop('checked', false);
 
-                // 清空复选框选中状态  
+                // 清空复选框选中状态
                 $newTd.find('[data-hm-node=checkbox]').prop('checked', false);
 
                 // 清空时间选中状态
@@ -806,7 +806,7 @@ commonHM.component['documentModel'].fn({
                             newtextboxcontent.html(bindVal);
                         });
                     }
-                    // 处理条形码生成  
+                    // 处理条形码生成
                     else if (_texttype == '条形码' && bindVal && !imgFlag) {
                         var barcodeWidth = newtextboxcontent.attr('_barcode_width') || '200';
                         var barcodeHeight = newtextboxcontent.attr('_barcode_height') || '50';
@@ -908,7 +908,7 @@ commonHM.component['documentModel'].fn({
                 datasourceNode.text(bindVal);
                 break;
             case 'checkbox':
-                // 多选 bindVal 是数组 
+                // 多选 bindVal 是数组
                 var codeArr = bindVal.code;
                 var valArr = bindVal.value;
                 var newArr = [];
@@ -1284,7 +1284,6 @@ commonHM.component['documentModel'].fn({
         $body.find("[data-hm-node=radiobox]").each(function () {
             $(this).on('click', function () {
                 console.log('******单选事件触发*******');
-                debugger
                 _handleCascade(this);
                 // 调用元素变化回调
                 if (typeof window.onElementChange === 'function') {
@@ -1377,7 +1376,7 @@ commonHM.component['documentModel'].fn({
             _t._initDateNavigation($body);
         } else {
             console.log('未检测到护理表单表格，跳过日期导航功能初始化');
-        } 
+        }
 
         // 监听可编辑内容的变化（适用于 contenteditable 元素）
         // 使用 input 事件来实时捕获编辑，change 事件可能不会触发
@@ -1396,8 +1395,8 @@ commonHM.component['documentModel'].fn({
             }
         });
         // 用于存储每个元素的click延迟定时器，避免双击时触发单击事件
-        var clickTimerMap = {}; 
-        
+        var clickTimerMap = {};
+
         // 文本类型 增加双击事件触发
         $body.on('dblclick',  '[data-hm-node="newtextbox"] [contenteditable="true"], [data-hm-code][contenteditable="true"], [data-hm-name][contenteditable="true"]', function () {
             // 双击时，清除该元素的click延迟定时器，防止单击事件触发
@@ -1405,12 +1404,12 @@ commonHM.component['documentModel'].fn({
             var $datasourceNode = $element.closest('[data-hm-code], [data-hm-name], [data-hm-node]');
             var element = $datasourceNode.length > 0 ? $datasourceNode[0] : this;
             var elementKey = 'id_' + $datasourceNode.attr('data-hm-id');
-            
+
             if (clickTimerMap[elementKey]) {
                 clearTimeout(clickTimerMap[elementKey]);
                 delete clickTimerMap[elementKey];
             }
-            
+
             if (typeof window.onElementDbclick === 'function') {
                 try {
                     window.onElementDbclick(element);
@@ -1419,7 +1418,7 @@ commonHM.component['documentModel'].fn({
                 }
             }
         });
-        
+
         // 文本类型 增加单击事件触发（使用延迟机制避免与双击冲突）
         $body.on('click',  '[data-hm-node="newtextbox"] [contenteditable="true"], [data-hm-code][contenteditable="true"], [data-hm-name][contenteditable="true"]', function () {
             if (typeof window.onElementClick === 'function') {
@@ -1430,12 +1429,12 @@ commonHM.component['documentModel'].fn({
                     // 如果没找到数据元素节点，则使用当前元素本身
                     var element = $datasourceNode.length > 0 ? $datasourceNode[0] : this;
                     var elementKey = 'id_' + $datasourceNode.attr('data-hm-id');
-                    
+
                     // 清除之前的定时器（如果存在）
                     if (clickTimerMap[elementKey]) {
                         clearTimeout(clickTimerMap[elementKey]);
                     }
-                    
+
                     // 延迟执行click事件，如果在延迟期间发生双击，则会被清除
                     clickTimerMap[elementKey] = setTimeout(function() {
                         delete clickTimerMap[elementKey];
@@ -1874,7 +1873,7 @@ commonHM.component['documentModel'].fn({
                 // 清空单选框选中状态
                 $td.find('[data-hm-node=radiobox]').prop('checked', false);
 
-                // 清空复选框选中状态  
+                // 清空复选框选中状态
                 $td.find('[data-hm-node=checkbox]').prop('checked', false);
 
                 // 清空时间选中状态
@@ -1932,8 +1931,8 @@ commonHM.component['documentModel'].fn({
     },
     /**
      * 横向表格增加行，其实对应增加一列
-     * @param {} $currentCell 
-     * @returns 
+     * @param {} $currentCell
+     * @returns
      */
     _addTableCell: function ($currentCell) {
         var _t = this;
@@ -1984,7 +1983,7 @@ commonHM.component['documentModel'].fn({
                 // 清空单选框选中状态
                 $newTd.find('[data-hm-node=radiobox]').prop('checked', false);
 
-                // 清空复选框选中状态  
+                // 清空复选框选中状态
                 $newTd.find('[data-hm-node=checkbox]').prop('checked', false);
 
                 // 清空时间选中状态
@@ -2020,8 +2019,8 @@ commonHM.component['documentModel'].fn({
     },
     /**
      * 横向表格删减行，其实对应删减一列
-     * @param {*} $currentCell 
-     * @returns 
+     * @param {*} $currentCell
+     * @returns
      */
     _deleteTableCell: function ($currentCell) {
         var _t = this;
@@ -2656,7 +2655,7 @@ commonHM.component['documentModel'].fn({
     /**
      * 生成图片widget HTML（通用方法）
      * @param {String} imageSrc - 图片源
-     * @param {String} style - 图片样式 
+     * @param {String} style - 图片样式
      * @returns {String} - 图片widget HTML
      */
     _generateImageWidgetHtml: function (imageSrc, style) {

@@ -275,7 +275,7 @@
             $div.find('#timeConfirm').on('click', function () {
                 var val = $interactTimebox.val();
                 var newValue = '';
-                
+
                 if (val == '') {
                     newValue = '';
                 } else {
@@ -286,10 +286,10 @@
                     }
                     newValue = val;
                 }
-                
+
                 // 在赋值之前，获取缓存的值并进行比较
                 var previousValue = $node.attr('_cachedTimeboxValue') || '';
-                
+
                 // 判断当前选择的值是否和缓存值不一样
                 if (previousValue !== newValue) {
                     // 调用 onElementChange 事件
@@ -301,10 +301,10 @@
                         }
                     }
                 }
-                
+
                 // 更新缓存值为新值
                 $node.attr('_cachedTimeboxValue', newValue);
-                
+
                 if (val == '') {
                     $node.text('\u200B');
                 } else {
@@ -325,10 +325,10 @@
             })
             $div.find('#timeClear').on('click', function () {
                 var newValue = '';
-                
+
                 // 在赋值之前，获取缓存的值并进行比较
                 var previousValue = $node.attr('_cachedTimeboxValue') || '';
-                
+
                 // 判断当前选择的值是否和缓存值不一样
                 if (previousValue !== newValue) {
                     // 调用 onElementChange 事件
@@ -340,7 +340,7 @@
                         }
                     }
                 }
-                
+
                 // 更新缓存值为新值
                 $node.attr('_cachedTimeboxValue', newValue);
 
@@ -507,13 +507,13 @@
             var $resultbox = $('<div id=interact-resultDiv class="panel-footer">' +
                 '<input id="freedom" type=text style="width:230px;margin:5px;height:30px;"' + readonly + '/>' +
                 '</div>');
-        
+
             $div.append($selectablebox);
             $div.append($resultbox);
             var resultInput = $resultbox.find('input');
             var tt = $node.text() || '';
             resultInput.val(tt);
-            
+
             // 缓存当前选择的值到节点上，用于后续判断是否发生变化
             var cachedValue = '';
             if (tt.replace(/\u200B/g, '') === '') {
@@ -631,11 +631,11 @@
                         }
                     }
                 }
-                
+
                 // 在赋值之前，获取缓存的值并进行比较
                 var previousValue = $node.attr('_cachedSearchboxValue') || '';
                 var newValue = resultInput.val().replace(/\u200B/g, '') || '';
-                
+
                 // 判断当前选择的值是否和缓存值不一样
                 if (previousValue !== newValue) {
                     // 调用 onElementChange 事件
@@ -647,10 +647,10 @@
                         }
                     }
                 }
-                
+
                 // 更新缓存值为新值
                 $node.attr('_cachedSearchboxValue', newValue);
-                
+
                 if (resultInput.val().replace(/\u200B/g, '') == '') {
                     $node.text('\u200B');
                     $pairNode.text('\u200B');
@@ -1437,7 +1437,7 @@
             var jointsymbol = $node.attr('_jointSymbol') || ',';
             var singleSelFlg = selectType == '单选';
             var $div = $('#interactDiv');
-            
+
             // 缓存当前选择的值到节点上，用于后续判断是否发生变化
             var cachedValue = '';
             if ($node.attr('_placeholdertext') === 'true') {
@@ -1484,7 +1484,7 @@
 
 
             $interactDropbox.on('click', function (evt) {
-                var $target = $(evt.target); 
+                var $target = $(evt.target);
                 // 选中 a
                 if ($target.is('a')) {
                     var curCheck = $target.children('input').is(":checked");
@@ -1546,11 +1546,11 @@
                         valStr += jointsymbol + str;
                     }
                 }
-                
+
                 // 在赋值之前，获取缓存的值并进行比较
                 var previousValue = $node.attr('_cachedDropboxValue') || '';
                 var newValue = valStr || '';
-                
+
                 // 判断当前选择的值是否和缓存值不一样
                 if (previousValue !== newValue) {
                     // 调用 onElementChange 事件
@@ -1562,10 +1562,10 @@
                         }
                     }
                 }
-                
+
                 // 更新缓存值为新值
                 $node.attr('_cachedDropboxValue', newValue);
-                
+
                 if (!valStr) {
                     var placeholder = $node.parent('.new-textbox').attr('_placeholder');
                     $node.html(placeholder);
@@ -2967,14 +2967,14 @@
                         evt.data.preventDefault();
                         return;
                     }
-                    
+
                     // 保护 r-model-gen-remark AI提示内容不被删除
                     var element = range0.startContainer;
                     if (element && element.type == CKEDITOR.NODE_TEXT) {
                         element = element.getParent();
                     }
                     // 检查是否在r-model-gen-remark元素内或者要删除r-model-gen-remark元素
-                    if (element && (element.hasClass('r-model-gen-remark') || 
+                    if (element && (element.hasClass('r-model-gen-remark') ||
                         element.getAscendant('.r-model-gen-remark', true) ||
                         (element.hasClass('new-textbox-content') && element.find('.r-model-gen-remark').count() > 0))) {
                         console.log('防止删除 AI 提示内容');
@@ -3077,7 +3077,7 @@
                             element = element.getParent();
                         }
                         // 检查是否在r-model-gen-remark元素内或者要删除r-model-gen-remark元素
-                        if (element && (element.hasClass('r-model-gen-remark') || 
+                        if (element && (element.hasClass('r-model-gen-remark') ||
                             element.getAscendant('.r-model-gen-remark', true) ||
                             (element.hasClass('new-textbox-content') && element.find('.r-model-gen-remark').count() > 0))) {
                             console.log('防止Delete键删除 AI 提示内容');
@@ -3087,7 +3087,7 @@
                             }
                             return;
                         }
-                        
+
                         if ((range0.endContainer.type === CKEDITOR.NODE_TEXT && range0.endOffset === range0.startContainer.getLength()) ||
                             (range0.endContainer.type === CKEDITOR.NODE_ELEMENT && range0.endOffset === range0.startContainer.getChildCount())) {
                             // 找之后有没有字符, 如果没有就必须加一个.
@@ -3444,7 +3444,7 @@
                                     console.log('删除新文本数据元');
                                     return;
                                 }
-                                
+
                                 // 增强删除保护 - 防止删除 r-model-gen-remark AI提示内容
                                 if ($placeholder.find('.r-model-gen-remark').length > 0) {
                                     console.log('防止删除 AI 提示内容');
@@ -3454,7 +3454,7 @@
                                     }
                                     return false;
                                 }
-                                
+
                                 console.log('防止删除 placeholder');
                                 // 这一句是必要的, 防止删除 placeholder, 虽然我也不知道为啥这样写就行
                                 lastPlaceholder &&
@@ -3483,7 +3483,7 @@
                             addPlaceHolderFlag = true;
                         }
                     }
-                    if (addPlaceHolderFlag && !composing) { 
+                    if (addPlaceHolderFlag && !composing) {
                         $newtextboxs.each(function () {
                             var $newtextbox = $(this);
                             placeholder = $newtextbox.attr('_placeholder');
@@ -3539,16 +3539,16 @@
                         editor.getCommand('horizontalrule').setState(CKEDITOR.TRISTATE_OFF);
                     }
                 }
-                
+
                 // 表单模式下控制样式按钮状态
                 // 检查element是否有class=emrWidget-content又有_contenteditable="false"属性的父级元素
                 if ($(element.$).parents('.emrWidget-content[_contenteditable="false"]').length > 0) {
                     var isInDataSource = false;
                     var current = element;
-                    
+
                     // 检查当前点击的元素是否在数据元内
                     while (current && current.type === CKEDITOR.NODE_ELEMENT) {
-                        if ((current.hasAttribute('data-hm-node') && current.getAttribute('data-hm-node') !== 'labelbox') || 
+                        if ((current.hasAttribute('data-hm-node') && current.getAttribute('data-hm-node') !== 'labelbox') ||
                             $(current.$).hasClass('new-textbox') ||
                             $(current.$).hasClass('new-textbox-content')) {
                             isInDataSource = true;
@@ -3556,7 +3556,7 @@
                         }
                         current = current.getParent();
                     }
-                    
+
                     // 控制样式按钮的启用/禁用状态
                     // 使用延迟执行确保在basicstyles的状态检测之后执行
                     setTimeout(function() {
@@ -3567,7 +3567,7 @@
                                 command.setState(isInDataSource ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED);
                             }
                         }
-                        
+
                         // 控制其他UI组件（字体、颜色等）
                         var uiComponents = ['Font', 'FontSize', 'TextColor', 'BGColor'];
                         for (var j = 0; j < uiComponents.length; j++) {
@@ -3578,7 +3578,7 @@
                         }
                     }, 10); // 延迟10ms确保在basicstyles状态检测之后执行
                 }
-                
+
                 // 只读模式下新文本获焦可输入问题修复
                 if (editor.readOnly && $(element.$).parents().hasClass('new-textbox')) {
                     // range0.moveToPosition(element, CKEDITOR.POSITION_AFTER_END);
@@ -3672,7 +3672,6 @@
                                             secondPlaceholder.remove();
                                         }
                                     }
-                                    debugger
                                 }
                                 var zeroWidthChild;
                                 newTextBoxContent = newTextBoxContent.getItem(0);
@@ -3767,7 +3766,7 @@
 
 
                     return;//label不支持点击响应
-                }            
+                }
                 popInteractive(evt, $(editable.$), editor);
 
                 checkContentListener(editor,evt,element.$);

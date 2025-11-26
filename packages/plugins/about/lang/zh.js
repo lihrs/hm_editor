@@ -1,12 +1,9 @@
 /*
-Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.md or http://ckeditor.com/license
+Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
 */
 CKEDITOR.plugins.setLang( 'about', 'zh', {
 	copy: 'Copyright &copy; $1. All rights reserved.',
-	dlgTitle: '關於 CKEditor',
-	help: '檢閱 $1 尋求幫助。',
-	moreInfo: '關於授權資訊，請參閱我們的網站：',
-	title: '關於 CKEditor',
-	userGuide: 'CKEditor 使用者手冊'
+	dlgTitle: '關於 CKEditor 4',
+	moreInfo: '關於授權資訊，請參閱我們的網站：'
 } );

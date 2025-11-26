@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2017, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md or http://ckeditor.com/license
+ * @license Copyright (c) 2003-2025, CKSource Holding sp. z o.o. All rights reserved.
+ * CKEditor 4 LTS ("Long Term Support") is available under the terms of the Extended Support Model.
  */
 
 CKEDITOR.plugins.setLang( 'specialchar', 'da', {
@@ -14,7 +14,7 @@ CKEDITOR.plugins.setLang( 'specialchar', 'da', {
 	iexcl: 'Omvendt udråbstegn',
 	cent: 'Cent-tegn',
 	pound: 'Pund-tegn',
-	curren: 'Kurs-tegn',
+	curren: 'Valuta-tegn',
 	yen: 'Yen-tegn',
 	brvbar: 'Brudt streg',
 	sect: 'Paragraftegn',
@@ -46,7 +46,7 @@ CKEDITOR.plugins.setLang( 'specialchar', 'da', {
 	Atilde: 'Stort A med tilde',
 	Auml: 'Stort A med umlaut',
 	Aring: 'Stort Å',
-	AElig: 'Latin capital letter Æ', // MISSING
+	AElig: 'Stort Æ',
 	Ccedil: 'Stort C med cedille',
 	Egrave: 'Stort E med accent grave',
 	Eacute: 'Stort E med accent aigu',

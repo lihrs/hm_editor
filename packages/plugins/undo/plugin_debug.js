@@ -667,7 +667,6 @@
 					}
 				} catch (e) {
 					console.error(e);
-					debugger;
 				}
 
 				// 恢复锁定状态
