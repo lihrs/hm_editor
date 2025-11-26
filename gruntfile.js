@@ -115,8 +115,8 @@ module.exports = function( grunt ) {
                 // livereload: '<%= config.livereload%>'
             },
             component: {
-                files: ["hmEditor/iframe/*.js","hmEditor/extensions/**/tpl/*.html",
-                    "hmEditor/extensions/**/js/*","hmEditor/extensions/**/css/*"],
+                files: ["apps/hmEditor/iframe/*.js","apps/hmEditor/extensions/**/tpl/*.html",
+                    "apps/hmEditor/extensions/**/js/*","apps/hmEditor/extensions/**/css/*"],
                 tasks: ["component", 'copy:baseInfo','clean:baseInfo',"concat:js","concat:css"]
             },
 
