@@ -178,7 +178,7 @@ HMEditor.fn({
         var _t = this;
         var editorConfig = _t.options.editorConfig || {};
         // 获取基础CSS配置
-        var baseCss = [CKEDITOR.getUrl('vendor/font-awesome.min.css'),CKEDITOR.getUrl('vendor/hm-sdk.min.css'),CKEDITOR.getUrl('css/docAi.min.css'),CKEDITOR.getUrl('css/document.min.css'),CKEDITOR.getUrl('contents.css')];
+        var baseCss = [CKEDITOR.getUrl('apps/hmEditor/demo/vendor/font-awesome.min.css'),CKEDITOR.getUrl('apps/hmEditor/demo/vendor/hm-sdk.min.css'),CKEDITOR.getUrl('css/docAi.min.css'),CKEDITOR.getUrl('css/document.min.css'),CKEDITOR.getUrl('contents.css')];
         editorConfig.contentsCss = baseCss.concat(editorConfig.contentsCss || []);
         var removePlugins = (editorConfig.removePlugins || '').replace(/,\s*$/, '');
         if (!_t.options.designMode) {

@@ -24,7 +24,7 @@ module.exports = function( grunt ) {
             livereload: 35741,
             // 版本号
             version:(new Date()).getTime()
-  
+
           },
         banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> */\n',
         connect: {
@@ -38,7 +38,7 @@ module.exports = function( grunt ) {
                     hostname: '*',
                     livereload: '<%= config.livereload%>',
                     middleware: function(connect, options, middlewares) {
-                        // inject a custom middleware into the array of default middlewares 
+                        // inject a custom middleware into the array of default middlewares
                         middlewares.unshift(function(req, res, next) {
                         // if (req.url !== '/hello/world') return next();
                         // res.end('Hello, world from port #' + options.port + '!');
@@ -119,7 +119,7 @@ module.exports = function( grunt ) {
                     "hmEditor/extensions/**/js/*","hmEditor/extensions/**/css/*"],
                 tasks: ["component", 'copy:baseInfo','clean:baseInfo',"concat:js","concat:css"]
             },
-            
+
         },
         /**
          *  清理目录
@@ -138,7 +138,7 @@ module.exports = function( grunt ) {
      */
     grunt.registerTask('def_test', function () {
         grunt.task.run([
-            'clean', 
+            'clean',
             'component',
             'clean:after',
             'copy:baseInfo',
@@ -154,7 +154,7 @@ module.exports = function( grunt ) {
      */
     grunt.registerTask('release', function () {
         grunt.task.run([
-            'clean', 
+            'clean',
             'component:dist',
             'clean:after',
             'copy:baseInfo',
@@ -173,10 +173,10 @@ module.exports = function( grunt ) {
      */
     grunt.registerTask('component', function(target) {
         // 要处理的根目录
-        var rootdir = 'hmEditor/extensions';
+        var rootdir = 'apps/hmEditor/extensions';
         //处理后将结果文件存放的目录
         var resultdir = grunt.config('config.folder');
-        // 构建组件 
+        // 构建组件
         buildComponentDir(target, rootdir, resultdir);
     });
     /**
@@ -204,7 +204,7 @@ module.exports = function( grunt ) {
                     var tplname = "$" +titleName + "_tpl";
                     // 压缩html
                     grunt.config(util.format('htmlmin.%s', taskName), {
-                        options: {                       
+                        options: {
                             removeComments: true,
                             collapseWhitespace: true
                         },
